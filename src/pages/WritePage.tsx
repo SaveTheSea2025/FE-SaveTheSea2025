@@ -1,6 +1,9 @@
+// 카카오맵 주소키 24e7f8fbd35263fc2d3d34a6b9ea6f69
+
 import React from "react";
 import Header from "../components/Header/Header";
 import WasteSection from "../components/Header/WasteSection";
+import KakaoMapSection from "../components/Header/Map/KakaoMapSection";
 
 
 const WritePage = () => {
@@ -249,44 +252,7 @@ const WritePage = () => {
           </p>
 
           {/* 출발지점 */}
-          <div className="border border-gray-300 border-l-0 border-r-0 text-sm mb-6">
-            <div className="flex border-b border-gray-300">
-              <div className="w-1/5 bg-[#f7f8fa] px-4 py-3 font-medium border-r border-gray-300">
-                출발지점
-              </div>
-              <div className="w-4/5 px-4 py-3 bg-[#f7f8fa]">
-                <input
-                  type="text"
-                  placeholder="출발지를 입력해주세요."
-                  className="w-full bg-[#f7f8fa] border-none text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="w-full h-[280px] bg-gray-200 flex items-center justify-center text-gray-500 mb-8">
-            지도 컴포넌트 영역
-          </div>
-
-          {/* 종료지점 */}
-          <div className="border border-gray-300 border-l-0 border-r-0 text-sm mb-2">
-            <div className="flex border-b border-gray-300">
-              <div className="w-1/5 bg-[#f7f8fa] px-4 py-3 font-medium border-r border-gray-300">
-                종료지점
-              </div>
-              <div className="w-4/5 px-4 py-3 bg-[#f7f8fa]">
-                <input
-                  type="text"
-                  placeholder="종료지점을 입력해주세요."
-                  className="w-full bg-[#f7f8fa] border-none text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="w-full h-[280px] bg-gray-200 flex items-center justify-center text-gray-500">
-            지도 컴포넌트 영역
-          </div>
+          <KakaoMapSection/>
         </section>
 
 
@@ -310,6 +276,12 @@ const WritePage = () => {
             작성 완료
         </button>
         </div>
+        <script
+          className="px-12 p-3"
+          type="text/javascript"
+          src="//dapi.kakao.com/v2/maps/sdk.js?appkey=24e7f8fbd35263fc2d3d34a6b9ea6f69&libraries=services"
+        ></script>
+
 
 
       </main>
