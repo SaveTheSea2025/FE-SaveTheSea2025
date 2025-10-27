@@ -40,6 +40,22 @@ function Dashboard() {
           해양 봉사활동 신청하러 가기 →
         </button>
       </div>
+      <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
+          <h3 className="text-[40px] font-light tracking-wide">
+            바다를 향한 우리의 시선
+          </h3>
+          <h1 className="text-[140px] font-extrabold tracking-wider mb-8">
+            바 다 보 다
+          </h1>
+        </section>
+        <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
+          <h3 className="text-[40px] font-light tracking-wide">
+            바다를 향한 우리의 시선
+          </h3>
+          <h1 className="text-[140px] font-extrabold tracking-wider mb-8">
+            바 다 보 다
+          </h1>
+        </section>
 
       
     </div>
