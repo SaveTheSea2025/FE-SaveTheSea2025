@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header/Header";
+import Header from "../components/Header";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -15,10 +15,10 @@ function Dashboard() {
           backgroundPosition: "center",
         }}
       >
-        
+
 
         {/* 공용 컴포넌트에서 헤더씀 */}
-        <Header/>
+        <Header />
 
         {/* 메인  */}
         <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
@@ -41,23 +41,23 @@ function Dashboard() {
         </button>
       </div>
       <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
-          <h3 className="text-[40px] font-light tracking-wide">
-            바다를 향한 우리의 시선
-          </h3>
-          <h1 className="text-[140px] font-extrabold tracking-wider mb-8">
-            바 다 보 다
-          </h1>
-        </section>
-        <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
-          <h3 className="text-[40px] font-light tracking-wide">
-            바다를 향한 우리의 시선
-          </h3>
-          <h1 className="text-[140px] font-extrabold tracking-wider mb-8">
-            바 다 보 다
-          </h1>
-        </section>
+        <h3 className="text-[40px] font-light tracking-wide">
+          바다를 향한 우리의 시선
+        </h3>
+        <h1 className="text-[140px] font-extrabold tracking-wider mb-8">
+          바 다 보 다
+        </h1>
+      </section>
+      <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
+        <h3 className="text-[40px] font-light tracking-wide">
+          바다를 향한 우리의 시선
+        </h3>
+        <h1 className="text-[140px] font-extrabold tracking-wider mb-8">
+          바 다 보 다
+        </h1>
+      </section>
 
-      
+
     </div>
   );
 }

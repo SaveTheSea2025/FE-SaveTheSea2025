@@ -1,9 +1,45 @@
-import React from "react";
-import Header from "../components/Header/Header";
-import WasteSection from "../components/Header/WasteSection";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { useState, useCallback } from "react";
+import Header from "../components/Header";
+import WasteSection from "../components/WasteSection";
+import KakaoMap from "../components/KakaoMap";
+import { loadKakao } from "../lib/loadKakao";
 
 
 const WritePage = () => {
+  const [startText, setStartText] = useState("");
+  const [endText, setEndText] = useState("");
+  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
+
+  const geocode = useCallback(async (addr: string) => {
+    if (!addr?.trim()) return null;
+    await loadKakao();
+    const geocoder = new window.kakao.maps.services.Geocoder();
+    return await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      geocoder.addressSearch(addr, (result: any[], status: string) => {
+        if (status === window.kakao.maps.services.Status.OK && result[0]) {
+          const { x, y } = result[0]; // x: lng, y: lat
+          resolve({ lat: Number(y), lng: Number(x) });
+        } else resolve(null);
+      });
+    });
+  }, []);
+
+  const handleSearchStart = useCallback(async () => {
+    const pos = await geocode(startText);
+    setStartPos(pos);
+    if (!pos) alert("출발지 주소를 찾을 수 없습니다. 다시 입력해주세요.");
+  }, [geocode, startText]);
+
+  const handleSearchEnd = useCallback(async () => {
+    const pos = await geocode(endText);
+    setEndPos(pos);
+    if (!pos) alert("종료지 주소를 찾을 수 없습니다. 다시 입력해주세요.");
+  }, [geocode, endText]);
+
+
   return (
     <div className="bg-white min-h-screen">
       {/* 공용 Header */}
@@ -26,157 +62,157 @@ const WritePage = () => {
 
         {/* ===================== 활동 정보 ===================== */}
         <section className="mb-10">
-        <h3 className="text-lg font-semibold mb-4">활동 정보</h3>
+          <h3 className="text-lg font-semibold mb-4">활동 정보</h3>
 
-        <div className="border border-gray-300 w-full"
-        style={{
-            borderTop:"none",
-            borderLeft:"none",
-            borderRight:"none"
-        }}>
+          <div className="border border-gray-300 w-full"
+            style={{
+              borderTop: "none",
+              borderLeft: "none",
+              borderRight: "none"
+            }}>
             <div className="flex justify-end pr-4 py-2 text-sm text-gray-500">
-            <span className="text-red-500">*</span> 표시는 필수 입력 항목입니다
+              <span className="text-red-500">*</span> 표시는 필수 입력 항목입니다
             </div>
 
             <table className="w-full border-collapse border-t border-gray-300 text-sm">
-            <tbody>
+              <tbody>
                 {/* 구분 */}
                 <tr className="border-t border-gray-300">
-                <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium">
+                  <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium">
                     구분
-                </th>
-                <td className="px-4 py-3 flex items-center gap-3">
+                  </th>
+                  <td className="px-4 py-3 flex items-center gap-3">
                     <label className="flex items-center gap-1">
-                    <input type="radio" name="group" defaultChecked /> 단체
+                      <input type="radio" name="group" defaultChecked /> 단체
                     </label>
                     <label className="flex items-center gap-1">
-                    <input type="radio" name="group" /> 개인
+                      <input type="radio" name="group" /> 개인
                     </label>
                     <input
-                    type="text"
-                    placeholder="단체명을 입력해주세요."
-                    className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 w-64 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+                      type="text"
+                      placeholder="단체명을 입력해주세요."
+                      className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 w-64 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     />
                     <span className="text-gray-400 cursor-pointer">✔️</span>
-                </td>
+                  </td>
                 </tr>
 
                 {/* 봉사활동 명 */}
                 <tr className="border-t border-gray-300">
-                <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium">
+                  <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium">
                     봉사활동 명 <span className="text-red-500">*</span>
-                </th>
-                <td className="px-4 py-3">
+                  </th>
+                  <td className="px-4 py-3">
                     <input
-                    type="text"
-                    placeholder="봉사활동 명을 입력해주세요."
-                    className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+                      type="text"
+                      placeholder="봉사활동 명을 입력해주세요."
+                      className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     />
-                </td>
+                  </td>
                 </tr>
 
                 {/* 활동 일자 */}
                 <tr className="border-t border-gray-300">
-                <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium">
+                  <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium">
                     활동 일자 <span className="text-red-500">*</span>
-                </th>
-                <td className="px-4 py-3 flex items-center gap-2">
+                  </th>
+                  <td className="px-4 py-3 flex items-center gap-2">
                     <input
-                    type="date"
-                    className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+                      type="date"
+                      className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     />
                     <input
-                    type="time"
-                    className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+                      type="time"
+                      className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     />
                     <span className="text-gray-500">~</span>
                     <input
-                    type="date"
-                    className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+                      type="date"
+                      className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     />
                     <input
-                    type="time"
-                    className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+                      type="time"
+                      className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     />
-                </td>
+                  </td>
                 </tr>
 
                 {/* 봉사활동 시간 / 인원 */}
                 <tr className="border-t border-gray-300">
-                <th className="w-40 bg-[#f5f6f8] border-r border-gray-300 px-4 py-3 text-left font-medium">
+                  <th className="w-40 bg-[#f5f6f8] border-r border-gray-300 px-4 py-3 text-left font-medium">
                     봉사활동 시간
-                </th>
-                <td className="p-0">
+                  </th>
+                  <td className="p-0">
                     <div className="flex">
-                    {/* 시간 */}
-                    <div className="flex items-center justify-center w-1/3 border-r border-gray-300 bg-white text-sm text-gray-800">
+                      {/* 시간 */}
+                      <div className="flex items-center justify-center w-1/3 border-r border-gray-300 bg-white text-sm text-gray-800">
                         <span>0 시간</span>
-                    </div>
+                      </div>
 
-                    {/* 봉사활동 인원  */}
-                    <div className="flex items-center justify-start w-1/3 bg-[#f5f6f8] border-r border-gray-300 px-6 py-3">
+                      {/* 봉사활동 인원  */}
+                      <div className="flex items-center justify-start w-1/3 bg-[#f5f6f8] border-r border-gray-300 px-6 py-3">
                         <label className="font-medium text-gray-800">
-                        봉사활동 인원 <span className="text-red-500">*</span>
+                          봉사활동 인원 <span className="text-red-500">*</span>
                         </label>
-                    </div>
+                      </div>
 
-                    {/* 숫자 적는 칸 */}
-                    <div className="flex items-center justify-start w-1/3 bg-white px-6 py-3">
+                      {/* 숫자 적는 칸 */}
+                      <div className="flex items-center justify-start w-1/3 bg-white px-6 py-3">
                         <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
-                        <button
+                          <button
                             type="button"
                             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100"
                             onClick={() => {
-                            const input = document.getElementById("volunteerCount") as HTMLInputElement;
-                            const val = Math.max(0, Number(input.value) - 1);
-                            input.value = String(val);
+                              const input = document.getElementById("volunteerCount") as HTMLInputElement;
+                              const val = Math.max(0, Number(input.value) - 1);
+                              input.value = String(val);
                             }}
-                        >
+                          >
                             -
-                        </button>
-                        <input
+                          </button>
+                          <input
                             id="volunteerCount"
                             type="number"
                             min={0}
                             defaultValue={0}
                             className="w-16 h-8 text-center text-gray-800 outline-none bg-white"
-                        />
-                        <button
+                          />
+                          <button
                             type="button"
                             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100"
                             onClick={() => {
-                            const input = document.getElementById("volunteerCount") as HTMLInputElement;
-                            const val = Number(input.value) + 1;
-                            input.value = String(val);
+                              const input = document.getElementById("volunteerCount") as HTMLInputElement;
+                              const val = Number(input.value) + 1;
+                              input.value = String(val);
                             }}
-                        >
+                          >
                             +
-                        </button>
+                          </button>
                         </div>
                         <span className="ml-2">명</span>
+                      </div>
                     </div>
-                    </div>
-                </td>
+                  </td>
                 </tr>
 
 
                 {/* 활동 설명 */}
                 <tr className="border-t border-gray-300">
-                <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium align-top">
+                  <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium align-top">
                     활동 설명
-                </th>
-                <td className="px-4 py-3">
+                  </th>
+                  <td className="px-4 py-3">
                     <textarea
-                    rows={4}
-                    placeholder="내용은 500자까지 입력 가능합니다."
-                    className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+                      rows={4}
+                      placeholder="내용은 500자까지 입력 가능합니다."
+                      className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     ></textarea>
                     <div className="text-right text-gray-500 text-xs mt-1">0/500자</div>
-                </td>
+                  </td>
                 </tr>
-            </tbody>
+              </tbody>
             </table>
-        </div>
+          </div>
         </section>
 
 
@@ -186,14 +222,14 @@ const WritePage = () => {
         <section className="mb-30 mt-30 ">
           <h3 className="text-lg font-semibold mb-4">활동 사진 첨부</h3>
           <div className="border border-gray-300  p-6"
-          style={{
-            borderLeft:"none",
-            borderRight:"none"
-          }}>
+            style={{
+              borderLeft: "none",
+              borderRight: "none"
+            }}>
             <p className="text-sm text-gray-600 mb-2">
-            이미지는 최대 10장, 3MB 이하로 업로드할 수 있습니다.<br />
-            등록 가능한 형식: jpg, jpeg, bmp, png, gif<br />
-            대표사진을 지정하지 않으면, 첫 번째 이미지가 자동으로 대표로 설정됩니다.
+              이미지는 최대 10장, 3MB 이하로 업로드할 수 있습니다.<br />
+              등록 가능한 형식: jpg, jpeg, bmp, png, gif<br />
+              대표사진을 지정하지 않으면, 첫 번째 이미지가 자동으로 대표로 설정됩니다.
             </p>
             <div className="flex gap-4 flex-wrap">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -211,7 +247,7 @@ const WritePage = () => {
           </div>
         </section>
 
-       
+
         {/* ===================== 활동 위치 ===================== */}
         <section className="mb-10">
           <h3 className="text-[22px] font-semibold mb-4">활동 위치</h3>
@@ -249,23 +285,37 @@ const WritePage = () => {
           </p>
 
           {/* 출발지점 */}
-          <div className="border border-gray-300 border-l-0 border-r-0 text-sm mb-6">
+          <div className="border border-gray-300 border-l-0 border-r-0 text-sm mb-2">
             <div className="flex border-b border-gray-300">
               <div className="w-1/5 bg-[#f7f8fa] px-4 py-3 font-medium border-r border-gray-300">
                 출발지점
               </div>
-              <div className="w-4/5 px-4 py-3 bg-[#f7f8fa]">
+              <div className="w-4/5 px-4 py-3 bg-[#f7f8fa] flex gap-2">
                 <input
                   type="text"
-                  placeholder="출발지를 입력해주세요."
-                  className="w-full bg-[#f7f8fa] border-none text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  placeholder="예) 강원 강릉시 강문동 000-0"
+                  value={startText}
+                  onChange={(e) => setStartText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchStart()}
+                  className="flex-1 bg-[#f7f8fa] border border-gray-300 rounded px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                 />
+                <button
+                  type="button"
+                  onClick={handleSearchStart}
+                  className="whitespace-nowrap px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded"
+                >
+                  검색
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="w-full h-[280px] bg-gray-200 flex items-center justify-center text-gray-500 mb-8">
-            지도 컴포넌트 영역
+          {/* 출발지 지도 */}
+          <div className="w-full mb-6">
+            <KakaoMap
+              center={startPos ?? { lat: 37.5665, lng: 126.978 }}
+              markers={startPos ? [{ ...startPos, title: "출발지점" }] : []}
+            />
           </div>
 
           {/* 종료지점 */}
@@ -274,41 +324,57 @@ const WritePage = () => {
               <div className="w-1/5 bg-[#f7f8fa] px-4 py-3 font-medium border-r border-gray-300">
                 종료지점
               </div>
-              <div className="w-4/5 px-4 py-3 bg-[#f7f8fa]">
+              <div className="w-4/5 px-4 py-3 bg-[#f7f8fa] flex gap-2">
                 <input
                   type="text"
-                  placeholder="종료지점을 입력해주세요."
-                  className="w-full bg-[#f7f8fa] border-none text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  placeholder="예) 강원 강릉시 경포동 000-0"
+                  value={endText}
+                  onChange={(e) => setEndText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchEnd()}
+                  className="flex-1 bg-[#f7f8fa] border border-gray-300 rounded px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                 />
+                <button
+                  type="button"
+                  onClick={handleSearchEnd}
+                  className="whitespace-nowrap px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded"
+                >
+                  검색
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="w-full h-[280px] bg-gray-200 flex items-center justify-center text-gray-500">
-            지도 컴포넌트 영역
+          {/* 종료지 지도 */}
+          <div className="w-full">
+            <KakaoMap
+              center={endPos ?? { lat: 37.5665, lng: 126.978 }}
+              markers={endPos ? [{ ...endPos, title: "종료지점" }] : []}
+            />
           </div>
+
+
         </section>
 
 
         {/* ===================== 폐기물 ===================== */}
-        <WasteSection/>
+        <WasteSection />
 
         {/* ===================== 특이사항 ===================== */}
         <section className="mb-16">
-        <h3 className="text-[22px] font-semibold mb-3">특이사항</h3>
-        <div className="border border-gray-300 border-l-0 border-r-0 bg-[#f7f8fa] p-4">
+          <h3 className="text-[22px] font-semibold mb-3">특이사항</h3>
+          <div className="border border-gray-300 border-l-0 border-r-0 bg-[#f7f8fa] p-4">
             <textarea
-            placeholder="특이사항이 있으면 적어주세요."
-            className="w-full bg-[#f7f8fa] border border-gray-300 rounded px-3 py-2 text-gray-700 h-32 resize-none focus:outline-none focus:ring-2 focus:ring-sky-400"
+              placeholder="특이사항이 있으면 적어주세요."
+              className="w-full bg-[#f7f8fa] border border-gray-300 rounded px-3 py-2 text-gray-700 h-32 resize-none focus:outline-none focus:ring-2 focus:ring-sky-400"
             ></textarea>
-        </div>
+          </div>
         </section>
 
         {/* 작성 완료 버튼 */}
         <div className="text-center mb-10">
-        <button className="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-12 py-3 rounded-md">
+          <button className="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-12 py-3 rounded-md">
             작성 완료
-        </button>
+          </button>
         </div>
 
 

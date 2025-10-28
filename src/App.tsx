@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
-import Calendar from "./pages/Calendar";
 import RecordsPage from "./pages/RecordsPage";
 import StatsPage from "./pages/StatsPage";
 import RankingPage from "./pages/RankingPage";
@@ -13,7 +12,6 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/calendar" element={<Calendar />} />
         <Route path="/records" element={<RecordsPage />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/ranking" element={<RankingPage />} />
