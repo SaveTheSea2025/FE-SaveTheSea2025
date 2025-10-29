@@ -1,13 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback ,useRef } from "react";
 import Header from "../components/Header";
 import WasteSection from "../components/WasteSection";
 import KakaoMap from "../components/KakaoMap";
 import { loadKakao } from "../lib/loadKakao";
+import graycheck from "/src/assets/graycheck.png";
+import bluecheck from "/src/assets/bluecheck.png";
+import PhotoUploadSection from "../components/PhotoUploadSection";
+
+
 
 
 const WritePage = () => {
+  const [description, setDescription] = useState("");
+  const maxLength = 500;
+  const [groupType, setGroupType] = useState("단체");
+  const [groupName, setGroupName] = useState("");
   const [startText, setStartText] = useState("");
   const [endText, setEndText] = useState("");
   const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -38,6 +47,8 @@ const WritePage = () => {
     setEndPos(pos);
     if (!pos) alert("종료지 주소를 찾을 수 없습니다. 다시 입력해주세요.");
   }, [geocode, endText]);
+
+ 
 
 
   return (
@@ -88,12 +99,22 @@ const WritePage = () => {
                     <label className="flex items-center gap-1">
                       <input type="radio" name="group" /> 개인
                     </label>
+                    
+                    {/* 단체명 입력 */}
                     <input
                       type="text"
                       placeholder="단체명을 입력해주세요."
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
                       className="border border-gray-200 bg-gray-50 rounded px-3 py-1.5 w-64 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     />
-                    <span className="text-gray-400 cursor-pointer">✔️</span>
+
+                    {/* ✅ 입력 여부에 따른 체크 아이콘 */}
+                    <img
+                      src={groupName.trim() ? bluecheck : graycheck}
+                      alt="check"
+                      className="w-5 h-5"
+                    />
                   </td>
                 </tr>
 
@@ -204,10 +225,17 @@ const WritePage = () => {
                   <td className="px-4 py-3">
                     <textarea
                       rows={4}
+                      maxLength={maxLength}
                       placeholder="내용은 500자까지 입력 가능합니다."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
                       className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
                     ></textarea>
-                    <div className="text-right text-gray-500 text-xs mt-1">0/500자</div>
+
+                    {/* ✅ 글자 수 표시 (textarea 바깥 하단 정렬) */}
+                    <div className="text-right text-gray-500 text-xs mt-1">
+                      {description.length}/{maxLength}자
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -219,33 +247,7 @@ const WritePage = () => {
 
 
         {/* ===================== 활동 사진 첨부 ===================== */}
-        <section className="mb-30 mt-30 ">
-          <h3 className="text-lg font-semibold mb-4">활동 사진 첨부</h3>
-          <div className="border border-gray-300  p-6"
-            style={{
-              borderLeft: "none",
-              borderRight: "none"
-            }}>
-            <p className="text-sm text-gray-600 mb-2">
-              이미지는 최대 10장, 3MB 이하로 업로드할 수 있습니다.<br />
-              등록 가능한 형식: jpg, jpeg, bmp, png, gif<br />
-              대표사진을 지정하지 않으면, 첫 번째 이미지가 자동으로 대표로 설정됩니다.
-            </p>
-            <div className="flex gap-4 flex-wrap">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="w-[140px] h-[140px] bg-gray-200 rounded-lg flex items-center justify-center text-gray-400"
-                >
-                  +
-                </div>
-              ))}
-            </div>
-            <button className="mt-4 bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-md">
-              첨부파일 등록
-            </button>
-          </div>
-        </section>
+        <PhotoUploadSection/>
 
 
         {/* ===================== 활동 위치 ===================== */}
