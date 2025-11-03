@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Header from "../components/Header";
 import WasteSection from "../components/WasteSection";
-import { loadKakao } from "../lib/loadKakao";
+import { loadKakaoCustom } from "../lib/loadKakaoCustom";
 import graycheck from "/src/assets/graycheck.png";
 import bluecheck from "/src/assets/bluecheck.png";
 import PhotoUploadSection from "../components/PhotoUploadSection";
@@ -47,31 +47,88 @@ const WritePage = () => {
   }, [startDate, startTime, endDate, endTime]);
 
   // ====================== 카카오 주소 검색 ======================
-  const geocode = useCallback(async (addr: string) => {
-    if (!addr?.trim()) return null;
-    await loadKakao();
-    const geocoder = new window.kakao.maps.services.Geocoder();
-    return await new Promise<{ lat: number; lng: number } | null>((resolve) => {
-      geocoder.addressSearch(addr, (result: any[], status: string) => {
-        if (status === window.kakao.maps.services.Status.OK && result[0]) {
-          const { x, y } = result[0];
-          resolve({ lat: Number(y), lng: Number(x) });
-        } else resolve(null);
-      });
+  // ====================== 카카오 주소 + 키워드 검색 ======================
+// ====================== 카카오 주소 + 키워드 병합 검색 ======================
+const geocode = useCallback(async (addr: string) => {
+  if (!addr?.trim()) return null;
+
+  // ✅ 커스텀 SDK 로드
+  await loadKakaoCustom();
+
+  // ✅ 혹시 SDK가 바로 attach되지 않은 경우 대비
+  if (!window.kakao?.maps?.services) {
+    console.warn("⚠️ Kakao services 아직 로드 안됨, 300ms 대기 후 재시도");
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  const geocoder = new window.kakao.maps.services.Geocoder();
+  const places = new window.kakao.maps.services.Places();
+
+  return new Promise<{ lat: number; lng: number } | null>((resolve) => {
+    let resolved = false;
+
+    geocoder.addressSearch(addr, (result: any[], status: string) => {
+      if (!resolved && status === window.kakao.maps.services.Status.OK && result[0]) {
+        const { x, y } = result[0];
+        resolved = true;
+        resolve({ lat: Number(y), lng: Number(x) });
+      } else {
+        // 키워드 검색 (예: “부산역”, “광안리”)
+        const regionPrefix = `${selectedRegion.sido || ""} ${selectedRegion.sigungu || ""} ${addr}`;
+        places.keywordSearch(regionPrefix, (data: any[], status2: string) => {
+          if (!resolved && status2 === window.kakao.maps.services.Status.OK && data[0]) {
+            const first = data[0];
+            resolved = true;
+            resolve({ lat: Number(first.y), lng: Number(first.x) });
+          } else if (!resolved) {
+            resolved = true;
+            resolve(null);
+          }
+        });
+      }
     });
-  }, []);
+  });
+}, [selectedRegion]);
 
-  const handleSearchStart = useCallback(async () => {
-    const pos = await geocode(startText);
-    setStartPos(pos);
-    if (!pos) alert("출발지 주소를 찾을 수 없습니다. 다시 입력해주세요.");
-  }, [geocode, startText]);
 
-  const handleSearchEnd = useCallback(async () => {
-    const pos = await geocode(endText);
-    setEndPos(pos);
-    if (!pos) alert("종료지 주소를 찾을 수 없습니다. 다시 입력해주세요.");
-  }, [geocode, endText]);
+
+
+const handleSearchStart = useCallback(async () => {
+  const pos = await geocode(startText);
+  setStartPos(pos);
+  if (pos) {
+    const mapContainer = document.getElementById("start-map");
+    const map = new window.kakao.maps.Map(mapContainer, {
+      center: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+      level: 3,
+    });
+    new window.kakao.maps.Marker({
+      map,
+      position: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+    });
+  } else {
+    alert("출발지 주소나 장소를 찾을 수 없습니다. 다시 입력해주세요.");
+  }
+}, [geocode, startText]);
+
+const handleSearchEnd = useCallback(async () => {
+  const pos = await geocode(endText);
+  setEndPos(pos);
+  if (pos) {
+    const mapContainer = document.getElementById("end-map");
+    const map = new window.kakao.maps.Map(mapContainer, {
+      center: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+      level: 3,
+    });
+    new window.kakao.maps.Marker({
+      map,
+      position: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+    });
+  } else {
+    alert("도착지 주소나 장소를 찾을 수 없습니다. 다시 입력해주세요.");
+  }
+}, [geocode, endText]);
+
 
   // ============================================================
 
