@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
  
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState, useCallback, useEffect } from "react";
 import Header from "../components/Header";
 import WasteSection from "../components/WasteSection";
@@ -24,7 +26,11 @@ const WritePage = () => {
   const [selectedRegion, setSelectedRegion] = useState({ sido: "", sigungu: "" });
   const [center, setCenter] = useState({ lat: 37.5665, lng: 126.978 });
 
-  //활동 시간 계산 관련 상태 추가
+  // ✅ 최상단 useState 영역에 추가
+  const [loading, setLoading] = useState(false);
+
+
+  // 활동 시간 관련
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -33,31 +39,34 @@ const WritePage = () => {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [thumbnailIndex, setThumbnailIndex] = useState(0);
   const [wasteList, setWasteList] = useState<
-  { wasteType: string; wasteWeight: number; wasteVolume: number }[]
+    { wasteType: string; wasteWeight: number; wasteVolume: number }[]
   >([]);
   const [activityName, setActivityName] = useState(""); // 봉사활동명
   const [specialNote, setSpecialNote] = useState(""); // 특이사항
   const [locationData, setLocationData] = useState<any>(null);
 
-  //useEffect로 자동 시간 계산
+  // ✅ 활동 시간 자동 계산
   useEffect(() => {
-  if (startDate && startTime && endDate && endTime) {
-  const start = new Date(`${startDate}T${startTime}`);
-  const end = new Date(`${endDate}T${endTime}`);
-  const diffMs = end.getTime() - start.getTime();
+    if (startDate && startTime && endDate && endTime) {
+      const start = new Date(`${startDate}T${startTime}`);
+      const end = new Date(`${endDate}T${endTime}`);
+      const diffMs = end.getTime() - start.getTime();
 
-  if (diffMs > 0) {
-  const diffHours = diffMs / (1000 * 60 * 60);
-  setVolunteerHours(Math.floor(diffHours * 10) / 10); // 소수 첫째 자리
-  } else {
-  setVolunteerHours(0);
-  }
-  }
+      if (diffMs > 0) {
+        const diffHours = diffMs / (1000 * 60 * 60);
+        setVolunteerHours(Math.floor(diffHours * 10) / 10);
+      } else {
+        setVolunteerHours(0);
+      }
+    }
   }, [startDate, startTime, endDate, endTime]);
 
   // ====================== 활동 등록 ======================
   const handleSubmit = async () => {
   try {
+    setLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 50)); // ✅ 로딩 화면 먼저 렌더
+
     const memberCountInput = document.getElementById("volunteerCount") as HTMLInputElement | null;
     const memberCount = Number(memberCountInput?.value || 1);
 
@@ -65,136 +74,149 @@ const WritePage = () => {
     const validEnd = endDate && endTime ? `${endDate}T${endTime}` : null;
 
     if (!validStart || !validEnd) {
-    alert("활동 시작일시와 종료일시를 모두 입력해주세요.");
-    return;
+      alert("활동 시작일시와 종료일시를 모두 입력해주세요.");
+      return;
     }
-    // ✅ volunteerHours(숫자)를 문자열로 변환 ("2시간 30분" 형태)
+
+    const latitude = endPos?.lat ?? startPos?.lat ?? 0;
+    const longitude = endPos?.lng ?? startPos?.lng ?? 0;
+
     const totalActivityTime = (() => {
-    const hours = Math.floor(volunteerHours);
-    const minutes = Math.round((volunteerHours - hours) * 60);
-    return `${hours}시간 ${minutes}분`;
+      const hours = Math.floor(volunteerHours);
+      const minutes = Math.round((volunteerHours - hours) * 60);
+      return `${hours}시간 ${minutes}분`;
     })();
 
-    // ✅ 백엔드가 요구하는 구조로 맞춰서 JSON 준비
     const data = {
-    ...locationData, // startAddress, endAddress, startLat, startLng, endLat, endLng 포함
-    groups: groupType === "단체",
-    name: groupName || "테스트 단체",
-    activeName: activityName || "봉사활동명 없음",
-    memberCount,
-    activityDescription: description || "활동 설명 없음",
-    startDate: validStart,
-    endDate: validEnd,
-    totalActivityTime,
-    specialNote: specialNote || "특이사항 없음",
-    wasteList,
-    thumbnailIndex,
+      groups: groupType === "단체",
+      name: groupName || "테스트 단체",
+      activeName: activityName || "봉사활동명 없음",
+      memberCount,
+      activityDescription: description || "활동 설명 없음",
+      startDate: validStart,
+      endDate: validEnd,
+      totalActivityTime,
+      regionSido: locationData?.regionSido || selectedRegion.sido,
+      regionSigungu: locationData?.regionSigungu || selectedRegion.sigungu,
+      startAddress: locationData?.startAddress || "",
+      endAddress: locationData?.endAddress || "",
+      latitude,
+      longitude,
+      specialNote: specialNote || "특이사항 없음",
+      wasteList,
+      thumbnailIndex,
     };
-
-
-
-// ✅ FormData로 감싸서 전송 (백엔드 요구 형식)
-
 
     const formData = new FormData();
     formData.append("data", new Blob([JSON.stringify(data)], { type: "application/json" }));
-
     photoFiles.forEach((file) => formData.append("photos", file));
 
-    // ✅ 실제 서버 주소로 전송
     const response = await axios.post(
-    "https://be-savethesea2025.onrender.com/api/activity-records",
-    formData,
-    { headers: { "Content-Type": "multipart/form-data" } }
+      "https://be-savethesea2025.onrender.com/api/activity-records",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      }
     );
 
     if (response.data.code === 0) {
-    alert("✅ 활동 기록이 성공적으로 저장되었습니다!");
+      alert("✅ 활동 기록이 성공적으로 저장되었습니다!");
     } else {
-    alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
+      alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
     }
-} catch (error: any) {
-console.error("❌ 서버 오류:", error);
-alert("서버 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-}
+  } catch (error: any) {
+    console.error("❌ 서버 오류:", error);
+    if (error.response) console.log("📨 서버 응답:", error.response.data);
+    alert("서버 통신 중 오류가 발생했습니다.");
+  } finally {
+    setLoading(false);
+  }
 };
 
 
-// ====================== 카카오 주소 + 키워드 병합 검색 ======================
-const geocode = useCallback(async (addr: string) => {
-  if (!addr?.trim()) return null;
 
-  await loadKakaoCustom();
+  // ====================== 카카오 주소 + 키워드 병합 검색 ======================
+  const geocode = useCallback(async (addr: string) => {
+    if (!addr?.trim()) return null;
 
-  if (!window.kakao?.maps?.services) {
-  console.warn("⚠️ Kakao services 아직 로드 안됨, 300ms 대기 후 재시도");
-  await new Promise((r) => setTimeout(r, 300));
-  }
+    await loadKakaoCustom();
 
-  const geocoder = new window.kakao.maps.services.Geocoder();
-  const places = new window.kakao.maps.services.Places();
+    if (!window.kakao?.maps?.services) {
+      console.warn("⚠️ Kakao services 아직 로드 안됨, 300ms 대기 후 재시도");
+      await new Promise((r) => setTimeout(r, 300));
+    }
 
-  return new Promise<{ lat: number; lng: number } | null>((resolve) => {
-    let resolved = false;
+    const geocoder = new window.kakao.maps.services.Geocoder();
+    const places = new window.kakao.maps.services.Places();
 
-    geocoder.addressSearch(addr, (result: any[], status: string) => {
-      if (!resolved && status === window.kakao.maps.services.Status.OK && result[0]) {
-        const { x, y } = result[0];
-        resolved = true;
-        resolve({ lat: Number(y), lng: Number(x) });
-      } else {
-        const regionPrefix = `${selectedRegion.sido || ""} ${selectedRegion.sigungu || ""} ${addr}`;
-        places.keywordSearch(regionPrefix, (data: any[], status2: string) => {
-          if (!resolved && status2 === window.kakao.maps.services.Status.OK && data[0]) {
-            const first = data[0];
-            resolved = true;
-            resolve({ lat: Number(first.y), lng: Number(first.x) });
-          } else if (!resolved) {
-            resolved = true;
-            resolve(null);
+    return new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      let resolved = false;
+
+      geocoder.addressSearch(addr, (result: any[], status: string) => {
+        if (!resolved && status === window.kakao.maps.services.Status.OK && result[0]) {
+          const { x, y } = result[0];
+          resolved = true;
+          resolve({ lat: Number(y), lng: Number(x) });
+        } else {
+          const regionPrefix = `${selectedRegion.sido || ""} ${selectedRegion.sigungu || ""} ${addr}`;
+          places.keywordSearch(regionPrefix, (data: any[], status2: string) => {
+            if (!resolved && status2 === window.kakao.maps.services.Status.OK && data[0]) {
+              const first = data[0];
+              resolved = true;
+              resolve({ lat: Number(first.y), lng: Number(first.x) });
+            } else if (!resolved) {
+              resolved = true;
+              resolve(null);
+            }
+          });
         }
       });
+    });
+  }, [selectedRegion]);
+
+  // ====================== 출발/도착지 지도 표시 ======================
+  const handleSearchStart = useCallback(async () => {
+    const pos = await geocode(startText);
+    setStartPos(pos);
+    if (pos) {
+      const mapContainer = document.getElementById("start-map");
+      if (mapContainer) {
+        const map = new window.kakao.maps.Map(mapContainer, {
+          center: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+          level: 3,
+        });
+        new window.kakao.maps.Marker({
+          map,
+          position: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+        });
+      }
+    } else {
+      alert("출발지 주소나 장소를 찾을 수 없습니다. 다시 입력해주세요.");
     }
-  });
-});
-}, [selectedRegion]);
+  }, [geocode, startText]);
 
-// ====================== 출발/도착지 지도 표시 ======================
-const handleSearchStart = useCallback(async () => {
-const pos = await geocode(startText);
-setStartPos(pos);
-if (pos) {
-const mapContainer = document.getElementById("start-map");
-const map = new window.kakao.maps.Map(mapContainer, {
-center: new window.kakao.maps.LatLng(pos.lat, pos.lng),
-level: 3,
-});
-new window.kakao.maps.Marker({
-map,
-position: new window.kakao.maps.LatLng(pos.lat, pos.lng),
-});
-} else {
-alert("출발지 주소나 장소를 찾을 수 없습니다. 다시 입력해주세요.");
-}
-}, [geocode, startText]);
-
-const handleSearchEnd = useCallback(async () => {
-const pos = await geocode(endText);
-setEndPos(pos);
-if (pos) {
-const mapContainer = document.getElementById("end-map");
-const map = new window.kakao.maps.Map(mapContainer, {
-center: new window.kakao.maps.LatLng(pos.lat, pos.lng),
-level: 3,
-});
-new window.kakao.maps.Marker({
-map,
-position: new window.kakao.maps.LatLng(pos.lat, pos.lng),
-});
-} else {
-alert("도착지 주소나 장소를 찾을 수 없습니다. 다시 입력해주세요.");
-}
-}, [geocode, endText]);
+  const handleSearchEnd = useCallback(async () => {
+    const pos = await geocode(endText);
+    setEndPos(pos);
+    if (pos) {
+      const mapContainer = document.getElementById("end-map");
+      if (mapContainer) {
+        const map = new window.kakao.maps.Map(mapContainer, {
+          center: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+          level: 3,
+        });
+        new window.kakao.maps.Marker({
+          map,
+          position: new window.kakao.maps.LatLng(pos.lat, pos.lng),
+        });
+      }
+    } else {
+      alert("도착지 주소나 장소를 찾을 수 없습니다. 다시 입력해주세요.");
+    }
+  }, [geocode, endText]);
 
 
 
@@ -203,6 +225,13 @@ alert("도착지 주소나 장소를 찾을 수 없습니다. 다시 입력해�
 return (
 <div className="bg-white min-h-screen">
 <Header />
+{loading && (
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
+    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
+    <p className="text-sm tracking-wide">사진 업로드 중입니다...</p>
+  </div>
+)}
+
 
 <div
 className="w-full h-[300px] bg-cover bg-center"
@@ -313,7 +342,7 @@ className="border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px]"
 type="time"
 value={startTime}
 onChange={(e) => setStartTime(e.target.value)}
-className="border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[120px]"
+className="border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px]"
 />
 <span className="text-gray-500 text-[20px] mx-1">~</span>
 <input
@@ -326,7 +355,7 @@ className="border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px]"
 type="time"
 value={endTime}
 onChange={(e) => setEndTime(e.target.value)}
-className="border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[120px]"
+className="border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px]"
 />
 </div>
 </td>

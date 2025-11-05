@@ -13,6 +13,8 @@ interface LocationSectionProps {
     endAddress: string;
     endLat: number;
     endLng: number;
+    regionSido: string;
+    regionSigungu: string;
   }) => void;
 }
 
@@ -180,15 +182,18 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
       onChange?.({
-        startAddress: startAddr,
-        startLat: startPos.lat,
-        startLng: startPos.lng,
-        endAddress: endAddr,
-        endLat: endPos.lat,
-        endLng: endPos.lng,
+      startAddress: startAddr,
+      startLat: startPos.lat,
+      startLng: startPos.lng,
+      endAddress: endAddr,
+      endLat: endPos.lat,
+      endLng: endPos.lng,
+      // ⬇️ 추가된 부분
+      regionSido: sido,
+      regionSigungu: sigungu,
       });
     }
-  }, [startAddr, endAddr, startPos, endPos, onChange]);
+  }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
 
   return (
     <section className="mb-10">
