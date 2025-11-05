@@ -1,8 +1,19 @@
-import { useState } from "react";
+import { useState,useEffect} from "react";
 import MapSelector from "./MapSelector";
 
 interface RegionCoords {
   [key: string]: { [key: string]: { lat: number; lng: number } };
+}
+
+interface LocationSectionProps {
+  onChange?: (data: {
+    startAddress: string;
+    startLat: number;
+    startLng: number;
+    endAddress: string;
+    endLat: number;
+    endLng: number;
+  }) => void;
 }
 
 // ✅ 전국 17개 시·도 및 주요 시군구 중심 좌표
@@ -151,14 +162,33 @@ const regionCenters: RegionCoords = {
   },
 };
 
-const LocationSection = () => {
+const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
+
+  const [startAddr, setStartAddr] = useState("");
+  const [endAddr, setEndAddr] = useState("");
+  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const regionCenter =
     sido && sigungu && regionCenters[sido]?.[sigungu]
       ? regionCenters[sido][sigungu]
       : null;
+
+  // ✅ 부모로 데이터 전달
+  useEffect(() => {
+    if (startAddr && endAddr && startPos && endPos) {
+      onChange?.({
+        startAddress: startAddr,
+        startLat: startPos.lat,
+        startLng: startPos.lng,
+        endAddress: endAddr,
+        endLat: endPos.lat,
+        endLng: endPos.lng,
+      });
+    }
+  }, [startAddr, endAddr, startPos, endPos, onChange]);
 
   return (
     <section className="mb-10">
@@ -218,8 +248,22 @@ const LocationSection = () => {
       </p>
 
       <div className="space-y-6">
-        <MapSelector label="출발지점" regionCenter={regionCenter || undefined} />
-        <MapSelector label="종료지점" regionCenter={regionCenter || undefined} />
+      <MapSelector
+          label="출발지점"
+          regionCenter={regionCenter || undefined}
+          onChange={(pos) => {
+            setStartAddr(pos.address);
+            setStartPos({ lat: pos.lat, lng: pos.lng });
+          }}
+        />
+        <MapSelector
+          label="종료지점"
+          regionCenter={regionCenter || undefined}
+          onChange={(pos) => {
+            setEndAddr(pos.address);
+            setEndPos({ lat: pos.lat, lng: pos.lng });
+          }}
+        />
       </div>
     </section>
   );

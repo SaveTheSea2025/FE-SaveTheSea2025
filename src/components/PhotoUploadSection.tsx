@@ -2,12 +2,17 @@ import { useRef, useState } from "react";
 import starOutline from "/src/assets/star-outline.png";
 import starFilled from "/src/assets/star-filled.png";
 
-const PhotoUploadSection = () => {
-  const [images, setImages] = useState<{ url: string; favorite: boolean }[]>([]);
+interface PhotoUploadSectionProps {
+  onChange?: (files: File[]) => void;
+  onFavoriteChange?: (index: number) => void;
+}
+
+const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionProps) => {
+  const [images, setImages] = useState<{ url: string; file: File; favorite: boolean }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ✅ 파일 추가 로직 (드롭이든 클릭이든 동일)
+  // ✅ 파일 추가 로직
   const handleFiles = (files: FileList) => {
     const newFiles = Array.from(files);
 
@@ -28,21 +33,29 @@ const PhotoUploadSection = () => {
 
     const newImages = validFiles.map((file, index) => ({
       url: URL.createObjectURL(file),
-      favorite: images.length === 0 && index === 0,
+      file,
+      favorite: images.length === 0 && index === 0, // 첫 업로드는 자동 대표
     }));
 
-    setImages((prev) => [...prev, ...newImages]);
+    
+  
+  
+
+    
+
+    // ✅ 대표 사진 갱신
+    const updatedImages = [...images, ...newImages];
+    setImages(updatedImages);
+    onChange?.(updatedImages.map((img) => img.file));
   };
 
-  // ✅ input 파일 선택
+  // ✅ 파일 선택
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) handleFiles(e.target.files);
   };
 
   // ✅ 버튼 클릭
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleUploadClick = () => fileInputRef.current?.click();
 
   // ✅ 드래그 앤 드롭 이벤트
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -61,14 +74,22 @@ const PhotoUploadSection = () => {
     if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
   };
 
-  // ✅ 즐겨찾기 토글
+  // ✅ 즐겨찾기(대표사진) 지정
   const handleFavorite = (index: number) => {
-    setImages((prev) =>
-      prev.map((img, i) => ({
-        ...img,
-        favorite: i === index,
-      }))
-    );
+    const updated = images.map((img,i) => ({...img, favorite: i === index}));
+    setImages(updated);
+    onFavoriteChange?.(index);
+  };
+
+  // ✅ 사진 삭제
+  const handleDelete = (index: number) => {
+    const updated = images.filter((_, i) => i !== index);
+    setImages(updated);
+    onChange?.(updated.map((i) => i.file));
+
+    // 삭제 후 대표사진 다시 지정
+    const favoriteIdx = updated.findIndex((img) => img.favorite);
+    onFavoriteChange?.(favoriteIdx >= 0 ? favoriteIdx : 0);
   };
 
   return (
@@ -76,11 +97,9 @@ const PhotoUploadSection = () => {
       <h3 className="text-lg font-semibold mb-4">활동 사진 첨부</h3>
 
       <div className="border border-gray-300 border-l-0 border-r-0 p-6 bg-white">
-        <p className="text-sm text-gray-600 mb-4">
-          이미지는 최대 10장, 3MB 이하로 업로드할 수 있습니다.
-          <br />
-          등록 가능한 형식: jpg, jpeg, bmp, png, gif
-          <br />
+        <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+          이미지는 최대 10장, 3MB 이하로 업로드할 수 있습니다.<br />
+          등록 가능한 형식: jpg, jpeg, bmp, png, gif<br />
           대표사진을 지정하지 않으면, 첫 번째 이미지가 자동으로 대표로 설정됩니다.
         </p>
 
@@ -91,10 +110,10 @@ const PhotoUploadSection = () => {
           onDrop={handleDrop}
           className={`${
             isDragging ? "border-sky-500 bg-sky-50" : "border-gray-300 bg-gray-50"
-          } border border-dashed rounded-md py-10  px-6 text-center text-gray-500 mb-4 transition-colors`}
+          } border border-dashed rounded-md py-10 px-6 text-center text-gray-500 mb-4 transition-colors`}
         >
           {images.length === 0 ? (
-            <p>버튼을 클릭하거나, 이미지를 마우스로 끌어와 업로드하세요.</p>
+            <p>버튼을 클릭하거나 이미지를 끌어와 업로드하세요.</p>
           ) : (
             <div className="flex flex-wrap justify-start gap-4">
               {images.map((img, index) => (
@@ -107,6 +126,7 @@ const PhotoUploadSection = () => {
                     alt={`uploaded-${index}`}
                     className="object-cover w-full h-full"
                   />
+                  {/* ⭐ 대표사진 지정 버튼 */}
                   <button
                     type="button"
                     onClick={() => handleFavorite(index)}
@@ -118,13 +138,21 @@ const PhotoUploadSection = () => {
                       className="w-5 h-5"
                     />
                   </button>
+                  {/* 🗑 삭제 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(index)}
+                    className="absolute bottom-2 right-2 bg-white rounded-full shadow p-1"
+                  >
+                    <img src={trashIcon} alt="delete" className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* ✅ 숨겨진 input */}
+        {/* ✅ 숨겨진 파일 input */}
         <input
           type="file"
           accept="image/jpeg, image/png, image/bmp, image/gif"
