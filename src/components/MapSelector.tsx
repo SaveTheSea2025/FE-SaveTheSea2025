@@ -5,7 +5,8 @@ import customMarker from "../assets/customMarker.png";
 interface MapSelectorProps {
   label: string;
   regionCenter?: { lat: number; lng: number } | null;
-  onChange?: (pos: { lat: number; lng: number; address: string }) => void;
+  // ✅ 시/도·시군구도 전달할 수 있도록 확장
+  onChange?: (pos: { lat: number; lng: number; address: string; regionSido?: string; regionSigungu?: string }) => void;
 }
 
 const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
@@ -29,7 +30,6 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
         const kakao = (window as any).kakao;
         if (!kakao?.maps || !mapRef.current) return;
 
-        // 이미 지도 생성된 경우 중복 방지
         if (mapInstance.current) return;
 
         const map = new kakao.maps.Map(mapRef.current, {
@@ -53,13 +53,23 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
         centerPin.style.zIndex = "10";
         mapRef.current?.appendChild(centerPin);
 
-        // ✅ 중심 좌표 기준 주소 업데이트
+        // ✅ 중심 좌표 기준 주소 + 시도/시군구 업데이트
         const updateAddress = (lat: number, lng: number) => {
           geocoder.coord2Address(lng, lat, (result: any, status: string) => {
             if (status === kakao.maps.services.Status.OK && result[0]) {
               const addr = result[0].address.address_name;
               setAddress((prev) => (prev === addr ? prev : addr));
-              onChange?.({ lat, lng, address: addr });
+
+              // ✅ region 정보 추가
+              geocoder.coord2RegionCode(lng, lat, (regionResult: any, regionStatus: string) => {
+                if (regionStatus === kakao.maps.services.Status.OK && regionResult[0]) {
+                  const sido = regionResult[0].region_1depth_name;
+                  const sigungu = regionResult[0].region_2depth_name;
+                  onChange?.({ lat, lng, address: addr, regionSido: sido, regionSigungu: sigungu });
+                } else {
+                  onChange?.({ lat, lng, address: addr });
+                }
+              });
             }
           });
         };
@@ -67,7 +77,6 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
         const center = map.getCenter();
         updateAddress(center.getLat(), center.getLng());
 
-        // ✅ 지도 중심 이동 시 주소 업데이트 (디바운스)
         let debounceTimer: any;
         kakao.maps.event.addListener(map, "center_changed", () => {
           clearTimeout(debounceTimer);
@@ -82,7 +91,7 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
     };
 
     initMap();
-  }, [regionCenter]);
+  }, [regionCenter, onChange]);
 
   // ✅ 주소 검색 (daum.Postcode)
   const handleAddressSearch = async () => {
@@ -116,7 +125,7 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
     }
   };
 
-  // ✅ 장소 검색 (kakao.maps.services.Places)
+  // ✅ 장소 검색
   const handlePlaceSearch = async () => {
     if (!address.trim()) return alert("장소명을 입력해주세요!");
     try {
@@ -127,7 +136,6 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
 
       if (!map) return;
 
-      // 기존 마커 제거
       if (map.markers) {
         map.markers.forEach((m: any) => m.setMap(null));
       }
@@ -152,7 +160,6 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
             map.markers.push(marker);
             bounds.extend(position);
 
-            // 마우스 오버 시 장소 이름 표시
             kakao.maps.event.addListener(marker, "mouseover", () => {
               infowindow.setContent(
                 `<div style="padding:5px;font-size:12px;">${place.place_name}</div>`
@@ -164,7 +171,6 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
               infowindow.close();
             });
 
-            // 클릭 시 지도 중심 이동 + 선택된 주소 전달
             kakao.maps.event.addListener(marker, "click", () => {
               map.setCenter(position);
               infowindow.setContent(
@@ -180,11 +186,10 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
             });
           });
 
-          // ✅ 모든 마커가 보이도록 한 후, 너무 멀면 확대 조정
           map.setBounds(bounds);
           setTimeout(() => {
             const currentLevel = map.getLevel();
-            if (currentLevel > 5) map.setLevel(5); // level 숫자 작을수록 확대
+            if (currentLevel > 5) map.setLevel(5);
           }, 300);
         } else {
           alert("검색 결과가 없습니다!");
@@ -224,7 +229,7 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
         </button>
       </div>
 
-      {/* 지도 표시 */}
+      {/* 지도 표시 (세로 길이 + aspect-square 유지) */}
       {isMapVisible && (
         <div
           ref={mapRef}

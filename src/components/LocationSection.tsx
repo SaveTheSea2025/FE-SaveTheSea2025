@@ -1,4 +1,4 @@
-import { useState,useEffect} from "react";
+import { useState, useEffect } from "react";
 import MapSelector from "./MapSelector";
 
 interface RegionCoords {
@@ -182,15 +182,14 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
       onChange?.({
-      startAddress: startAddr,
-      startLat: startPos.lat,
-      startLng: startPos.lng,
-      endAddress: endAddr,
-      endLat: endPos.lat,
-      endLng: endPos.lng,
-      // ⬇️ 추가된 부분
-      regionSido: sido,
-      regionSigungu: sigungu,
+        startAddress: startAddr,
+        startLat: startPos.lat,
+        startLng: startPos.lng,
+        endAddress: endAddr,
+        endLat: endPos.lat,
+        endLng: endPos.lng,
+        regionSido: sido,
+        regionSigungu: sigungu,
       });
     }
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
@@ -208,7 +207,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         <tbody>
           <tr className="border-t border-gray-300">
             <th className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-12 py-3 text-left font-medium whitespace-nowrap align-middle">
-              시/도
+              시/도 <span className="text-red-500">*</span>
             </th>
             <td className="px-4 py-3 w-1/2">
               <select
@@ -227,7 +226,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
             </td>
 
             <th className="w-32 bg-[#f5f6f8] border-r border-l border-gray-300 px-10 py-3 text-left font-medium whitespace-nowrap align-middle">
-              시·군·구
+              시·군·구 <span className="text-red-500">*</span>
             </th>
             <td className="px-4 py-3 w-1/2">
               <select
@@ -253,12 +252,18 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
       </p>
 
       <div className="space-y-6">
-      <MapSelector
+        <MapSelector
           label="출발지점"
           regionCenter={regionCenter || undefined}
           onChange={(pos) => {
             setStartAddr(pos.address);
             setStartPos({ lat: pos.lat, lng: pos.lng });
+
+            // ✅ 지도에서 자동으로 시도·시군구 업데이트
+            if (pos.regionSido && pos.regionSigungu) {
+              setSido(pos.regionSido);
+              setSigungu(pos.regionSigungu);
+            }
           }}
         />
         <MapSelector
@@ -267,6 +272,12 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
           onChange={(pos) => {
             setEndAddr(pos.address);
             setEndPos({ lat: pos.lat, lng: pos.lng });
+
+            // ✅ 지도에서 자동으로 시도·시군구 업데이트
+            if (pos.regionSido && pos.regionSigungu) {
+              setSido(pos.regionSido);
+              setSigungu(pos.regionSigungu);
+            }
           }}
         />
       </div>
