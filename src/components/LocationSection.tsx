@@ -1,8 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MapSelector from "./MapSelector";
 
 interface RegionCoords {
   [key: string]: { [key: string]: { lat: number; lng: number } };
+}
+
+interface LocationSectionProps {
+  onChange?: (data: {
+    startAddress: string;
+    startLat: number;
+    startLng: number;
+    endAddress: string;
+    endLat: number;
+    endLng: number;
+    regionSido: string;
+    regionSigungu: string;
+  }) => void;
 }
 
 // ✅ 전국 17개 시·도 및 주요 시군구 중심 좌표
@@ -151,14 +164,35 @@ const regionCenters: RegionCoords = {
   },
 };
 
-const LocationSection = () => {
+const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
+
+  const [startAddr, setStartAddr] = useState("");
+  const [endAddr, setEndAddr] = useState("");
+  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const regionCenter =
     sido && sigungu && regionCenters[sido]?.[sigungu]
       ? regionCenters[sido][sigungu]
       : null;
+
+  // ✅ 부모로 데이터 전달
+  useEffect(() => {
+    if (startAddr && endAddr && startPos && endPos) {
+      onChange?.({
+        startAddress: startAddr,
+        startLat: startPos.lat,
+        startLng: startPos.lng,
+        endAddress: endAddr,
+        endLat: endPos.lat,
+        endLng: endPos.lng,
+        regionSido: sido,
+        regionSigungu: sigungu,
+      });
+    }
+  }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
 
   return (
     <section className="mb-10">
@@ -173,7 +207,7 @@ const LocationSection = () => {
         <tbody>
           <tr className="border-t border-gray-300">
             <th className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-12 py-3 text-left font-medium whitespace-nowrap align-middle">
-              시/도
+              시/도 <span className="text-red-500">*</span>
             </th>
             <td className="px-4 py-3 w-1/2">
               <select
@@ -192,7 +226,7 @@ const LocationSection = () => {
             </td>
 
             <th className="w-32 bg-[#f5f6f8] border-r border-l border-gray-300 px-10 py-3 text-left font-medium whitespace-nowrap align-middle">
-              시·군·구
+              시·군·구 <span className="text-red-500">*</span>
             </th>
             <td className="px-4 py-3 w-1/2">
               <select
@@ -218,8 +252,34 @@ const LocationSection = () => {
       </p>
 
       <div className="space-y-6">
-        <MapSelector label="출발지점" regionCenter={regionCenter || undefined} />
-        <MapSelector label="종료지점" regionCenter={regionCenter || undefined} />
+        <MapSelector
+          label="출발지점"
+          regionCenter={regionCenter || undefined}
+          onChange={(pos) => {
+            setStartAddr(pos.address);
+            setStartPos({ lat: pos.lat, lng: pos.lng });
+
+            // ✅ 지도에서 자동으로 시도·시군구 업데이트
+            if (pos.regionSido && pos.regionSigungu) {
+              setSido(pos.regionSido);
+              setSigungu(pos.regionSigungu);
+            }
+          }}
+        />
+        <MapSelector
+          label="종료지점"
+          regionCenter={regionCenter || undefined}
+          onChange={(pos) => {
+            setEndAddr(pos.address);
+            setEndPos({ lat: pos.lat, lng: pos.lng });
+
+            // ✅ 지도에서 자동으로 시도·시군구 업데이트
+            if (pos.regionSido && pos.regionSigungu) {
+              setSido(pos.regionSido);
+              setSigungu(pos.regionSigungu);
+            }
+          }}
+        />
       </div>
     </section>
   );

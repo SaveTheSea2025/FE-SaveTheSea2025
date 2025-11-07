@@ -5,6 +5,7 @@ let kakaoCustomPromise: Promise<void> | null = null;
  * Kakao Map SDK 로드 (커스텀 안정 버전)
  * - autoload=false 상태에서도 SDK 초기화 보장
  * - 중복 로드 방지 및 기존 스크립트 재활용
+ * - services 라이브러리 attach 완료까지 대기 (장소 검색 안정화)
  */
 export async function loadKakaoCustom(): Promise<void> {
   if (typeof window === "undefined") return;
@@ -15,7 +16,21 @@ export async function loadKakaoCustom(): Promise<void> {
       if (window.kakao.maps.load) {
         window.kakao.maps.load(() => {
           console.log("[KakaoCustom] 이미 SDK 활성화됨 ✅");
-          resolve();
+
+          // ✅ services attach 완료 대기
+          const checkServices = setInterval(() => {
+            if (window.kakao?.maps?.services) {
+              clearInterval(checkServices);
+              console.log("[KakaoCustom] Services 라이브러리 준비 완료 ⚙️");
+              resolve();
+            }
+          }, 100);
+
+          // 1초 내 attach 안 되면 그냥 resolve
+          setTimeout(() => {
+            clearInterval(checkServices);
+            resolve();
+          }, 1000);
         });
       } else {
         resolve();
@@ -43,7 +58,21 @@ export async function loadKakaoCustom(): Promise<void> {
             clearInterval(checkReady);
             window.kakao.maps.load(() => {
               console.log("[KakaoCustom] 기존 SDK 활성화 완료 ✅");
-              resolve();
+
+              // ✅ services attach 완료 대기
+              const checkServices = setInterval(() => {
+                if (window.kakao?.maps?.services) {
+                  clearInterval(checkServices);
+                  console.log("[KakaoCustom] Services 라이브러리 준비 완료 ⚙️");
+                  resolve();
+                }
+              }, 100);
+
+              // 1초 내 attach 안 되면 그냥 resolve
+              setTimeout(() => {
+                clearInterval(checkServices);
+                resolve();
+              }, 1000);
             });
           }
         }, 200);
@@ -65,7 +94,21 @@ export async function loadKakaoCustom(): Promise<void> {
         // autoload=false → 직접 load() 호출
         window.kakao.maps.load(() => {
           console.log("[KakaoCustom] SDK 완전 초기화 완료 ✅");
-          resolve();
+
+          // ✅ services attach 완료 대기
+          const checkServices = setInterval(() => {
+            if (window.kakao?.maps?.services) {
+              clearInterval(checkServices);
+              console.log("[KakaoCustom] Services 라이브러리 준비 완료 ⚙️");
+              resolve();
+            }
+          }, 100);
+
+          // 1초 내 attach 안 되면 그냥 resolve
+          setTimeout(() => {
+            clearInterval(checkServices);
+            resolve();
+          }, 1000);
         });
       };
 

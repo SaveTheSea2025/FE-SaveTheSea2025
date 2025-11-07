@@ -1,13 +1,18 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import starOutline from "/src/assets/star-outline.png";
 import starFilled from "/src/assets/star-filled.png";
 
-const PhotoUploadSection = () => {
-  const [images, setImages] = useState<{ url: string; favorite: boolean }[]>([]);
+interface PhotoUploadSectionProps {
+  onChange?: (files: File[]) => void; // ✅ 부모로 파일 전달
+  onFavoriteChange?: (index: number) => void; // ✅ 대표사진 index 전달
+}
+
+const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionProps) => {
+  const [images, setImages] = useState<{ url: string; file: File; favorite: boolean }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ✅ 파일 추가 로직 (드롭이든 클릭이든 동일)
+  // ✅ 파일 추가 로직
   const handleFiles = (files: FileList) => {
     const newFiles = Array.from(files);
 
@@ -28,10 +33,13 @@ const PhotoUploadSection = () => {
 
     const newImages = validFiles.map((file, index) => ({
       url: URL.createObjectURL(file),
-      favorite: images.length === 0 && index === 0,
+      file,
+      favorite: images.length === 0 && index === 0, // 첫 이미지 기본 대표
     }));
 
-    setImages((prev) => [...prev, ...newImages]);
+    const updatedImages = [...images, ...newImages];
+    setImages(updatedImages);
+    onChange?.(updatedImages.map((img) => img.file)); // ✅ 부모로 파일 배열 전달
   };
 
   // ✅ input 파일 선택
@@ -44,31 +52,26 @@ const PhotoUploadSection = () => {
     fileInputRef.current?.click();
   };
 
-  // ✅ 드래그 앤 드롭 이벤트
+  // ✅ 드래그 앤 드롭
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
-
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
   };
 
-  // ✅ 즐겨찾기 토글
+  // ✅ 대표사진 선택
   const handleFavorite = (index: number) => {
-    setImages((prev) =>
-      prev.map((img, i) => ({
-        ...img,
-        favorite: i === index,
-      }))
-    );
+    const updated = images.map((img, i) => ({ ...img, favorite: i === index }));
+    setImages(updated);
+    onFavoriteChange?.(index); // ✅ 부모에 전달
   };
 
   return (
@@ -91,7 +94,7 @@ const PhotoUploadSection = () => {
           onDrop={handleDrop}
           className={`${
             isDragging ? "border-sky-500 bg-sky-50" : "border-gray-300 bg-gray-50"
-          } border border-dashed rounded-md py-10  px-6 text-center text-gray-500 mb-4 transition-colors`}
+          } border border-dashed rounded-md py-10 px-6 text-center text-gray-500 mb-4 transition-colors`}
         >
           {images.length === 0 ? (
             <p>버튼을 클릭하거나, 이미지를 마우스로 끌어와 업로드하세요.</p>

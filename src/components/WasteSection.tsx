@@ -1,7 +1,37 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 
-const WasteSection = () => {
-  const wasteOptions = ["마대수", "부표", "페트병", "박스", "통발", "주사기", "약품", "기타"];
+interface WasteSectionProps {
+  onChange?: (
+    wasteList: { wasteType: string; wasteWeight: number; wasteVolume: number }[]
+  ) => void;
+}
+
+const WasteSection = ({ onChange }: WasteSectionProps) => {
+  // ✅ 한글 → 백엔드 ENUM 코드 매핑
+  const wasteTypeMap: Record<string, string> = {
+    마대수: "SACK",
+    페트병: "PLASTIC",
+    캔: "CAN",
+    유리병: "GLASS",
+    박스: "PAPER",
+    부표: "BUOY",
+    통발: "FISH_TRAP",
+    주사기: "SYRINGE",
+    약품: "MEDICINE",
+    기타: "ETC",
+  };
+
+  // ✅ 체크박스 표시 항목
+  const wasteOptions = [
+    "마대수",
+    "부표",
+    "페트병",
+    "박스",
+    "통발",
+    "주사기",
+    "약품",
+    "기타",
+  ];
 
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [quantities, setQuantities] = useState<{ [key: string]: { kg: number; L: number } }>({});
@@ -16,7 +46,6 @@ const WasteSection = () => {
       setQuantities(qCopy);
     } else {
       const updated = [...selectedItems, item];
-      // ✅ 항상 wasteOptions 순서로 정렬
       const sorted = wasteOptions.filter((opt) => updated.includes(opt));
       setSelectedItems(sorted);
       setQuantities({ ...quantities, [item]: { kg: 0, L: 0 } });
@@ -43,6 +72,16 @@ const WasteSection = () => {
     );
   }, [quantities]);
 
+  // ✅ 부모 컴포넌트로 데이터 전달 (백엔드 ENUM 변환)
+  useEffect(() => {
+    const wasteList = selectedItems.map((item) => ({
+      wasteType: wasteTypeMap[item] || "ETC", // ✅ 한글 → ENUM 변환
+      wasteWeight: quantities[item]?.kg || 0,
+      wasteVolume: quantities[item]?.L || 0,
+    }));
+    onChange?.(wasteList);
+  }, [selectedItems, quantities, onChange]);
+
   return (
     <section className="mb-10">
       <h3 className="text-[22px] font-semibold mb-4">
@@ -55,7 +94,7 @@ const WasteSection = () => {
           <div className="bg-[#f7f8fa] px-4 py-2 font-medium border-r border-b border-gray-300 col-span-1 flex items-center">
             총 수거량(kg)
           </div>
-          <div className="px-4 py-2  border-gray-300 col-span-1 flex items-center">
+          <div className="px-4 py-2 col-span-1 flex items-center">
             <input
               type="number"
               readOnly
@@ -63,13 +102,14 @@ const WasteSection = () => {
               className="w-full border border-gray-300 rounded bg-[#f7f8fa] text-center text-gray-700 cursor-not-allowed h-[28px]"
             />
           </div>
-          <div className="px-2 py-3 border-r border-gray-300  col-span-1 ">
+          <div className="px-2 py-3 border-r border-gray-300 col-span-1 flex items-center justify-center">
             kg
           </div>
+
           <div className="bg-[#f7f8fa] px-4 py-2 font-medium border-b border-r border-gray-300 col-span-1 flex items-center">
             총 수거량(L)
           </div>
-          <div className="px-4 py-2  border-gray-300 col-span-1 flex items-center">
+          <div className="px-4 py-2 col-span-1 flex items-center">
             <input
               type="number"
               readOnly
@@ -77,7 +117,9 @@ const WasteSection = () => {
               className="w-full border border-gray-300 rounded bg-[#f7f8fa] text-center text-gray-700 cursor-not-allowed h-[28px]"
             />
           </div>
-          <div className="px-2 py-3  col-span-1 ">L</div>
+          <div className="px-2 py-3 col-span-1 flex items-center justify-center">
+            L
+          </div>
         </div>
 
         {/* ==================== 체크박스 ==================== */}
@@ -95,7 +137,7 @@ const WasteSection = () => {
           ))}
         </div>
 
-        {/* ==================== 선택된 항목 (고정 순서 정렬) ==================== */}
+        {/* ==================== 선택된 항목 ==================== */}
         {selectedItems.length > 0 && (
           <div className="grid grid-cols-2 gap-y-10 gap-x-8 px-6 py-4 bg-white border-t border-gray-300">
             {wasteOptions
