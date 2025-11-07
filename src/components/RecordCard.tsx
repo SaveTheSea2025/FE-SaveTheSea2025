@@ -9,6 +9,7 @@ interface RecordCardProps {
     weight: string;      // 수거량
     mainImage: string;   // 대표사진 URL
     logoImage: string;   // 단체 로고 URL
+    onClick?: () => void; // ✅ 클릭 이벤트 (RecordDetailPanel 열기용)
 }
 
 const RecordCard: React.FC<RecordCardProps> = ({
@@ -19,16 +20,18 @@ const RecordCard: React.FC<RecordCardProps> = ({
     weight,
     mainImage,
     logoImage,
+    onClick, // ✅ 구조 분해 추가
 }) => {
     return (
         <div
-            className="flex bg-white border border-gray-100 hover:shadow-lg transition rounded-[10px] overflow-hidden"
+            onClick={onClick} // ✅ 카드 클릭 시 실행
+            className="flex bg-white border border-gray-100 rounded-[10px] overflow-hidden cursor-pointer transition-transform duration-200 hover:-translate-y-[2px] hover:shadow-lg active:scale-[0.99]"
             style={{
                 boxShadow:
                     "0px 7px 3px rgba(0, 0, 0, 0.01), 0px 4px 2px rgba(0, 0, 0, 0.03), 0px 2px 2px rgba(0, 0, 0, 0.06), 0px 0px 1px rgba(0, 0, 0, 0.07)",
             }}
         >
-            {/* ✅ 왼쪽 대표 이미지 (균등 여백) */}
+            {/* ✅ 왼쪽 대표 이미지 */}
             <div className="p-3 flex-shrink-0">
                 <div className="w-[120px] h-[120px] rounded-[6px] bg-gray-200 overflow-hidden">
                     <img
@@ -48,7 +51,9 @@ const RecordCard: React.FC<RecordCardProps> = ({
                         alt="단체 로고"
                         className="w-6 h-6 rounded-full bg-gray-300 object-cover"
                     />
-                    <h3 className="font-semibold text-sky-700 text-sm">{title}</h3>
+                    <h3 className="font-semibold text-sky-700 text-sm truncate max-w-[200px]">
+                        {title}
+                    </h3>
                 </div>
 
                 {/* 세부 정보 */}
@@ -67,7 +72,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                         <Trash2 size={14} className="text-sky-700" />
-                        <span>{weight}</span>
+                        <span>{weight}kg</span>
                     </div>
                 </div>
             </div>

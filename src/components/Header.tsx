@@ -22,12 +22,12 @@ function Header({ forceScrolled = false }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrolled ? "bg-white py-3" : "bg-transparent py-3"
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrolled ? "bg-white py-2" : "bg-transparent py-2"
         }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-10">
-        {/* 로고 */}
-        <div className="flex items-center gap-2">
+        {/* ✅ 로고 (누르면 홈으로 이동) */}
+        <Link to="/" className="flex items-center gap-2">
           <img
             src="/src/assets/logoimage.png"
             alt="바다보다 로고"
@@ -35,28 +35,38 @@ function Header({ forceScrolled = false }: HeaderProps) {
           />
           <div className="flex flex-col leading-tight">
             <span
-              className={`font-semibold ${scrolled ? "text-sky-700 text-[17px]" : "text-white text-[20px]"
+              className={`font-semibold ${scrolled
+                ? "text-sky-700 text-[17px]"
+                : "text-white text-[20px]"
                 }`}
             >
               바다보다
             </span>
             <span
-              className={`${scrolled ? "text-sky-600 text-[12px]" : "text-white text-[12px]"
+              className={`${scrolled
+                ? "text-sky-600 text-[12px]"
+                : "text-white text-[12px]"
                 }`}
             >
               Ocean Cleanup Platform
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* 메뉴 */}
         <nav
           className={`flex items-center gap-12 font-medium ${scrolled ? "text-sky-700" : "text-white"
             }`}
         >
-          <Link to="/records" className="hover:text-sky-400">함께한 기록</Link>
-          <Link to="/stats" className="hover:text-sky-400">통계</Link>
-          <Link to="/ranking" className="hover:text-sky-400">랭킹</Link>
+          <Link to="/records" className="hover:text-sky-400">
+            함께한 기록
+          </Link>
+          <Link to="/stats" className="hover:text-sky-400">
+            통계
+          </Link>
+          <Link to="/ranking" className="hover:text-sky-400">
+            랭킹
+          </Link>
         </nav>
 
         {/* 버튼 */}
