@@ -22,8 +22,11 @@ function Header({ forceScrolled = false }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrolled ? "bg-white py-2" : "bg-transparent py-2"
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrolled ? "py-2" : "py-2"
         }`}
+      style={{
+        backgroundColor: scrolled ? "rgba(255, 255, 255, 1)" : "transparent", // ✅ [변경] 90% 투명 흰색 배경
+      }}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-10">
         {/* ✅ 로고 (누르면 홈으로 이동) */}
@@ -55,16 +58,34 @@ function Header({ forceScrolled = false }: HeaderProps) {
 
         {/* 메뉴 */}
         <nav
-          className={`flex items-center gap-12 font-medium ${scrolled ? "text-sky-700" : "text-white"
+          className={`flex items-center gap-12 font-medium ${scrolled ? "text-[#2C3E50]" : "text-white"
             }`}
         >
-          <Link to="/records" className="hover:text-sky-400">
+          <Link
+            to="/records"
+            className={`transition-colors duration-300 ${scrolled
+                ? "hover:text-blue-400"
+                : "hover:text-sky-300"
+              }`}
+          >
             함께한 기록
           </Link>
-          <Link to="/stats" className="hover:text-sky-400">
+          <Link
+            to="/stats"
+            className={`transition-colors duration-300 ${scrolled
+                ? "hover:text-blue-400"
+                : "hover:text-sky-300"
+              }`}
+          >
             통계
           </Link>
-          <Link to="/ranking" className="hover:text-sky-400">
+          <Link
+            to="/ranking"
+            className={`transition-colors duration-300 ${scrolled
+                ? "hover:text-blue-400"
+                : "hover:text-sky-300"
+              }`}
+          >
             랭킹
           </Link>
         </nav>
@@ -73,14 +94,18 @@ function Header({ forceScrolled = false }: HeaderProps) {
         <div className="flex items-center gap-6">
           <button
             onClick={() => navigate("/write")}
-            className={`flex items-center gap-2 rounded-full font-medium transition duration-300 ${scrolled
-              ? "bg-sky-600 text-white px-5 py-2 hover:bg-sky-700"
-              : "bg-white text-sky-600 px-5 py-2 hover:bg-sky-100"
+            className={`flex items-center gap-2 rounded-full font-medium transition duration-300 px-5 py-2 ${scrolled
+                ? "bg-[#0C4A6E] text-white hover:bg-[#093d5d]"
+                : "bg-white text-sky-600 hover:bg-sky-100"
               }`}
           >
             <span>작성하기</span>
             <img
-              src="/src/assets/headerpen.png"
+              src={
+                scrolled
+                  ? "/src/assets/headerpen-white.png"
+                  : "/src/assets/headerpen.png"
+              }
               alt="작성 아이콘"
               className="w-[18px] h-[18px]"
             />
@@ -89,7 +114,7 @@ function Header({ forceScrolled = false }: HeaderProps) {
           <button
             onClick={() => navigate("/login")}
             className={`flex items-center gap-2 text-sm ${scrolled
-              ? "text-sky-700 hover:text-sky-900"
+              ? "text-[#0C4A6E] hover:text-sky-800"
               : "text-gray-100 hover:text-white"
               }`}
           >
