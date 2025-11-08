@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
+import { useEffect, useState } from "react";
 import MainpageScrollReveal from "../components/MainpageScrollReveal";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
@@ -7,14 +8,36 @@ import "swiper/css";
 
 function Dashboard() {
   const navigate = useNavigate();
+  const [activities, setActivities] = useState<ActivityRecord[]>([]);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const BASE_URL = import.meta.env.VITE_API_BASE_URL
+        const response = await fetch(`${BASE_URL}/api/activity-records?page=0&size=50`);
+        const result = await response.json();
+
+        if (result.code === 0 && result.data?.content) {
+          setActivities(result.data.content);
+        } else {
+          console.error("데이터 로드 실패:", result);
+        }
+      } catch (error) {
+        console.error("API 호출 오류:", error);
+      }
+    };
+
+    fetchActivities();
+  }, []);
+
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* 헤더까지 전체 배경 이미지 넣기 */}
       <div
-        className="relative text-white" //
+        className="relative text-white"
         style={{
-          backgroundImage: "url('/src/assets/backgroundimage.png')", // ocean 배경
+          backgroundImage: "url('/src/assets/backgroundimage.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -41,26 +64,7 @@ function Dashboard() {
         style={{ backgroundColor: "#72A0BF" }}
       >
         <button
-          onClick={() => {
-            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-
-            if (/android/i.test(userAgent)) {
-              window.open(
-                "https://play.google.com/store/apps/details?id=com.letspl.oceankeeper&pcampaignid=web_share",
-                "_blank"
-              );
-            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-              window.open(
-                "https://apps.apple.com/kr/app/%EC%98%A4%EC%85%98%ED%82%A4%ED%8D%BC/id6470431291",
-                "_blank"
-              );
-            } else {
-              window.open(
-                "https://play.google.com/store/apps/details?id=com.letspl.oceankeeper&pcampaignid=web_share",
-                "_blank"
-              );
-            }
-          }}
+          onClick={() => navigate("/calendar")}
           className="text-white font-medium cursor-pointer hover:no-underline focus:no-underline active:no-underline"
         >
           해양 봉사활동 신청하러 가기 →
@@ -91,7 +95,6 @@ function Dashboard() {
               className="w-[160px] h-[160px]"
             />
 
-            {/* 수거량 통계 */}
             <div className="flex flex-col md:flex-row gap-20 items-center">
               <div>
                 <p className="text-[20px] text-[#0F575F] mb-2 font-medium">
@@ -136,9 +139,10 @@ function Dashboard() {
           </p>
         </div>
 
-        {/* 카드 슬라이더 */}
+        {/* 활동 카드 슬라이드 */}
         <div className="w-[90%] max-w-7xl">
           <Swiper
+            key={activities.length}
             spaceBetween={40}
             slidesPerView={3}
             loop={true}
@@ -150,16 +154,22 @@ function Dashboard() {
             modules={[Autoplay]}
             className="mySwiper"
           >
-            {[1, 2, 3, 4, 5, 6].map((index) => (
-              <SwiperSlide key={index}>
-                <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
-                  {/* 이미지 자리 */}
-                  <div className="w-full h-64 bg-gray-200 rounded-t-2xl"></div>
+            {activities.map((activity) => (
+              <SwiperSlide key={activity.id}>
+                <div
+                  onClick={() => navigate("/records")}
+                  className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+                  {/* thumbnail 사용 */}
+                  <img
+                    src={activity.thumbnail}
+                    alt={activity.name}
+                    className="w-full h-64 object-cover"
+                  />
 
-                  {/* 카드 내용 */}
+                  {/* 카드 내용 - API 데이터 렌더링 */}
                   <div className="p-5 text-left">
-                    <h3 className="text-[18px] font-semibold text-[#0C4A6E] mb-3">
-                      바다사랑 환경단체
+                    <h3 className="text-[18px] font-semibold text-[#0C4A6E] mb-3 truncate">
+                      {activity.name}
                     </h3>
 
                     <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-[#0C4A6E] text-[14px]">
@@ -170,7 +180,7 @@ function Dashboard() {
                             alt="trash"
                             className="w-4 h-4"
                           />
-                          <span>26.5kg</span>
+                          <span>{activity.totalWeight}kg</span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -179,7 +189,7 @@ function Dashboard() {
                             alt="people"
                             className="w-4 h-4"
                           />
-                          <span>14명</span>
+                          <span>{activity.memberCount}명</span>
                         </div>
                       </div>
 
@@ -196,6 +206,7 @@ function Dashboard() {
           </Swiper>
         </div>
       </section>
+
 
       {/* Footer */}
       <footer className="bg-[#0C4A6E] text-white py-14 px-8 md:px-20">
@@ -265,6 +276,5 @@ function Dashboard() {
     </div>
   );
 }
-
 
 export default Dashboard;
