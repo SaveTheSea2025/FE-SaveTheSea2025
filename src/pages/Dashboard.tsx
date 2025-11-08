@@ -64,7 +64,26 @@ function Dashboard() {
         style={{ backgroundColor: "#72A0BF" }}
       >
         <button
-          onClick={() => navigate("/calendar")}
+          onClick={() => {
+            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+
+            if (/android/i.test(userAgent)) {
+              window.open(
+                "https://play.google.com/store/apps/details?id=com.letspl.oceankeeper&pcampaignid=web_share",
+                "_blank"
+              );
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+              window.open(
+                "https://apps.apple.com/kr/app/%EC%98%A4%EC%85%98%ED%82%A4%ED%8D%BC/id6470431291",
+                "_blank"
+              );
+            } else {
+              window.open(
+                "https://play.google.com/store/apps/details?id=com.letspl.oceankeeper&pcampaignid=web_share",
+                "_blank"
+              );
+            }
+          }}
           className="text-white font-medium cursor-pointer hover:no-underline focus:no-underline active:no-underline"
         >
           해양 봉사활동 신청하러 가기 →
