@@ -30,7 +30,6 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
         const kakao = (window as any).kakao;
         if (!kakao?.maps || !mapRef.current) return;
 
-        if (mapInstance.current) return;
 
         const map = new kakao.maps.Map(mapRef.current, {
           center: new kakao.maps.LatLng(regionCenter.lat, regionCenter.lng),
@@ -91,7 +90,17 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
     };
 
     initMap();
-  }, [regionCenter, onChange]);
+  }, [regionCenter]);
+
+  // ✅ regionCenter가 바뀌면 지도 중심 갱신
+useEffect(() => {
+  if (regionCenter && mapInstance.current && window.kakao?.maps) {
+    const kakao = (window as any).kakao;
+    const newCenter = new kakao.maps.LatLng(regionCenter.lat, regionCenter.lng);
+    mapInstance.current.panTo(newCenter);
+  }
+}, [regionCenter]);
+
 
   // ✅ 주소 검색 (daum.Postcode)
   const handleAddressSearch = async () => {
@@ -126,79 +135,98 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
   };
 
   // ✅ 장소 검색
-  const handlePlaceSearch = async () => {
-    if (!address.trim()) return alert("장소명을 입력해주세요!");
-    try {
-      await loadKakaoCustom();
-      const kakao = (window as any).kakao;
-      const ps = new kakao.maps.services.Places();
-      const map = mapInstance.current;
+  // ✅ 장소 검색
+// ✅ 장소 검색 (최적 안정화 버전)
+const handlePlaceSearch = async () => {
+  if (!address.trim()) return alert("장소명을 입력해주세요!");
+  try {
+    await loadKakaoCustom();
 
-      if (!map) return;
+    const kakao = (window as any).kakao;
 
-      if (map.markers) {
-        map.markers.forEach((m: any) => m.setMap(null));
-      }
-      map.markers = [];
+    // ✅ SDK 및 지도 객체 완전 로드 확인
+    if (!kakao?.maps?.services) {
+      alert("지도를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    if (!mapInstance.current) {
+      alert("지도가 아직 준비되지 않았습니다. 1~2초 후 다시 시도해주세요.");
+      return;
+    }
 
-      const infowindow = new kakao.maps.InfoWindow({ zIndex: 1 });
+    // ✅ 지도 객체 준비가 완료된 뒤에 Places 생성
+    const ps = new kakao.maps.services.Places();
+    const map = mapInstance.current;
 
-      ps.keywordSearch(address, (data: any[], status: string) => {
-        if (status === kakao.maps.services.Status.OK) {
-          const bounds = new kakao.maps.LatLngBounds();
+    if (!map) return;
 
-          data.forEach((place: any) => {
-            const position = new kakao.maps.LatLng(place.y, place.x);
-            const marker = new kakao.maps.Marker({
-              map,
-              position,
-              image: new kakao.maps.MarkerImage(
-                "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
-                new kakao.maps.Size(24, 35)
-              ),
-            });
-            map.markers.push(marker);
-            bounds.extend(position);
+    // 기존 마커 제거
+    if (map.markers) {
+      map.markers.forEach((m: any) => m.setMap(null));
+    }
+    map.markers = [];
 
-            kakao.maps.event.addListener(marker, "mouseover", () => {
-              infowindow.setContent(
-                `<div style="padding:5px;font-size:12px;">${place.place_name}</div>`
-              );
-              infowindow.open(map, marker);
-            });
+    const infowindow = new kakao.maps.InfoWindow({ zIndex: 1 });
 
-            kakao.maps.event.addListener(marker, "mouseout", () => {
-              infowindow.close();
-            });
+    // ✅ 검색 실행
+    ps.keywordSearch(address, (data: any[], status: string) => {
+      if (status === kakao.maps.services.Status.OK && data.length > 0) {
+        const bounds = new kakao.maps.LatLngBounds();
+        const firstPlace = data[0]; // ✅ 첫 번째 장소 사용
 
-            kakao.maps.event.addListener(marker, "click", () => {
-              map.setCenter(position);
-              infowindow.setContent(
-                `<div style="padding:5px;font-size:12px;font-weight:600;">${place.place_name}</div>`
-              );
-              infowindow.open(map, marker);
-              setAddress(`${place.place_name} (${place.address_name})`);
-              onChange?.({
-                lat: parseFloat(place.y),
-                lng: parseFloat(place.x),
-                address: `${place.place_name} (${place.address_name})`,
-              });
-            });
+        // 마커 찍기
+        data.forEach((place: any) => {
+          const position = new kakao.maps.LatLng(place.y, place.x);
+          const marker = new kakao.maps.Marker({
+            map,
+            position,
+            image: new kakao.maps.MarkerImage(
+              "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
+              new kakao.maps.Size(24, 35)
+            ),
+          });
+          map.markers.push(marker);
+          bounds.extend(position);
+
+          kakao.maps.event.addListener(marker, "mouseover", () => {
+            infowindow.setContent(`<div style="padding:5px;font-size:12px;">${place.place_name}</div>`);
+            infowindow.open(map, marker);
           });
 
-          map.setBounds(bounds);
-          setTimeout(() => {
-            const currentLevel = map.getLevel();
-            if (currentLevel > 5) map.setLevel(5);
-          }, 300);
-        } else {
-          alert("검색 결과가 없습니다!");
-        }
-      });
-    } catch (err) {
-      console.error("❌ 장소 검색 오류:", err);
-    }
-  };
+          kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
+
+          kakao.maps.event.addListener(marker, "click", () => {
+            map.panTo(position);
+            setAddress(`${place.place_name} (${place.address_name})`);
+            onChange?.({
+              lat: parseFloat(place.y),
+              lng: parseFloat(place.x),
+              address: `${place.place_name} (${place.address_name})`,
+            });
+          });
+        });
+
+        // ✅ 지도가 완전히 그려진 뒤 중심 이동 보장
+        setTimeout(() => {
+          map.relayout();
+          const firstPos = new kakao.maps.LatLng(firstPlace.y, firstPlace.x);
+          map.panTo(firstPos); // ✅ 부드럽게 이동
+          onChange?.({
+            lat: parseFloat(firstPlace.y),
+            lng: parseFloat(firstPlace.x),
+            address: `${firstPlace.place_name} (${firstPlace.address_name})`,
+          });
+        }, 200);
+      } else {
+        alert("검색 결과가 없습니다!");
+      }
+    });
+  } catch (err) {
+    console.error("❌ 장소 검색 오류:", err);
+  }
+};
+
+
 
   return (
     <div className="mb-8">

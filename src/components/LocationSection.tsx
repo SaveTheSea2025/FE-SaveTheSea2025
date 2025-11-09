@@ -173,12 +173,15 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
   const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
+  const [locked, setLocked] = useState(false);
+  const [hasEditedEndMap, setHasEditedEndMap] = useState(false);
+
   const regionCenter =
     sido && sigungu && regionCenters[sido]?.[sigungu]
       ? regionCenters[sido][sigungu]
       : null;
 
-  // ✅ 부모로 데이터 전달
+  // ✅ 출발/종료 정보 부모로 전달
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
       onChange?.({
@@ -194,8 +197,15 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
     }
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
 
+  // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
+  useEffect(() => {
+    if (startPos && !hasEditedEndMap) {
+      setEndPos(startPos);
+    }
+  }, [startPos, hasEditedEndMap]);
+
   return (
-    <section className="mb-10">
+    <section className="mb-10 relative">
       <h3 className="text-[22px] font-semibold mb-4">활동 위치</h3>
 
       {/* STEP 1 */}
@@ -205,7 +215,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
 
       <table className="w-full border-collapse border-t border-b border-gray-300 text-sm mb-6">
         <tbody>
-          <tr className="border-t border-gray-300">
+          <tr>
             <th className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-12 py-3 text-left font-medium whitespace-nowrap align-middle">
               시/도 <span className="text-red-500">*</span>
             </th>
@@ -216,7 +226,8 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                   setSido(e.target.value);
                   setSigungu("");
                 }}
-                className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                disabled={locked}
+                className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
               >
                 <option value="">선택</option>
                 {Object.keys(regionCenters).map((r) => (
@@ -232,8 +243,8 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
               <select
                 value={sigungu}
                 onChange={(e) => setSigungu(e.target.value)}
-                disabled={!sido}
-                className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                disabled={!sido || locked}
+                className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
               >
                 <option value="">선택</option>
                 {sido &&
@@ -251,35 +262,76 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         STEP 2 <span className="text-black font-normal">출발·종료지점 선택</span>
       </p>
 
-      <div className="space-y-6">
-        <MapSelector
-          label="출발지점"
-          regionCenter={regionCenter || undefined}
-          onChange={(pos) => {
-            setStartAddr(pos.address);
-            setStartPos({ lat: pos.lat, lng: pos.lng });
+      <div className="space-y-6 relative">
+        {/* 출발지 */}
+        <div className="relative">
+          <MapSelector
+            label="출발지점"
+            regionCenter={regionCenter || undefined}
+            onChange={(pos) => {
+              if (!locked) {
+                setStartAddr(pos.address);
+                setStartPos({ lat: pos.lat, lng: pos.lng });
+                if (pos.regionSido && pos.regionSigungu) {
+                  setSido(pos.regionSido);
+                  setSigungu(pos.regionSigungu);
+                }
+              }
+            }}
+          />
 
-            // ✅ 지도에서 자동으로 시도·시군구 업데이트
-            if (pos.regionSido && pos.regionSigungu) {
-              setSido(pos.regionSido);
-              setSigungu(pos.regionSigungu);
-            }
-          }}
-        />
-        <MapSelector
-          label="종료지점"
-          regionCenter={regionCenter || undefined}
-          onChange={(pos) => {
-            setEndAddr(pos.address);
-            setEndPos({ lat: pos.lat, lng: pos.lng });
+          {/* 지도 잠금 오버레이 (버튼 제외) */}
+          {locked && (
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] cursor-not-allowed z-10 rounded-md pointer-events-auto"></div>
+          )}
+        </div>
 
-            // ✅ 지도에서 자동으로 시도·시군구 업데이트
-            if (pos.regionSido && pos.regionSigungu) {
-              setSido(pos.regionSido);
-              setSigungu(pos.regionSigungu);
-            }
-          }}
-        />
+        {/* 종료지 */}
+        <div className="relative">
+          <MapSelector
+            label="종료지점"
+            regionCenter={regionCenter || undefined}
+            onChange={(pos) => {
+              if (!locked) {
+                setEndAddr(pos.address);
+                setEndPos({ lat: pos.lat, lng: pos.lng });
+                setHasEditedEndMap(true);
+                if (pos.regionSido && pos.regionSigungu) {
+                  setSido(pos.regionSido);
+                  setSigungu(pos.regionSigungu);
+                }
+              }
+            }}
+          />
+
+          {/* 지도 잠금 오버레이 (버튼 제외) */}
+          {locked && (
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] cursor-not-allowed z-10 rounded-md pointer-events-auto"></div>
+          )}
+        </div>
+
+        {/* ✅ 안내문구 + 완료/수정 버튼 (맨 아래로 이동) */}
+        <div className="flex items-center justify-end mt-4 gap-3">
+          <p className="text-sm text-gray-500 mr-auto ml-1">
+            지도 선택을 다 하셨으면{" "}
+            <span className="font-semibold text-[#0369A1]">완료</span> 버튼을 눌러주세요.
+          </p>
+          {!locked ? (
+            <button
+              className="bg-[#0369A1] hover:bg-[#025985] text-white text-sm px-4 py-2 rounded-md shadow-sm"
+              onClick={() => setLocked(true)}
+            >
+              완료
+            </button>
+          ) : (
+            <button
+              className="bg-gray-400 hover:bg-gray-500 text-white text-sm px-4 py-2 rounded-md shadow-sm"
+              onClick={() => setLocked(false)}
+            >
+              수정
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );

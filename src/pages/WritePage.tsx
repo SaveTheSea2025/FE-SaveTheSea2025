@@ -104,8 +104,9 @@ const WritePage = () => {
       const validStart = `${startDate}T${startTime}`;
       const validEnd = `${endDate}T${endTime}`;
 
-      const latitude = endPos?.lat ?? startPos?.lat ?? 0;
-      const longitude = endPos?.lng ?? startPos?.lng ?? 0;
+      const latitude = locationData?.endLat ?? locationData?.startLat ?? 0;
+      const longitude = locationData?.endLng ?? locationData?.startLng ?? 0;
+
 
       const totalActivityTime = (() => {
         const hours = Math.floor(volunteerHours);
