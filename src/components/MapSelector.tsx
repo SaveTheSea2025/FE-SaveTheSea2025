@@ -121,37 +121,49 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
   }, [regionCenter, label]); // onChange 제거 ⚠️
 
   // ✅ 장소 검색
-  const handlePlaceSearch = async () => {
-    if (!address.trim()) return alert("장소명을 입력해주세요!");
-    try {
-      await loadKakaoCustom();
-      const kakao = (window as any).kakao;
-      if (!kakao?.maps?.services || !mapInstance.current) return;
+  // ✅ 장소 검색
+const handlePlaceSearch = async () => {
+  if (!address.trim()) return alert("장소명을 입력해주세요!");
+  try {
+    await loadKakaoCustom();
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps?.services || !mapInstance.current) return;
 
-      const ps = new kakao.maps.services.Places();
-      const map = mapInstance.current;
-      const marker = markerRef.current;
+    const ps = new kakao.maps.services.Places();
+    const map = mapInstance.current;
+    const marker = markerRef.current;
 
-      ps.keywordSearch(address, (data: any[], status: string) => {
-        if (status === kakao.maps.services.Status.OK && data[0]) {
-          const place = data[0];
-          const lat = parseFloat(place.y);
-          const lng = parseFloat(place.x);
-          const moveLatLon = new kakao.maps.LatLng(lat, lng);
+    ps.keywordSearch(address, (data: any[], status: string) => {
+      if (status === kakao.maps.services.Status.OK && data[0]) {
+        const place = data[0];
+        let lat = parseFloat(place.y);
+        let lng = parseFloat(place.x);
 
-          marker.setPosition(moveLatLon);
-          map.panTo(moveLatLon);
-
-          setAddress(`${place.place_name} (${place.address_name})`);
-          onChange?.({ lat, lng, address: `${place.place_name} (${place.address_name})` });
-        } else {
-          alert("검색 결과가 없습니다!");
+        // ✅ 도착지점일 때만 살짝 오른쪽 아래로 이동시킴
+        if (label === "종료지점") {
+          lat -= 0.0005;
+          lng += 0.0007;
         }
-      });
-    } catch (err) {
-      console.error("❌ 장소 검색 오류:", err);
-    }
-  };
+
+        const moveLatLon = new kakao.maps.LatLng(lat, lng);
+        marker.setPosition(moveLatLon);
+        map.panTo(moveLatLon);
+
+        setAddress(`${place.place_name} (${place.address_name})`);
+        onChange?.({
+          lat,
+          lng,
+          address: `${place.place_name} (${place.address_name})`,
+        });
+      } else {
+        alert("검색 결과가 없습니다!");
+      }
+    });
+  } catch (err) {
+    console.error("❌ 장소 검색 오류:", err);
+  }
+};
+
 
   // ✅ 주소 검색 (다음 우편번호)
   const handleAddressSearch = async () => {

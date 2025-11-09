@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import MapSelector from "./MapSelector";
+import DualMapSelector from "./DualMapSelector";
 
 declare global {
   interface Window {
@@ -208,27 +209,41 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
 
   // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
   // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
+// ✅ 출발지 변경 시 종료지도 위치 자동 이동
 useEffect(() => {
   if (startPos && !hasEditedEndMap) {
-    setEndPos(startPos);
-
     const kakao = (window as any).kakao;
+
+    // ✅ offset 계산
+    const offsetLat = 0.0005;
+    const offsetLng = 0.0007;
+
+    const newEndLat = startPos.lat - offsetLat;
+    const newEndLng = startPos.lng + offsetLng;
+
+    setEndPos({ lat: newEndLat, lng: newEndLng });
 
     const moveEndMap = () => {
       if (window.endMapInstance && window.endMarkerRef) {
-        const moveLatLng = new kakao.maps.LatLng(startPos.lat, startPos.lng);
+        const moveLatLng = new kakao.maps.LatLng(newEndLat, newEndLng);
         window.endMarkerRef.setPosition(moveLatLng);
         window.endMapInstance.setCenter(moveLatLng);
-        console.log("✅ 도착지도 이동 완료!");
+        console.log("✅ 도착지도 offset 이동 완료!");
+
+        // ✅ 주소도 자동 업데이트 (없을 경우 대비)
+        const geocoder = new kakao.maps.services.Geocoder();
+        geocoder.coord2Address(newEndLng, newEndLat, (result: any, status: string) => {
+          if (status === kakao.maps.services.Status.OK && result[0]) {
+            const addr = result[0].address.address_name;
+            setEndAddr(addr);
+          }
+        });
       }
     };
 
-    // ✅ 도착지 맵이 이미 준비된 경우 바로 실행
     if (window.endMapReady) {
       moveEndMap();
     } else {
-      console.log("⏳ 종료지도 로딩 대기 중... tilesloaded 이벤트로 대체");
-      // ✅ tilesloaded 후 자동 이동 (확실히 보장)
       const checkTilesLoaded = setInterval(() => {
         if (window.endMapReady) {
           moveEndMap();
@@ -238,6 +253,8 @@ useEffect(() => {
     }
   }
 }, [startPos, hasEditedEndMap]);
+
+
 
 
 
@@ -304,20 +321,23 @@ useEffect(() => {
       <div className="space-y-6 relative">
         {/* 출발지 */}
         <div className="relative">
-          <MapSelector
-            label="출발지점"
-            regionCenter={startPos || regionCenter}
-            onChange={(pos) => {
-              if (!locked) {
-                setStartAddr(pos.address);
-                setStartPos({ lat: pos.lat, lng: pos.lng });
-                if (pos.regionSido && pos.regionSigungu) {
-                  setSido(pos.regionSido);
-                  setSigungu(pos.regionSigungu);
-                }
-              }
-            }}
-          />
+        <DualMapSelector
+  regionCenter={regionCenter}
+  onChange={(data) => {
+    console.log("✅ 백엔드로 보낼 데이터:", data);
+    // 🔥 이걸 추가해야 WritePage에 값이 전달됨!
+    onChange?.({
+      startAddress: data.startAddress,
+      startLat: data.startLat,
+      startLng: data.startLng,
+      endAddress: data.endAddress,
+      endLat: data.endLat,
+      endLng: data.endLng,
+      regionSido: sido,
+      regionSigungu: sigungu,});
+    // 여기에 axios.post("/api/location", data) 같은 코드 넣으면 됨
+  }}
+/>
 
           {/* 지도 잠금 오버레이 (버튼 제외) */}
           {locked && (
@@ -326,28 +346,7 @@ useEffect(() => {
         </div>
 
         {/* 종료지 */}
-        <div className="relative">
-          <MapSelector
-            label="종료지점"
-            regionCenter={endPos || startPos || regionCenter}
-            onChange={(pos) => {
-              if (!locked) {
-                setEndAddr(pos.address);
-                setEndPos({ lat: pos.lat, lng: pos.lng });
-                setHasEditedEndMap(true);
-                if (pos.regionSido && pos.regionSigungu) {
-                  setSido(pos.regionSido);
-                  setSigungu(pos.regionSigungu);
-                }
-              }
-            }}
-          />
-
-          {/* 지도 잠금 오버레이 (버튼 제외) */}
-          {locked && (
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] cursor-not-allowed z-10 rounded-md pointer-events-auto"></div>
-          )}
-        </div>
+        
 
         {/* ✅ 안내문구 + 완료/수정 버튼 (맨 아래로 이동) */}
         <div className="flex items-center justify-end mt-4 gap-3">
