@@ -262,7 +262,7 @@ useEffect(() => {
 
   return (
     <section className="mb-10 relative">
-      <h3 className="text-[22px] font-semibold mb-4">활동 위치</h3>
+      <h3 className="text-lg font-semibold mb-4">활동 위치</h3>
 
       {/* STEP 1 */}
       <p className="text-[#0071CE] font-semibold mb-2">
@@ -325,19 +325,45 @@ useEffect(() => {
   regionCenter={regionCenter}
   onChange={(data) => {
     console.log("✅ 백엔드로 보낼 데이터:", data);
-    // 🔥 이걸 추가해야 WritePage에 값이 전달됨!
-    onChange?.({
-      startAddress: data.startAddress,
-      startLat: data.startLat,
-      startLng: data.startLng,
-      endAddress: data.endAddress,
-      endLat: data.endLat,
-      endLng: data.endLng,
-      regionSido: sido,
-      regionSigungu: sigungu,});
-    // 여기에 axios.post("/api/location", data) 같은 코드 넣으면 됨
+
+    // ⚠️ endAddress가 없으면 geocoder로 직접 조회해서 세팅
+    const kakao = (window as any).kakao;
+    const geocoder = new kakao.maps.services.Geocoder();
+
+    // 🔹 endAddress가 비어있으면 좌표 기반으로 강제로 변환
+    if (!data.endAddress && data.endLat && data.endLng) {
+      geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const addr = result[0].address.address_name;
+          onChange?.({
+            startAddress: data.startAddress,
+            startLat: data.startLat,
+            startLng: data.startLng,
+            endAddress: addr,
+            endLat: data.endLat,
+            endLng: data.endLng,
+            regionSido: sido,
+            regionSigungu: sigungu,
+          });
+        }
+      });
+    } else {
+      // 🔹 평상시 (endAddress 정상 세팅된 경우)
+      onChange?.({
+        startAddress: data.startAddress,
+        startLat: data.startLat,
+        startLng: data.startLng,
+        endAddress: data.endAddress,
+        endLat: data.endLat,
+        endLng: data.endLng,
+        regionSido: sido,
+        regionSigungu: sigungu,
+      });
+    }
   }}
 />
+
+
 
           {/* 지도 잠금 오버레이 (버튼 제외) */}
           {locked && (

@@ -94,23 +94,44 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
 
       // ✅ 주소 업데이트 함수
       const updateAddress = (lat: number, lng: number, type: "start" | "end") => {
-        geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+        const kakao = (window as any).kakao;
+        const geocoder = new kakao.maps.services.Geocoder();
+      
+        geocoder.coord2Address(lng, lat, (result: any, status: string) => {
           if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address.address_name;
-            if (type === "start") setStartAddress(addr);
-            else setEndAddress(addr);
-
-            onChange?.({
-              startAddress: type === "start" ? addr : startAddress,
-              startLat: startMarkerRef.current.getPosition().getLat(),
-              startLng: startMarkerRef.current.getPosition().getLng(),
-              endAddress: type === "end" ? addr : endAddress,
-              endLat: endMarkerRef.current.getPosition().getLat(),
-              endLng: endMarkerRef.current.getPosition().getLng(),
-            });
+      
+            if (type === "start") {
+              setStartAddress(addr);
+              const updated = {
+                startAddress: addr,
+                startLat: lat,
+                startLng: lng,
+                endAddress: endAddress, // endAddress 최신값 유지
+                endLat: endMarkerRef.current?.getPosition()?.getLat() ?? 0,
+                endLng: endMarkerRef.current?.getPosition()?.getLng() ?? 0,
+              };
+              console.log("✅ start 업데이트:", updated);
+              onChange?.(updated);
+            } else {
+              setEndAddress(addr);
+              const updated = {
+                startAddress: startAddress, // startAddress 최신값 유지
+                startLat: startMarkerRef.current?.getPosition()?.getLat() ?? 0,
+                startLng: startMarkerRef.current?.getPosition()?.getLng() ?? 0,
+                endAddress: addr,
+                endLat: lat,
+                endLng: lng,
+              };
+              console.log("✅ end 업데이트:", updated);
+              onChange?.(updated);
+            }
+          } else {
+            console.warn("⚠️ 주소 변환 실패:", status);
           }
         });
       };
+      
 
       // ✅ 출발 마커 이벤트
       kakao.maps.event.addListener(startMarker, "dragstart", () => {

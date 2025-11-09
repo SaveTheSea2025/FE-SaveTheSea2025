@@ -186,7 +186,7 @@ const WritePage = () => {
 
         {/* ===================== 활동 정보 ===================== */}
         <section className="mb-10">
-          <h3 className="text-[30px] font-medium font-['Noto_Sans_KR']">활동 정보</h3>
+          <h3 className="text-lg font-semibold mb-4">활동 정보</h3>
 
           <div
             className="border border-gray-300 w-full"
@@ -414,7 +414,7 @@ const WritePage = () => {
 
         {/* ===================== 특이사항 ===================== */}
         <section className="mb-16">
-          <h3 className="text-[22px] font-semibold mb-3">특이사항</h3>
+          <h3 className="text-lg font-semibold mb-4">특이사항</h3>
           <div className="border border-gray-300 border-l-0 border-r-0 bg-white p-4">
             <textarea
               placeholder="특이사항이 있으면 적어주세요. ex) 기타 폐기물 종류, 특이한 폐기물 발견"
