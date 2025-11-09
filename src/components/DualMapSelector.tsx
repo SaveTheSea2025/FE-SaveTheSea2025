@@ -23,9 +23,22 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
   const [endAddress, setEndAddress] = useState("");
   const [isMapVisible, setIsMapVisible] = useState(false);
 
-  // ✅ offset 값 (도착지 마커를 출발지보다 오른쪽 아래로 이동)
   const OFFSET_LAT = 0.0005;
   const OFFSET_LNG = 0.0007;
+  const FOLLOW_THRESHOLD_M = 5000; // 5km
+
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const getDistanceMeters = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+    const R = 6371000;
+    const dLat = toRad(bLat - aLat);
+    const dLng = toRad(bLng - aLng);
+    const s1 = toRad(aLat);
+    const s2 = toRad(bLat);
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(s1) * Math.cos(s2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  };
 
   useEffect(() => {
     if (!regionCenter) {
@@ -44,10 +57,9 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
         level: 4,
       });
       mapInstance.current = map;
-
       const geocoder = new kakao.maps.services.Geocoder();
 
-      // ✅ 출발/도착 아이콘
+      // ✅ 마커 아이콘
       const startImage = new kakao.maps.MarkerImage(
         "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/red_b.png",
         new kakao.maps.Size(50, 45),
@@ -90,12 +102,11 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
       });
       endMarkerRef.current = endMarker;
 
-      // ✅ 주소 업데이트 함수
+      // ✅ 주소 변환 함수
       const updateAddress = (lat: number, lng: number, type: "start" | "end") => {
         geocoder.coord2Address(lng, lat, (result: any, status: string) => {
           if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address.address_name;
-
             if (type === "start") {
               setStartAddress(addr);
               onChange?.({
@@ -126,16 +137,26 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
         startMarker.setImage(startDragImage);
       });
       kakao.maps.event.addListener(startMarker, "dragend", () => {
-        const pos = startMarker.getPosition();
-        const newEndLat = pos.getLat() - OFFSET_LAT;
-        const newEndLng = pos.getLng() + OFFSET_LNG;
-
-        endMarker.setPosition(new kakao.maps.LatLng(newEndLat, newEndLng));
+        const sPos = startMarker.getPosition();
         startMarker.setImage(startImage);
-        map.panTo(pos);
+        map.panTo(sPos);
+        updateAddress(sPos.getLat(), sPos.getLng(), "start");
 
-        updateAddress(pos.getLat(), pos.getLng(), "start");
-        updateAddress(newEndLat, newEndLng, "end");
+        const ePos = endMarker.getPosition();
+        const distance = getDistanceMeters(
+          sPos.getLat(),
+          sPos.getLng(),
+          ePos.getLat(),
+          ePos.getLng()
+        );
+
+        if (distance > FOLLOW_THRESHOLD_M) {
+          const newEndLat = sPos.getLat() - OFFSET_LAT;
+          const newEndLng = sPos.getLng() + OFFSET_LNG;
+          const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
+          endMarker.setPosition(newEndPos);
+          updateAddress(newEndLat, newEndLng, "end");
+        }
       });
 
       // ✅ 도착 마커 드래그
@@ -144,8 +165,8 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
       });
       kakao.maps.event.addListener(endMarker, "dragend", () => {
         const pos = endMarker.getPosition();
-        map.panTo(pos);
         endMarker.setImage(endImage);
+        map.panTo(pos);
         updateAddress(pos.getLat(), pos.getLng(), "end");
       });
 
@@ -159,7 +180,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     initMap();
   }, [regionCenter]);
 
-  // ✅ 검색 기능 (검색 후에도 offset 유지)
+  // ✅ 검색 기능
   const handlePlaceSearch = async (type: "start" | "end") => {
     const address = type === "start" ? startAddress : endAddress;
     if (!address.trim()) return alert("검색어를 입력해주세요!");
@@ -175,31 +196,28 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
         const { y, x, place_name, address_name } = data[0];
         const baseLat = parseFloat(y);
         const baseLng = parseFloat(x);
-
-        const startLat = baseLat;
-        const startLng = baseLng;
-        const endLat = baseLat - OFFSET_LAT;
-        const endLng = baseLng + OFFSET_LNG;
-
-        const startPos = new kakao.maps.LatLng(startLat, startLng);
-        const endPos = new kakao.maps.LatLng(endLat, endLng);
-
-        startMarkerRef.current.setPosition(startPos);
-        endMarkerRef.current.setPosition(endPos);
-        map.panTo(startPos);
-
         const addrText = `${place_name} (${address_name})`;
-        setStartAddress(addrText);
-        setEndAddress(addrText);
 
-        onChange?.({
-          startAddress: addrText,
-          startLat,
-          startLng,
-          endAddress: addrText,
-          endLat,
-          endLng,
-        });
+        if (type === "start") {
+          const startPos = new kakao.maps.LatLng(baseLat, baseLng);
+          startMarkerRef.current.setPosition(startPos);
+          map.panTo(startPos);
+          setStartAddress(addrText);
+          updateAddress(baseLat, baseLng, "start");
+
+          // ✅ 출발 검색 시 도착 마커는 항상 근처로 자동 이동
+          const newEndLat = baseLat - OFFSET_LAT;
+          const newEndLng = baseLng + OFFSET_LNG;
+          const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
+          endMarkerRef.current.setPosition(newEndPos);
+          setTimeout(() => updateAddress(newEndLat, newEndLng, "end"), 200);
+        } else {
+          const endPos = new kakao.maps.LatLng(baseLat, baseLng);
+          endMarkerRef.current.setPosition(endPos);
+          map.panTo(endPos);
+          setEndAddress(addrText);
+          updateAddress(baseLat, baseLng, "end");
+        }
       } else {
         alert("검색 결과가 없습니다!");
       }
@@ -208,9 +226,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
 
   return (
     <div className="mb-8">
-      {/* 입력창 */}
       <div className="flex flex-col gap-3 mb-3">
-        {/* 출발지 */}
         <div className="flex items-center w-full border-t border-b border-gray-300 text-sm">
           <label className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-10 py-3 text-left font-medium whitespace-nowrap">
             출발지점
@@ -231,7 +247,6 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
           </button>
         </div>
 
-        {/* 종료지 */}
         <div className="flex items-center w-full border-t border-b border-gray-300 text-sm">
           <label className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-10 py-3 text-left font-medium whitespace-nowrap">
             종료지점
@@ -253,7 +268,6 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
         </div>
       </div>
 
-      {/* 지도 */}
       {isMapVisible && (
         <div
           ref={mapRef}
