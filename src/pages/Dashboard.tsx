@@ -105,45 +105,60 @@ function Dashboard() {
         </MainpageScrollReveal>
 
         {/* 가운데 아이콘 + 수거량 */}
-        <MainpageScrollReveal delay={0.4}>
-          <div className="flex flex-col md:flex-row justify-center items-center gap-16 mt-14">
-            {/* 아이콘 이미지 */}
-            <img
-              src="/src/assets/mainpage-cleanup.png"
-              alt="cleanup"
-              className="w-[160px] h-[160px]"
-            />
+<MainpageScrollReveal delay={0.4}>
+  <div className="flex flex-col md:flex-row justify-center items-center gap-32 mt-10 relative">
+    {/* 아이콘 이미지 */}
+    <img
+      src="/src/assets/mainpage-cleanup.png"
+      alt="cleanup"
+      className="w-[200px] h-[200px] md:w-[260px] md:h-[260px]"
+    />
 
-            <div className="flex flex-col md:flex-row gap-20 items-center">
-              <div>
-                <p className="text-[20px] text-[#0F575F] mb-2 font-medium">
-                  수거량(kg)
-                </p>
-                <p className="text-[80px] font-extrabold text-[#0C4A6E]">1,321</p>
-              </div>
-              <div>
-                <p className="text-[20px] text-[#0F575F] mb-2 font-medium">
-                  수거량(L)
-                </p>
-                <p className="text-[80px] font-extrabold text-[#0C4A6E]">745</p>
-              </div>
-            </div>
-          </div>
-        </MainpageScrollReveal>
+    {/* 수거량 섹션 - 왼쪽으로 약간 이동 */}
+    <div className="flex flex-col md:flex-row gap-36 items-center md:-translate-x-8">
+      <div>
+        <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+          수거량(kg)
+        </p>
+        <p className="text-[88px] md:text-[100px] font-extrabold text-[#0C4A6E]">
+          1,321
+        </p>
+      </div>
+      <div>
+        <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+          수거량(L)
+        </p>
+        <p className="text-[88px] md:text-[100px] font-extrabold text-[#0C4A6E]">
+          745
+        </p>
+      </div>
+    </div>
+  </div>
+</MainpageScrollReveal>
 
-        {/* 하단 활동건수 + 참여자수 */}
-        <MainpageScrollReveal delay={0.6}>
-          <div className="flex justify-center items-center gap-28 mt-16">
-            <div>
-              <p className="text-[20px] text-[#0F575F] mb-2 font-medium">활동건수</p>
-              <p className="text-[72px] font-extrabold text-[#0C4A6E]">47</p>
-            </div>
-            <div>
-              <p className="text-[20px] text-[#0F575F] mb-2 font-medium">참여자수</p>
-              <p className="text-[72px] font-extrabold text-[#0C4A6E]">897</p>
-            </div>
-          </div>
-        </MainpageScrollReveal>
+
+{/* 하단 활동건수 + 참여자수 */}
+<MainpageScrollReveal delay={0.6}>
+  <div className="flex justify-center items-center gap-44 mt-20">
+    <div>
+      <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+        활동건수
+      </p>
+      <p className="text-[80px] md:text-[96px] font-extrabold text-[#0C4A6E]">
+        47
+      </p>
+    </div>
+    <div>
+      <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+        참여자수
+      </p>
+      <p className="text-[80px] md:text-[96px] font-extrabold text-[#0C4A6E]">
+        897
+      </p>
+    </div>
+  </div>
+</MainpageScrollReveal>
+
       </section>
 
       {/* 현장의 이야기 섹션 */}
