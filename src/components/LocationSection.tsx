@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
 import MapSelector from "./MapSelector";
 
+declare global {
+  interface Window {
+    endMapInstance?: any;
+    endMarkerRef?: any;
+    endMapReady?: any;
+  }
+}
+
+
 interface RegionCoords {
   [key: string]: { [key: string]: { lat: number; lng: number } };
 }
@@ -198,11 +207,41 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
 
   // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
-  useEffect(() => {
-    if (startPos && !hasEditedEndMap) {
-      setEndPos(startPos);
+  // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
+useEffect(() => {
+  if (startPos && !hasEditedEndMap) {
+    setEndPos(startPos);
+
+    const kakao = (window as any).kakao;
+
+    const moveEndMap = () => {
+      if (window.endMapInstance && window.endMarkerRef) {
+        const moveLatLng = new kakao.maps.LatLng(startPos.lat, startPos.lng);
+        window.endMarkerRef.setPosition(moveLatLng);
+        window.endMapInstance.setCenter(moveLatLng);
+        console.log("✅ 도착지도 이동 완료!");
+      }
+    };
+
+    // ✅ 도착지 맵이 이미 준비된 경우 바로 실행
+    if (window.endMapReady) {
+      moveEndMap();
+    } else {
+      console.log("⏳ 종료지도 로딩 대기 중... tilesloaded 이벤트로 대체");
+      // ✅ tilesloaded 후 자동 이동 (확실히 보장)
+      const checkTilesLoaded = setInterval(() => {
+        if (window.endMapReady) {
+          moveEndMap();
+          clearInterval(checkTilesLoaded);
+        }
+      }, 300);
     }
-  }, [startPos, hasEditedEndMap]);
+  }
+}, [startPos, hasEditedEndMap]);
+
+
+
+
 
   return (
     <section className="mb-10 relative">
@@ -267,7 +306,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         <div className="relative">
           <MapSelector
             label="출발지점"
-            regionCenter={regionCenter || undefined}
+            regionCenter={startPos || regionCenter}
             onChange={(pos) => {
               if (!locked) {
                 setStartAddr(pos.address);
@@ -290,7 +329,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         <div className="relative">
           <MapSelector
             label="종료지점"
-            regionCenter={regionCenter || undefined}
+            regionCenter={endPos || startPos || regionCenter}
             onChange={(pos) => {
               if (!locked) {
                 setEndAddr(pos.address);
