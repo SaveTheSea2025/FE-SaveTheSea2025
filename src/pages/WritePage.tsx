@@ -180,7 +180,7 @@ const WritePage = () => {
       ></div>
 
       <main className="max-w-5xl mx-auto bg-white p-10 mt-0 relative z-10">
-        <h2 className="text-[38px] font-medium text-center mb-10 leading-normal font-['Noto_Sans_KR']">
+        <h2 className="text-[38px] font-semibold text-center mb-10 leading-normal font-['Noto_Sans_KR']">
           봉사활동 기록하기
         </h2>
 

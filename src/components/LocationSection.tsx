@@ -324,44 +324,32 @@ useEffect(() => {
         <DualMapSelector
   regionCenter={regionCenter}
   onChange={(data) => {
-    console.log("✅ 백엔드로 보낼 데이터:", data);
-
-    // ⚠️ endAddress가 없으면 geocoder로 직접 조회해서 세팅
+    console.log("✅ 백엔드로 보낼 데이터:", data);    
     const kakao = (window as any).kakao;
     const geocoder = new kakao.maps.services.Geocoder();
 
-    // 🔹 endAddress가 비어있으면 좌표 기반으로 강제로 변환
     if (!data.endAddress && data.endLat && data.endLng) {
       geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
         if (status === kakao.maps.services.Status.OK && result[0]) {
           const addr = result[0].address.address_name;
           onChange?.({
-            startAddress: data.startAddress,
-            startLat: data.startLat,
-            startLng: data.startLng,
+            ...data,
             endAddress: addr,
-            endLat: data.endLat,
-            endLng: data.endLng,
             regionSido: sido,
-            regionSigungu: sigungu,
+  regionSigungu: sigungu,
           });
         }
       });
     } else {
-      // 🔹 평상시 (endAddress 정상 세팅된 경우)
       onChange?.({
-        startAddress: data.startAddress,
-        startLat: data.startLat,
-        startLng: data.startLng,
-        endAddress: data.endAddress,
-        endLat: data.endLat,
-        endLng: data.endLng,
+        ...data,
         regionSido: sido,
         regionSigungu: sigungu,
       });
     }
   }}
 />
+
 
 
 
