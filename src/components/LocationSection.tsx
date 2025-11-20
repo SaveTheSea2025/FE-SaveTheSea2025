@@ -20,10 +20,18 @@ interface LocationSectionProps {
     endAddress: string;
     endLat: number;
     endLng: number;
+
+    // WritePage용 확장 필드
+    startLatitude: number;
+    startLongitude: number;
+    endLatitude: number;
+    endLongitude: number;
+
     regionSido: string;
     regionSigungu: string;
   }) => void;
 }
+
 
 
 const LocationSection = ({ onChange }: LocationSectionProps) => {
@@ -47,15 +55,23 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
       onChange?.({
-        startAddress: startAddr,
-        startLat: startPos.lat,
-        startLng: startPos.lng,
-        endAddress: endAddr,
-        endLat: endPos.lat,
-        endLng: endPos.lng,
-        regionSido: sido,
-        regionSigungu: sigungu,
-      });
+  startAddress: startAddr,
+  startLat: startPos.lat,
+  startLng: startPos.lng,
+  endAddress: endAddr,
+  endLat: endPos.lat,
+  endLng: endPos.lng,
+
+  // WritePage가 실제로 필요로 하는 필드
+  startLatitude: startPos.lat,
+  startLongitude: startPos.lng,
+  endLatitude: endPos.lat,
+  endLongitude: endPos.lng,
+
+  regionSido: sido,
+  regionSigungu: sigungu,
+});
+
     }
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
 
@@ -174,33 +190,49 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         {/* 출발지 */}
         <div className="relative">
           <DualMapSelector
-            regionCenter={regionCenter}
-            onChange={(data) => {
-              console.log("✅ 백엔드로 보낼 데이터:", data);
-              const kakao = (window as any).kakao;
-              const geocoder = new kakao.maps.services.Geocoder();
+  regionCenter={regionCenter}
+  onChange={(data) => {
+    console.log("🟩 백엔드로 보낼 데이터:", data);
+    const kakao = (window as any).kakao;
+    const geocoder = new kakao.maps.services.Geocoder();
 
-              if (!data.endAddress && data.endLat && data.endLng) {
-                geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
-                  if (status === kakao.maps.services.Status.OK && result[0]) {
-                    const addr = result[0].address.address_name;
-                    onChange?.({
-                      ...data,
-                      endAddress: addr,
-                      regionSido: sido,
-                      regionSigungu: sigungu,
-                    });
-                  }
-                });
-              } else {
-                onChange?.({
-                  ...data,
-                  regionSido: sido,
-                  regionSigungu: sigungu,
-                });
-              }
-            }}
-          />
+    // 도착 주소 자동 채움
+    if (!data.endAddress && data.endLat && data.endLng) {
+      geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const addr = result[0].address.address_name;
+
+          onChange?.({
+            ...data,
+            endAddress: addr,
+            regionSido: sido,
+            regionSigungu: sigungu,
+
+            // ⭐ WritePage에 필요한 필드 추가
+            startLatitude: data.startLat,
+            startLongitude: data.startLng,
+            endLatitude: data.endLat,
+            endLongitude: data.endLng,
+          });
+        }
+      });
+    } 
+    else {
+      onChange?.({
+        ...data,
+        regionSido: sido,
+        regionSigungu: sigungu,
+
+        // ⭐ WritePage에 필요한 필드 추가
+        startLatitude: data.startLat,
+        startLongitude: data.startLng,
+        endLatitude: data.endLat,
+        endLongitude: data.endLng,
+      });
+    }
+  }}
+/>
+
 
 
 
