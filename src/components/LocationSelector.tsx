@@ -1,77 +1,276 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
+import MapSelector from "./MapSelector";
+import DualMapSelector from "./DualMapSelector";
+import { regionCenters } from "../data/regionCenters";
 
-interface LocationSelectorProps {
-  onChange: (sido: string, sigungu: string) => void;
+declare global {
+  interface Window {
+    endMapInstance?: any;
+    endMarkerRef?: any;
+    endMapReady?: any;
+  }
 }
 
-const locationData: Record<string, string[]> = {
-  서울특별시: ["강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"],
-  부산광역시: ["강서구", "금정구", "기장군", "남구", "동구", "동래구", "부산진구", "북구", "사상구", "사하구", "서구", "수영구", "연제구", "영도구", "중구", "해운대구"],
-  대구광역시: ["남구", "달서구", "달성군", "동구", "북구", "서구", "수성구", "중구"],
-  인천광역시: ["강화군", "계양구", "남동구", "동구", "미추홀구", "부평구", "서구", "연수구", "옹진군", "중구"],
-  광주광역시: ["광산구", "남구", "동구", "북구", "서구"],
-  대전광역시: ["대덕구", "동구", "서구", "유성구", "중구"],
-  울산광역시: ["남구", "동구", "북구", "울주군", "중구"],
-  세종특별자치시: ["세종시"],
-  경기도: ["가평군", "고양시", "과천시", "광명시", "광주시", "구리시", "군포시", "김포시", "남양주시", "동두천시", "부천시", "성남시", "수원시", "시흥시", "안산시", "안성시", "안양시", "양주시", "양평군", "여주시", "연천군", "오산시", "용인시", "의왕시", "의정부시", "이천시", "파주시", "평택시", "포천시", "하남시", "화성시"],
-  강원특별자치도: ["강릉시", "고성군", "동해시", "삼척시", "속초시", "양구군", "양양군", "영월군", "원주시", "인제군", "정선군", "철원군", "춘천시", "태백시", "평창군", "홍천군", "화천군", "횡성군"],
-  충청북도: ["괴산군", "단양군", "보은군", "영동군", "옥천군", "음성군", "제천시", "진천군", "청주시", "충주시"],
-  충청남도: ["계룡시", "공주시", "금산군", "논산시", "당진시", "보령시", "부여군", "서산시", "서천군", "아산시", "예산군", "천안시", "청양군", "태안군", "홍성군"],
-  전북특별자치도: ["고창군", "군산시", "김제시", "남원시", "무주군", "부안군", "순창군", "완주군", "익산시", "임실군", "장수군", "전주시", "정읍시", "진안군"],
-  전라남도: ["강진군", "고흥군", "곡성군", "광양시", "구례군", "나주시", "담양군", "목포시", "무안군", "보성군", "순천시", "신안군", "여수시", "영광군", "영암군", "완도군", "장성군", "장흥군", "진도군", "함평군", "해남군", "화순군"],
-  경상북도: ["경산시", "경주시", "고령군", "구미시", "김천시", "문경시", "봉화군", "상주시", "성주군", "안동시", "영덕군", "영양군", "영주시", "영천시", "예천군", "울릉군", "울진군", "의성군", "청도군", "청송군", "칠곡군", "포항시"],
-  경상남도: ["거제시", "거창군", "고성군", "김해시", "남해군", "밀양시", "사천시", "산청군", "양산시", "의령군", "진주시", "창녕군", "창원시", "통영시", "하동군", "함안군", "함양군", "합천군"],
-  제주특별자치도: ["서귀포시", "제주시"],
-};
 
-const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange }) => {
+interface LocationSectionProps {
+  onChange?: (data: {
+    startAddress: string;
+    startLat: number;
+    startLng: number;
+    endAddress: string;
+    endLat: number;
+    endLng: number;
+
+    // WritePage용 확장 필드
+    startLatitude: number;
+    startLongitude: number;
+    endLatitude: number;
+    endLongitude: number;
+
+    regionSido: string;
+    regionSigungu: string;
+  }) => void;
+}
+
+
+
+const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
 
-  const handleSidoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSido = e.target.value;
-    setSido(newSido);
-    setSigungu("");
-    onChange(newSido, "");
-  };
+  const [startAddr, setStartAddr] = useState("");
+  const [endAddr, setEndAddr] = useState("");
+  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
-  const handleSigunguChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSigungu = e.target.value;
-    setSigungu(newSigungu);
-    onChange(sido, newSigungu);
-  };
+  const [locked, setLocked] = useState(false);
+  const [hasEditedEndMap, setHasEditedEndMap] = useState(false);
+
+  const regionCenter =
+    sido && sigungu && regionCenters[sido]?.[sigungu]
+      ? regionCenters[sido][sigungu]
+      : null;
+
+  // ✅ 출발/종료 정보 부모로 전달
+  useEffect(() => {
+    if (startAddr && endAddr && startPos && endPos) {
+      onChange?.({
+        startAddress: startAddr,
+        startLat: startPos.lat,
+        startLng: startPos.lng,
+        endAddress: endAddr,
+        endLat: endPos.lat,
+        endLng: endPos.lng,
+
+        // WritePage가 실제로 필요로 하는 필드
+        startLatitude: startPos.lat,
+        startLongitude: startPos.lng,
+        endLatitude: endPos.lat,
+        endLongitude: endPos.lng,
+
+        regionSido: sido,
+        regionSigungu: sigungu,
+      });
+
+    }
+  }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
+
+  // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
+  // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
+  // ✅ 출발지 변경 시 종료지도 위치 자동 이동
+  useEffect(() => {
+    if (startPos && !hasEditedEndMap) {
+      const kakao = (window as any).kakao;
+
+      // ✅ offset 계산
+      const offsetLat = 0.0005;
+      const offsetLng = 0.0007;
+
+      const newEndLat = startPos.lat - offsetLat;
+      const newEndLng = startPos.lng + offsetLng;
+
+      setEndPos({ lat: newEndLat, lng: newEndLng });
+
+      const moveEndMap = () => {
+        if (window.endMapInstance && window.endMarkerRef) {
+          const moveLatLng = new kakao.maps.LatLng(newEndLat, newEndLng);
+          window.endMarkerRef.setPosition(moveLatLng);
+          window.endMapInstance.setCenter(moveLatLng);
+          console.log("✅ 도착지도 offset 이동 완료!");
+
+          // ✅ 주소도 자동 업데이트 (없을 경우 대비)
+          const geocoder = new kakao.maps.services.Geocoder();
+          geocoder.coord2Address(newEndLng, newEndLat, (result: any, status: string) => {
+            if (status === kakao.maps.services.Status.OK && result[0]) {
+              const addr = result[0].address.address_name;
+              setEndAddr(addr);
+            }
+          });
+        }
+      };
+
+      if (window.endMapReady) {
+        moveEndMap();
+      } else {
+        const checkTilesLoaded = setInterval(() => {
+          if (window.endMapReady) {
+            moveEndMap();
+            clearInterval(checkTilesLoaded);
+          }
+        }, 300);
+      }
+    }
+  }, [startPos, hasEditedEndMap]);
+
+
+
+
+
+
 
   return (
-    <div className="grid grid-cols-4 border-b border-gray-300">
-      <div className="bg-[#f7f8fa] px-4 py-3 font-medium border-r border-gray-300">시/도</div>
-      <div className="px-4 py-3 border-r border-gray-300 bg-[#f7f8fa]">
-        <select
-          value={sido}
-          onChange={handleSidoChange}
-          className="w-full border border-gray-300 bg-white rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400"
-        >
-          <option value="">선택</option>
-          {Object.keys(locationData).map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
+    <section className="mb-10 relative">
+      <h3 className="text-lg font-semibold mb-4">활동 위치</h3>
+
+      {/* STEP 1 */}
+      <p className="text-[#0071CE] font-semibold mb-2">
+        STEP 1 <span className="text-black font-normal">지역 선택</span>
+      </p>
+
+      <table className="w-full border-collapse border-t border-b border-gray-300 text-sm mb-6">
+        <tbody>
+          <tr>
+            <th className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-12 py-3 text-left font-medium whitespace-nowrap align-middle">
+              시/도 <span className="text-red-500">*</span>
+            </th>
+            <td className="px-4 py-3 w-1/2">
+              <select
+                value={sido}
+                onChange={(e) => {
+                  setSido(e.target.value);
+                  setSigungu("");
+                }}
+                disabled={locked}
+                className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
+              >
+                <option value="">선택</option>
+                {Object.keys(regionCenters).map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            </td>
+
+            <th className="w-32 bg-[#f5f6f8] border-r border-l border-gray-300 px-10 py-3 text-left font-medium whitespace-nowrap align-middle">
+              시·군·구 <span className="text-red-500">*</span>
+            </th>
+            <td className="px-4 py-3 w-1/2">
+              <select
+                value={sigungu}
+                onChange={(e) => setSigungu(e.target.value)}
+                disabled={!sido || locked}
+                className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
+              >
+                <option value="">선택</option>
+                {sido &&
+                  Object.keys(regionCenters[sido]).map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* STEP 2 */}
+      <p className="text-[#0071CE] font-semibold mb-2">
+        STEP 2 <span className="text-black font-normal">출발·종료지점 선택</span>
+      </p>
+
+      <div className="space-y-6 relative">
+        {/* 출발지 */}
+        <div className="relative">
+          <DualMapSelector
+            regionCenter={regionCenter}
+            onChange={(data) => {
+              console.log("🟩 백엔드로 보낼 데이터:", data);
+              const kakao = (window as any).kakao;
+              const geocoder = new kakao.maps.services.Geocoder();
+
+              // 도착 주소 자동 채움
+              if (!data.endAddress && data.endLat && data.endLng) {
+                geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
+                  if (status === kakao.maps.services.Status.OK && result[0]) {
+                    const addr = result[0].address.address_name;
+
+                    onChange?.({
+                      ...data,
+                      endAddress: addr,
+                      regionSido: sido,
+                      regionSigungu: sigungu,
+
+                      // ⭐ WritePage에 필요한 필드 추가
+                      startLatitude: data.startLat,
+                      startLongitude: data.startLng,
+                      endLatitude: data.endLat,
+                      endLongitude: data.endLng,
+                    });
+                  }
+                });
+              }
+              else {
+                onChange?.({
+                  ...data,
+                  regionSido: sido,
+                  regionSigungu: sigungu,
+
+                  // ⭐ WritePage에 필요한 필드 추가
+                  startLatitude: data.startLat,
+                  startLongitude: data.startLng,
+                  endLatitude: data.endLat,
+                  endLongitude: data.endLng,
+                });
+              }
+            }}
+          />
+
+
+
+
+
+          {/* 지도 잠금 오버레이 (버튼 제외) */}
+          {locked && (
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] cursor-not-allowed z-10 rounded-md pointer-events-auto"></div>
+          )}
+        </div>
+
+        {/* 종료지 */}
+
+
+        {/* ✅ 안내문구 + 완료/수정 버튼 (맨 아래로 이동) */}
+        <div className="flex items-center justify-end mt-4 gap-3">
+          <p className="text-sm text-gray-500 mr-auto ml-1">
+            지도 선택을 다 하셨으면{" "}
+            <span className="font-semibold text-[#0369A1]">완료</span> 버튼을 눌러주세요.
+          </p>
+          {!locked ? (
+            <button
+              className="bg-[#0369A1] hover:bg-[#025985] text-white text-sm px-4 py-2 rounded-md shadow-sm"
+              onClick={() => setLocked(true)}
+            >
+              완료
+            </button>
+          ) : (
+            <button
+              className="bg-gray-400 hover:bg-gray-500 text-white text-sm px-4 py-2 rounded-md shadow-sm"
+              onClick={() => setLocked(false)}
+            >
+              수정
+            </button>
+          )}
+        </div>
       </div>
-      <div className="bg-[#f7f8fa] px-4 py-3 font-medium border-r border-gray-300">시·군·구</div>
-      <div className="px-4 py-3 bg-[#f7f8fa]">
-        <select
-          value={sigungu}
-          onChange={handleSigunguChange}
-          disabled={!sido}
-          className="w-full border border-gray-300 bg-white rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400"
-        >
-          <option value="">선택</option>
-          {sido && locationData[sido].map((gungu) => (
-            <option key={gungu} value={gungu}>{gungu}</option>
-          ))}
-        </select>
-      </div>
-    </div>
+    </section>
   );
 };
 
-export default LocationSelector;
+export default LocationSection;
