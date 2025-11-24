@@ -83,12 +83,12 @@ const WritePage = () => {
           first === "groupName"
             ? "group-input"
             : first === "activityName"
-            ? "activityName-input"
-            : first === "dateTime"
-            ? "dateTime-row"
-            : first === "memberCount"
-            ? "memberCount-input"
-            : "location-section";
+              ? "activityName-input"
+              : first === "dateTime"
+                ? "dateTime-row"
+                : first === "memberCount"
+                  ? "memberCount-input"
+                  : "location-section";
 
         const el = document.getElementById(targetId);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -104,14 +104,16 @@ const WritePage = () => {
       const validStart = `${startDate}T${startTime}`;
       const validEnd = `${endDate}T${endTime}`;
 
-      const latitude = endPos?.lat ?? startPos?.lat ?? 0;
-      const longitude = endPos?.lng ?? startPos?.lng ?? 0;
 
-      const totalActivityTime = (() => {
-        const hours = Math.floor(volunteerHours);
-        const minutes = Math.round((volunteerHours - hours) * 60);
-        return `${hours}시간 ${minutes}분`;
-      })();
+
+
+
+
+      const startLatitude = locationData?.startLat ?? 0;
+      const startLongitude = locationData?.startLng ?? 0;
+      const endLatitude = locationData?.endLat ?? 0;
+      const endLongitude = locationData?.endLng ?? 0;
+
 
       const data = {
         groups: groupType === "단체",
@@ -126,8 +128,10 @@ const WritePage = () => {
         regionSigungu: locationData?.regionSigungu || selectedRegion.sigungu,
         startAddress: locationData?.startAddress || "",
         endAddress: locationData?.endAddress || "",
-        latitude,
-        longitude,
+        startLatitude,
+        startLongitude,
+        endLatitude,
+        endLongitude,
         specialNote: specialNote || "특이사항 없음",
         wasteList,
         thumbnailIndex,
@@ -159,6 +163,13 @@ const WritePage = () => {
     }
   };
 
+  const totalActivityTime = (() => {
+    const hours = Math.floor(volunteerHours);
+    const minutes = Math.round((volunteerHours - hours) * 60);
+    return `${hours}시간 ${minutes}분`;
+  })();
+
+
   // ============================================================
 
   return (
@@ -178,14 +189,14 @@ const WritePage = () => {
         style={{ backgroundImage: "url('/src/assets/backgroundimage2.png')" }}
       ></div>
 
-      <main className="max-w-5xl mx-auto bg-white p-10 mt-0 relative z-10">
-        <h2 className="text-[38px] font-medium text-center mb-10 leading-normal font-['Noto_Sans_KR']">
+      <main className="mt-20 max-w-5xl mx-auto bg-white p-10 relative z-10">
+        <h2 className="text-[30px] font-bold text-center mb-20 leading-normal font-['Noto_Sans_KR']">
           봉사활동 기록하기
         </h2>
 
         {/* ===================== 활동 정보 ===================== */}
         <section className="mb-10">
-          <h3 className="text-[30px] font-medium font-['Noto_Sans_KR']">활동 정보</h3>
+          <h3 className="text-lg font-semibold mb-4">활동 정보</h3>
 
           <div
             className="border border-gray-300 w-full"
@@ -233,9 +244,8 @@ const WritePage = () => {
                             placeholder={groupType === "단체" ? "단체명을 입력해주세요." : "이름을 입력해주세요."}
                             value={groupName}
                             onChange={(e) => setGroupName(e.target.value.replace(/\s+/g, ""))}
-                            className={`border border-gray-300 bg-gray-50 rounded px-3 py-1.5 w-64 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                              missingFields.includes("groupName") ? "border-red-500" : ""
-                            }`}
+                            className={`border border-gray-300 bg-gray-50 rounded px-3 py-1.5 w-64 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${missingFields.includes("groupName") ? "border-red-500" : ""
+                              }`}
                           />
                           <img src={groupName.trim() ? bluecheck : graycheck} alt="check" className="w-5 h-5" />
                           <p className="text-xs text-gray-400">띄어쓰기 없이 입력해주세요.</p>
@@ -257,9 +267,8 @@ const WritePage = () => {
                       placeholder="봉사활동 명을 입력해주세요."
                       value={activityName}
                       onChange={(e) => setActivityName(e.target.value)}
-                      className={`w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                        missingFields.includes("activityName") ? "border-red-500" : ""
-                      }`}
+                      className={`w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${missingFields.includes("activityName") ? "border-red-500" : ""
+                        }`}
                     />
                   </td>
                 </tr>
@@ -275,34 +284,30 @@ const WritePage = () => {
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                       <input
                         type="time"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                       <span className="text-gray-500 text-[20px] mx-1">~</span>
                       <input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                       <input
                         type="time"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                     </div>
                   </td>
@@ -316,7 +321,10 @@ const WritePage = () => {
                   <td className="p-0">
                     <div className="flex">
                       <div className="flex items-center justify-center w-1/3 border-r border-gray-300 bg-white text-sm text-gray-800">
-                        <span>{volunteerHours} 시간</span>
+                        <span>
+                          {Math.floor(volunteerHours)}시간 {Math.round((volunteerHours - Math.floor(volunteerHours)) * 60)}분
+                        </span>
+
                       </div>
 
                       <div className="flex items-center justify-start w-1/3 bg-[#f5f6f8] border-r border-gray-300 px-6 py-3">
@@ -328,11 +336,10 @@ const WritePage = () => {
                       <div className="flex items-center justify-start w-1/3 bg-white px-6 py-3">
                         <div
                           id="memberCount-input"
-                          className={`flex items-center border rounded-md overflow-hidden ${
-                            missingFields.includes("memberCount")
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
+                          className={`flex items-center border rounded-md overflow-hidden ${missingFields.includes("memberCount")
+                            ? "border-red-500"
+                            : "border-gray-300"
+                            }`}
                         >
                           <button
                             type="button"
@@ -373,7 +380,7 @@ const WritePage = () => {
                 {/* 활동 설명 */}
                 <tr className="border-t border-gray-300">
                   <th className="w-40 bg-[#f3f4f6] border-r border-gray-300 px-4 py-3 text-left font-medium align-top">
-                    활동 설명
+                    활동 동기 및 설명
                   </th>
                   <td className="px-4 py-3">
                     <textarea
@@ -385,11 +392,10 @@ const WritePage = () => {
                       className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400"
                     ></textarea>
                     <div
-                      className={`text-right text-xs mt-1 ${
-                        description.length >= maxLength
-                          ? "text-red-500 font-semibold"
-                          : "text-gray-500"
-                      }`}
+                      className={`text-right text-xs mt-1 ${description.length >= maxLength
+                        ? "text-red-500 font-semibold"
+                        : "text-gray-500"
+                        }`}
                     >
                       {description.length}/{maxLength}자
                     </div>
@@ -401,19 +407,22 @@ const WritePage = () => {
         </section>
 
         {/* ===================== 활동 사진 첨부 ===================== */}
-        <PhotoUploadSection onChange={setPhotoFiles} onFavoriteChange={setThumbnailIndex} />
+        <div className="mt-20">
+          <PhotoUploadSection onChange={setPhotoFiles} onFavoriteChange={setThumbnailIndex} />
+        </div>
 
         {/* ===================== 활동 위치 ===================== */}
-        <section id="location-section">
-          <LocationSection onChange={setLocationData} />
-        </section>
-
+        <div className="mt-20 mb-20">
+          <section id="location-section">
+            <LocationSection onChange={setLocationData} />
+          </section>
+        </div>
         {/* ===================== 폐기물 ===================== */}
         <WasteSection onChange={setWasteList} />
 
         {/* ===================== 특이사항 ===================== */}
-        <section className="mb-16">
-          <h3 className="text-[22px] font-semibold mb-3">특이사항</h3>
+        <section className="mb-25 mt-20">
+          <h3 className="text-lg font-semibold mb-4">느낀점 & 특이사항</h3>
           <div className="border border-gray-300 border-l-0 border-r-0 bg-white p-4">
             <textarea
               placeholder="특이사항이 있으면 적어주세요. ex) 기타 폐기물 종류, 특이한 폐기물 발견"
@@ -425,7 +434,7 @@ const WritePage = () => {
         </section>
 
         {/* 작성 완료 버튼 */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-20">
           <button
             className="bg-[#0369A1] hover:bg-[#025985] text-white font-semibold px-12 py-3 rounded-md"
             onClick={handleSubmit}

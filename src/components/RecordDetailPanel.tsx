@@ -2,24 +2,36 @@
 import React, { useEffect, useState } from "react";
 import { CalendarDays, MapPin, Users, Trash2, Clock } from "lucide-react";
 
+declare global {
+    interface Window {
+        kakao: any;
+    }
+}
+
 type DetailData = {
     id: number;
     name: string;
+    totalWeight: number;
     activeName: string;
     groups: boolean;
     memberCount: number;
     activityDescription: string;
     startDate: string;
-    totalWeight: number | string;
     endDate: string;
     totalActivityTime: string;
+
     startAddress: string;
     endAddress: string;
-    latitude: number;
-    longitude: number;
+
+    startLatitude: number;
+    startLongitude: number;
+    endLatitude: number;
+    endLongitude: number;
+
     specialNote: string;
     thumbnail: string;
     photoUrls: string[];
+
     wasteList?: {
         wasteType: string;
         wasteWeight: number;
@@ -29,7 +41,7 @@ type DetailData = {
 
 type Props = {
     recordId: number;
-    totalWeight?: number; // ✅ 리스트에서 전달받을 수거량
+    totalWeight?: number;
     onClose: () => void;
 };
 
@@ -42,7 +54,7 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    /* ✅ 상세 데이터 불러오기 */
+    /* 상세 데이터 불러오기 */
     useEffect(() => {
         const fetchDetail = async () => {
             try {
@@ -60,6 +72,76 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
         fetchDetail();
     }, [BASE_URL, recordId]);
 
+    /* Kakao Map 표시 */
+    useEffect(() => {
+        if (!detail) return;
+
+        const script = document.createElement("script");
+        script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${import.meta.env.VITE_KAKAO_MAP_KEY}&autoload=false`;
+        script.onload = () => {
+            window.kakao.maps.load(() => {
+                const container = document.getElementById("detailMap");
+                if (!container) return;
+
+                const options = {
+                    center: new window.kakao.maps.LatLng(
+                        detail.startLatitude,
+                        detail.startLongitude
+                    ),
+                    level: 5,
+                };
+
+                const map = new window.kakao.maps.Map(container, options);
+
+                // 출발 마커
+                new window.kakao.maps.Marker({
+                    map,
+                    title: "출발 지점",
+                    position: new window.kakao.maps.LatLng(
+                        detail.startLatitude,
+                        detail.startLongitude
+                    ),
+                });
+
+                // 도착 마커
+                new window.kakao.maps.Marker({
+                    map,
+                    title: "도착 지점",
+                    position: new window.kakao.maps.LatLng(
+                        detail.endLatitude,
+                        detail.endLongitude
+                    ),
+                });
+
+                // 선 연결
+                const polyline = new window.kakao.maps.Polyline({
+                    map,
+                    path: [
+                        new window.kakao.maps.LatLng(
+                            detail.startLatitude,
+                            detail.startLongitude
+                        ),
+                        new window.kakao.maps.LatLng(
+                            detail.endLatitude,
+                            detail.endLongitude
+                        ),
+                    ],
+                    strokeWeight: 4,
+                    strokeColor: "#1E90FF",
+                    strokeOpacity: 0.9,
+                });
+
+                polyline.setMap(map);
+            });
+        };
+
+        document.body.appendChild(script);
+
+        return () => {
+            document.getElementById("detailMap")?.replaceChildren();
+        };
+    }, [detail]);
+
     if (loading)
         return (
             <div className="absolute top-0 right-[400px] w-[380px] bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mt-[88px] mr-3 text-center text-gray-500">
@@ -76,7 +158,6 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
 
     if (!detail) return null;
 
-    // ✅ 수거량 계산 로직 (API 값 > props 값)
     const displayWeight =
         detail.totalWeight && !isNaN(Number(detail.totalWeight))
             ? Number(detail.totalWeight)
@@ -86,15 +167,13 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
 
     return (
         <div
-            className="absolute top-0 right-[400px] w-[380px] bg-white rounded-2xl shadow-xl border border-gray-200 
-           overflow-y-auto z-40 transition-all duration-300"
+            className="absolute top-0 right-[400px] w-[380px] bg-white rounded-2xl shadow-xl border border-gray-200 overflow-y-auto z-40 transition-all duration-300"
             style={{
                 marginTop: "88px",
                 marginRight: "12px",
                 height: "calc(100vh - 96px)",
             }}
         >
-            {/* 닫기 버튼 */}
             <button
                 onClick={onClose}
                 className="absolute top-3 right-4 text-gray-400 hover:text-gray-600 text-2xl font-bold transition"
@@ -109,11 +188,13 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                 className="w-full h-52 object-cover rounded-t-2xl"
             />
 
-            {/* 내용 */}
             <div className="p-6">
+                {/* 제목 */}
                 <h2 className="text-xl font-semibold text-[#114C79] mb-1">
                     {detail.activeName}
                 </h2>
+
+                {/* 날짜 */}
                 <div className="flex items-center gap-2 text-sky-800 text-sm mb-1">
                     <CalendarDays size={16} />
                     <span>
@@ -121,6 +202,8 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                         {detail.totalActivityTime})
                     </span>
                 </div>
+
+                {/* 주소 */}
                 <div className="flex items-center gap-2 text-sky-800 text-sm mb-4">
                     <MapPin size={16} />
                     <span>
@@ -128,20 +211,14 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                     </span>
                 </div>
 
-                {/* 참여자 / 수거량 / 소요시간 */}
+                {/* 참여자/수거량/소요시간 */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
-                    {/* 참여자 */}
                     <div className="rounded-xl py-3 text-center" style={{ backgroundColor: "#E5FCFF" }}>
                         <Users size={18} className="mx-auto mb-1" style={{ color: "#0598AB" }} />
-                        <p className="text-lg font-semibold" style={{ color: "#393939" }}>
-                            {detail.memberCount}
-                        </p>
-                        <p className="text-xs" style={{ color: "#656565" }}>
-                            참여자
-                        </p>
+                        <p className="text-lg font-semibold">{detail.memberCount}</p>
+                        <p className="text-xs text-gray-600">참여자</p>
                     </div>
 
-                    {/* 수거량 */}
                     <div className="rounded-xl py-3 text-center" style={{ backgroundColor: "#E6FFF3" }}>
                         <Trash2 size={18} className="mx-auto mb-1" style={{ color: "#0AAF64" }} />
                         <p className="text-lg font-semibold" style={{ color: "#393939" }}>
@@ -154,26 +231,20 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                         </p>
                     </div>
 
-                    {/* 소요시간 */}
+
                     <div className="rounded-xl py-3 text-center" style={{ backgroundColor: "#FFFAE6" }}>
                         <Clock size={18} className="mx-auto mb-1" style={{ color: "#FFA550" }} />
-                        <p className="text-lg font-semibold" style={{ color: "#393939" }}>
-                            {detail.totalActivityTime}
-                        </p>
-                        <p className="text-xs" style={{ color: "#656565" }}>
-                            소요시간
-                        </p>
+                        <p className="text-lg font-semibold">{detail.totalActivityTime}</p>
+                        <p className="text-xs text-gray-600">소요시간</p>
                     </div>
                 </div>
 
-
                 {/* 활동 설명 */}
-                <h3 className="text-base font-semibold text-[#114C79] mb-2">
-                    활동 설명
-                </h3>
+                <h3 className="text-base font-semibold text-[#114C79] mb-2">활동 설명</h3>
                 <div className="bg-gray-100 text-gray-700 text-sm rounded-xl p-3 leading-relaxed mb-6">
-                    {detail.activityDescription || "설명 데이터가 없습니다."}
+                    {detail.activityDescription}
                 </div>
+
                 {/* 폐기물 분류 */}
                 {detail.wasteList && detail.wasteList.length > 0 && (
                     <div className="mb-6">
@@ -193,6 +264,9 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                                     GLASS: "유리",
                                     METAL: "금속",
                                     ETC: "기타",
+                                    PAPER: "박스",
+                                    MEDICINE: "약품",
+                                    SYRINGE: "주사기",
                                 };
                                 const label = typeLabel[item.wasteType] || item.wasteType;
 
@@ -217,14 +291,12 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                 )}
 
                 {/* 특이사항 */}
-                <h3 className="text-base font-semibold text-[#114C79] mb-2">
-                    특이사항
-                </h3>
+                <h3 className="text-base font-semibold text-[#114C79] mb-2">특이사항</h3>
                 <div className="bg-gray-100 text-gray-700 text-sm rounded-xl p-3 leading-relaxed">
-                    {detail.specialNote || "특이사항 없음"}
+                    {detail.specialNote || "없음"}
                 </div>
 
-                {/* 추가 이미지 */}
+                {/* 현장 사진 */}
                 {detail.photoUrls?.length > 0 && (
                     <>
                         <h3 className="text-base font-semibold text-[#114C79] mb-2 mt-6">
@@ -235,13 +307,18 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                                 <img
                                     key={idx}
                                     src={url}
-                                    alt={`photo-${idx}`}
                                     className="rounded-xl object-cover w-full h-32"
                                 />
                             ))}
                         </div>
                     </>
                 )}
+
+                {/* 지도 */}
+                <h3 className="text-base font-semibold text-[#114C79] mb-3 mt-6">
+                    활동 경로 지도
+                </h3>
+                <div id="detailMap" className="w-full h-64 rounded-xl"></div>
             </div>
         </div>
     );

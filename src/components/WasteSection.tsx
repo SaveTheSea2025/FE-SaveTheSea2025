@@ -84,7 +84,7 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
 
   return (
     <section className="mb-10">
-      <h3 className="text-[22px] font-semibold mb-4">
+      <h3 className="text-lg font-semibold mb-4">
         폐기물 <span className="text-red-500">*</span>
       </h3>
 
