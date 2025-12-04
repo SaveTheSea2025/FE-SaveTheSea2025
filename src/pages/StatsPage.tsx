@@ -73,34 +73,11 @@ export default function StatsPage() {
   const [orgOpen, setOrgOpen] = useState(false);
 
   // ✅ API 데이터 상태
-  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>({
-    activityCount: 24,
-    totalMembers: 1250,
-    totalWeight: 3450,
-    totalVolume: 5800,
-  });
-  const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([
-    { month: "1월", totalWeight: 450 },
-    { month: "2월", totalWeight: 520 },
-    { month: "3월", totalWeight: 680 },
-    { month: "4월", totalWeight: 720 },
-    { month: "5월", totalWeight: 580 },
-    { month: "6월", totalWeight: 500 },
-  ]);
-  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([
-    { wasteType: "PLASTIC", ratio: 35.5 },
-    { wasteType: "GLASS", ratio: 22.3 },
-    { wasteType: "CAN", ratio: 18.7 },
-    { wasteType: "PAPER", ratio: 15.2 },
-    { wasteType: "ETC", ratio: 8.3 },
-  ]);
-  const [regionData, setRegionData] = useState<RegionStats[]>([
-    { region: "동해", totalWeight: 1200, totalVolume: 2000 },
-    { region: "서해", totalWeight: 950, totalVolume: 1600 },
-    { region: "남해", totalWeight: 800, totalVolume: 1400 },
-    { region: "제주", totalWeight: 500, totalVolume: 800 },
-  ]);
-  const [loading, setLoading] = useState(false);
+  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([]);
+  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
+  const [regionData, setRegionData] = useState<RegionStats[]>([]);
+  const [loading, setLoading] = useState(false); // 일단 false로 시작
   const [error, setError] = useState<string | null>(null);
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -123,10 +100,6 @@ export default function StatsPage() {
 
   // ✅ 데이터 불러오기
   useEffect(() => {
-    // 🔧 임시로 API 호출 비활성화 - UI 테스트용
-    // TODO: API 서버 준비되면 주석 해제
-    
-    /*
     const fetchAllData = async () => {
       try {
         setLoading(true);
@@ -191,10 +164,6 @@ export default function StatsPage() {
       setLoading(false);
       console.warn("BASE_URL이 설정되지 않았습니다. .env 파일을 확인하세요.");
     }
-    */
-    
-    console.log("필터 상태:", { startDate, endDate, location, organization });
-    console.log("더미 데이터로 UI 표시 중...");
   }, [BASE_URL, startDate, endDate, location, organization]);
 
   // ✅ 조회 버튼 클릭 핸들러
