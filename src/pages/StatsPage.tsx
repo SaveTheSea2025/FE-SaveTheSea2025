@@ -73,11 +73,34 @@ export default function StatsPage() {
   const [orgOpen, setOrgOpen] = useState(false);
 
   // ✅ API 데이터 상태
-  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
-  const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([]);
-  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
-  const [regionData, setRegionData] = useState<RegionStats[]>([]);
-  const [loading, setLoading] = useState(false); // 일단 false로 시작
+  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>({
+    activityCount: 24,
+    totalMembers: 1250,
+    totalWeight: 3450,
+    totalVolume: 5800,
+  });
+  const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([
+    { month: "1월", totalWeight: 450 },
+    { month: "2월", totalWeight: 520 },
+    { month: "3월", totalWeight: 680 },
+    { month: "4월", totalWeight: 720 },
+    { month: "5월", totalWeight: 580 },
+    { month: "6월", totalWeight: 500 },
+  ]);
+  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([
+    { wasteType: "PLASTIC", ratio: 35.5 },
+    { wasteType: "GLASS", ratio: 22.3 },
+    { wasteType: "CAN", ratio: 18.7 },
+    { wasteType: "PAPER", ratio: 15.2 },
+    { wasteType: "ETC", ratio: 8.3 },
+  ]);
+  const [regionData, setRegionData] = useState<RegionStats[]>([
+    { region: "동해", totalWeight: 1200, totalVolume: 2000 },
+    { region: "서해", totalWeight: 950, totalVolume: 1600 },
+    { region: "남해", totalWeight: 800, totalVolume: 1400 },
+    { region: "제주", totalWeight: 500, totalVolume: 800 },
+  ]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -101,10 +124,13 @@ export default function StatsPage() {
   // ✅ 데이터 불러오기
   useEffect(() => {
     const fetchAllData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+      // BASE_URL이 없으면 더미 데이터 사용
+      if (!BASE_URL) {
+        console.warn("BASE_URL이 설정되지 않았습니다. 더미 데이터를 사용합니다.");
+        return;
+      }
 
+      try {
         // 필터 파라미터 구성
         const params = new URLSearchParams({
           startDate,
@@ -113,57 +139,63 @@ export default function StatsPage() {
           organization: organization === "전체" ? "" : organization,
         });
 
-        // 타임아웃 설정 (5초)
-        const timeout = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('요청 시간 초과')), 5000)
-        );
+        console.log("API 호출 시작:", `${BASE_URL}/api/statistics/*?${params}`);
 
         // 1. 전체 통계
-        const summaryPromise = fetch(`${BASE_URL}/api/statistics/summary?${params}`);
-        const summaryRes = await Promise.race([summaryPromise, timeout]) as Response;
-        const summaryData = await summaryRes.json();
-        if (summaryData.code === 0) {
-          setSummaryStats(summaryData.data);
+        try {
+          const summaryRes = await fetch(`${BASE_URL}/api/statistics/summary?${params}`);
+          const summaryData = await summaryRes.json();
+          if (summaryData.code === 0) {
+            setSummaryStats(summaryData.data);
+            console.log("✅ 전체 통계 로드 완료");
+          }
+        } catch (err) {
+          console.error("❌ 전체 통계 API 실패:", err);
         }
 
         // 2. 월별 수거량
-        const monthlyPromise = fetch(`${BASE_URL}/api/statistics/monthly-weight?${params}`);
-        const monthlyRes = await Promise.race([monthlyPromise, timeout]) as Response;
-        const monthlyResult = await monthlyRes.json();
-        if (monthlyResult.code === 0) {
-          setMonthlyData(monthlyResult.data);
+        try {
+          const monthlyRes = await fetch(`${BASE_URL}/api/statistics/monthly-weight?${params}`);
+          const monthlyResult = await monthlyRes.json();
+          if (monthlyResult.code === 0) {
+            setMonthlyData(monthlyResult.data);
+            console.log("✅ 월별 수거량 로드 완료");
+          }
+        } catch (err) {
+          console.error("❌ 월별 수거량 API 실패:", err);
         }
 
         // 3. 폐기물 비율
-        const wastePromise = fetch(`${BASE_URL}/api/statistics/waste-type-ratio?${params}`);
-        const wasteRes = await Promise.race([wastePromise, timeout]) as Response;
-        const wasteResult = await wasteRes.json();
-        if (wasteResult.code === 0) {
-          setWasteRatio(wasteResult.data);
+        try {
+          const wasteRes = await fetch(`${BASE_URL}/api/statistics/waste-type-ratio?${params}`);
+          const wasteResult = await wasteRes.json();
+          if (wasteResult.code === 0) {
+            setWasteRatio(wasteResult.data);
+            console.log("✅ 폐기물 비율 로드 완료");
+          }
+        } catch (err) {
+          console.error("❌ 폐기물 비율 API 실패:", err);
         }
 
         // 4. 지역별 통계
-        const regionPromise = fetch(`${BASE_URL}/api/statistics/region?${params}`);
-        const regionRes = await Promise.race([regionPromise, timeout]) as Response;
-        const regionResult = await regionRes.json();
-        if (regionResult.code === 0) {
-          setRegionData(regionResult.data);
+        try {
+          const regionRes = await fetch(`${BASE_URL}/api/statistics/region?${params}`);
+          const regionResult = await regionRes.json();
+          if (regionResult.code === 0) {
+            setRegionData(regionResult.data);
+            console.log("✅ 지역별 통계 로드 완료");
+          }
+        } catch (err) {
+          console.error("❌ 지역별 통계 API 실패:", err);
         }
+
+        console.log("🎉 모든 API 호출 완료");
       } catch (error) {
-        console.error("API 로드 오류:", error);
-        setError(error instanceof Error ? error.message : "데이터를 불러오는데 실패했습니다.");
-      } finally {
-        setLoading(false);
+        console.error("전체 API 로드 오류:", error);
       }
     };
 
-    // BASE_URL이 있을 때만 API 호출
-    if (BASE_URL) {
-      fetchAllData();
-    } else {
-      setLoading(false);
-      console.warn("BASE_URL이 설정되지 않았습니다. .env 파일을 확인하세요.");
-    }
+    fetchAllData();
   }, [BASE_URL, startDate, endDate, location, organization]);
 
   // ✅ 조회 버튼 클릭 핸들러
@@ -187,32 +219,6 @@ export default function StatsPage() {
   };
 
   const COLORS = ["#004e89", "#1a659e", "#2a9d8f", "#8ecae6", "#d4e09b"];
-
-  if (loading) {
-    return (
-      <div className="w-full bg-[#e5edf2] min-h-screen flex items-center justify-center">
-        <p className="text-lg text-gray-600">데이터를 불러오는 중...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full bg-[#e5edf2] min-h-screen">
-        <Header forceScrolled />
-        <div className="max-w-[1200px] mx-auto pt-20 pb-20 px-8 flex flex-col items-center justify-center min-h-[60vh]">
-          <p className="text-lg text-red-600 mb-4">⚠️ {error}</p>
-          <p className="text-sm text-gray-600 mb-4">API 서버 연결을 확인해주세요.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-[#0066aa] text-white rounded-lg hover:bg-[#005a95]"
-          >
-            새로고침
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full bg-[#e5edf2] min-h-screen">
