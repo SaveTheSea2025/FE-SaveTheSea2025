@@ -465,7 +465,10 @@ export default function StatsPage() {
                     stroke="#fff"
                     strokeWidth={3}
                     labelLine={false}
-                    label={({ name, value }) => `${name} ${value.toFixed(1)}%`}
+                    label={({ name, value }) => {
+                      const percentage = typeof value === 'number' ? value.toFixed(1) : '0.0';
+                      return `${name} ${percentage}%`;
+                    }}
                   >
                     {wasteRatio.map((_, idx) => (
                       <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
@@ -480,7 +483,7 @@ export default function StatsPage() {
                 <LegendRow
                   key={item.wasteType}
                   label={wasteTypeMap[item.wasteType] || item.wasteType}
-                  percent={`${item.ratio.toFixed(1)}%`}
+                  percent={`${typeof item.ratio === 'number' ? item.ratio.toFixed(1) : '0.0'}%`}
                   color={COLORS[idx % COLORS.length]}
                 />
               ))}
