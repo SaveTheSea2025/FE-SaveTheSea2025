@@ -11,7 +11,6 @@ declare global {
   }
 }
 
-
 interface LocationSectionProps {
   onChange?: (data: {
     startAddress: string;
@@ -20,19 +19,10 @@ interface LocationSectionProps {
     endAddress: string;
     endLat: number;
     endLng: number;
-
-    // WritePage용 확장 필드
-    startLatitude: number;
-    startLongitude: number;
-    endLatitude: number;
-    endLongitude: number;
-
     regionSido: string;
     regionSigungu: string;
   }) => void;
 }
-
-
 
 const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [sido, setSido] = useState("");
@@ -51,38 +41,25 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
       ? regionCenters[sido][sigungu]
       : null;
 
-  // ✅ 출발/종료 정보 부모로 전달
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
       onChange?.({
-  startAddress: startAddr,
-  startLat: startPos.lat,
-  startLng: startPos.lng,
-  endAddress: endAddr,
-  endLat: endPos.lat,
-  endLng: endPos.lng,
-
-  // WritePage가 실제로 필요로 하는 필드
-  startLatitude: startPos.lat,
-  startLongitude: startPos.lng,
-  endLatitude: endPos.lat,
-  endLongitude: endPos.lng,
-
-  regionSido: sido,
-  regionSigungu: sigungu,
-});
-
+        startAddress: startAddr,
+        startLat: startPos.lat,
+        startLng: startPos.lng,
+        endAddress: endAddr,
+        endLat: endPos.lat,
+        endLng: endPos.lng,
+        regionSido: sido,
+        regionSigungu: sigungu,
+      });
     }
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
 
-  // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
-  // ✅ 출발지 변경 시 종료지도 위치 자동 이동 (단, 종료지도 직접 수정 전까지만)
-  // ✅ 출발지 변경 시 종료지도 위치 자동 이동
   useEffect(() => {
     if (startPos && !hasEditedEndMap) {
       const kakao = (window as any).kakao;
 
-      // ✅ offset 계산
       const offsetLat = 0.0005;
       const offsetLng = 0.0007;
 
@@ -96,9 +73,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
           const moveLatLng = new kakao.maps.LatLng(newEndLat, newEndLng);
           window.endMarkerRef.setPosition(moveLatLng);
           window.endMapInstance.setCenter(moveLatLng);
-          console.log("✅ 도착지도 offset 이동 완료!");
 
-          // ✅ 주소도 자동 업데이트 (없을 경우 대비)
           const geocoder = new kakao.maps.services.Geocoder();
           geocoder.coord2Address(newEndLng, newEndLat, (result: any, status: string) => {
             if (status === kakao.maps.services.Status.OK && result[0]) {
@@ -122,22 +97,17 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
     }
   }, [startPos, hasEditedEndMap]);
 
-
-
-
-
-
-
   return (
     <section className="mb-10 relative">
-      <h3 className="text-lg font-semibold mb-4">활동 위치</h3>
+      <h3 className="text-base md:text-lg font-semibold mb-4">활동 위치</h3>
 
       {/* STEP 1 */}
-      <p className="text-[#0071CE] font-semibold mb-2">
+      <p className="text-[#0071CE] font-semibold mb-3 text-sm md:text-base">
         STEP 1 <span className="text-black font-normal">지역 선택</span>
       </p>
 
-      <table className="w-full border-collapse border-t border-b border-gray-300 text-sm mb-6">
+      {/* 데스크톱 버전 */}
+      <table className="hidden md:table w-full border-collapse border-t border-b border-gray-300 text-sm mb-6">
         <tbody>
           <tr>
             <th className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-12 py-3 text-left font-medium whitespace-nowrap align-middle">
@@ -181,87 +151,120 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         </tbody>
       </table>
 
+      {/* 모바일 버전 */}
+      <div className="md:hidden mb-6">
+        <div className="bg-gray-50 rounded-lg overflow-hidden border border-gray-300">
+          <div className="grid grid-cols-2">
+            <div className="p-4 border-r border-gray-300">
+              <label className="block text-xs text-gray-600 mb-2">
+                시/도 <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={sido}
+                  onChange={(e) => {
+                    setSido(e.target.value);
+                    setSigungu("");
+                  }}
+                  disabled={locked}
+                  className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
+                >
+                  <option value="">선택</option>
+                  {Object.keys(regionCenters).map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4">
+              <label className="block text-xs text-gray-600 mb-2">
+                시·군·구 <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={sigungu}
+                  onChange={(e) => setSigungu(e.target.value)}
+                  disabled={!sido || locked}
+                  className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
+                >
+                  <option value="">선택</option>
+                  {sido &&
+                    Object.keys(regionCenters[sido]).map((r) => (
+                      <option key={r}>{r}</option>
+                    ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* STEP 2 */}
-      <p className="text-[#0071CE] font-semibold mb-2">
+      <p className="text-[#0071CE] font-semibold mb-3 text-sm md:text-base">
         STEP 2 <span className="text-black font-normal">출발·종료지점 선택</span>
       </p>
 
       <div className="space-y-6 relative">
-        {/* 출발지 */}
         <div className="relative">
           <DualMapSelector
-  regionCenter={regionCenter}
-  onChange={(data) => {
-    console.log("🟩 백엔드로 보낼 데이터:", data);
-    const kakao = (window as any).kakao;
-    const geocoder = new kakao.maps.services.Geocoder();
+            regionCenter={regionCenter}
+            onChange={(data) => {
+              const kakao = (window as any).kakao;
+              const geocoder = new kakao.maps.services.Geocoder();
 
-    // 도착 주소 자동 채움
-    if (!data.endAddress && data.endLat && data.endLng) {
-      geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
-        if (status === kakao.maps.services.Status.OK && result[0]) {
-          const addr = result[0].address.address_name;
+              if (!data.endAddress && data.endLat && data.endLng) {
+                geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
+                  if (status === kakao.maps.services.Status.OK && result[0]) {
+                    const addr = result[0].address.address_name;
+                    onChange?.({
+                      ...data,
+                      endAddress: addr,
+                      regionSido: sido,
+                      regionSigungu: sigungu,
+                    });
+                  }
+                });
+              } else {
+                onChange?.({
+                  ...data,
+                  regionSido: sido,
+                  regionSigungu: sigungu,
+                });
+              }
+            }}
+          />
 
-          onChange?.({
-            ...data,
-            endAddress: addr,
-            regionSido: sido,
-            regionSigungu: sigungu,
-
-            // ⭐ WritePage에 필요한 필드 추가
-            startLatitude: data.startLat,
-            startLongitude: data.startLng,
-            endLatitude: data.endLat,
-            endLongitude: data.endLng,
-          });
-        }
-      });
-    } 
-    else {
-      onChange?.({
-        ...data,
-        regionSido: sido,
-        regionSigungu: sigungu,
-
-        // ⭐ WritePage에 필요한 필드 추가
-        startLatitude: data.startLat,
-        startLongitude: data.startLng,
-        endLatitude: data.endLat,
-        endLongitude: data.endLng,
-      });
-    }
-  }}
-/>
-
-
-
-
-
-          {/* 지도 잠금 오버레이 (버튼 제외) */}
           {locked && (
             <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] cursor-not-allowed z-10 rounded-md pointer-events-auto"></div>
           )}
         </div>
 
-        {/* 종료지 */}
-
-
-        {/* ✅ 안내문구 + 완료/수정 버튼 (맨 아래로 이동) */}
         <div className="flex items-center justify-end mt-4 gap-3">
-          <p className="text-sm text-gray-500 mr-auto ml-1">
+          <p className="text-xs md:text-sm text-gray-500 mr-auto ml-1">
             지도 선택을 다 하셨으면{" "}
             <span className="font-semibold text-[#0369A1]">완료</span> 버튼을 눌러주세요.
           </p>
           {!locked ? (
             <button
-              className="bg-[#0369A1] hover:bg-[#025985] text-white text-sm px-4 py-2 rounded-md shadow-sm"
+              className="bg-[#0369A1] hover:bg-[#025985] text-white text-xs md:text-sm px-4 py-2 rounded-md shadow-sm"
               onClick={() => setLocked(true)}
             >
               완료
             </button>
           ) : (
             <button
-              className="bg-gray-400 hover:bg-gray-500 text-white text-sm px-4 py-2 rounded-md shadow-sm"
+              className="bg-gray-400 hover:bg-gray-500 text-white text-xs md:text-sm px-4 py-2 rounded-md shadow-sm"
               onClick={() => setLocked(false)}
             >
               수정

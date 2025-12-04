@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 interface WasteSectionProps {
   onChange?: (
@@ -7,7 +7,6 @@ interface WasteSectionProps {
 }
 
 const WasteSection = ({ onChange }: WasteSectionProps) => {
-  // 한글 → 백엔드 ENUM 매핑
   const wasteTypeMap: Record<string, string> = {
     마대수: "SACK",
     페트병: "PLASTIC",
@@ -33,13 +32,10 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
   ];
 
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-
-  // 내부 저장 값은 number이지만 입력 중 문자열도 허용 (입력 UX 위해)
   const [quantities, setQuantities] = useState<{
     [key: string]: { kg: number | string; L: number | string };
   }>({});
 
-  // 체크박스 선택/해제
   const handleCheckboxChange = (item: string) => {
     if (selectedItems.includes(item)) {
       const updated = selectedItems.filter((v) => v !== item);
@@ -55,17 +51,14 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
     }
   };
 
-  // ===== 입력 변경 (소수점 자연 입력 지원) =====
   const handleQuantityChange = (
     item: string,
     type: "kg" | "L",
     value: string
   ) => {
-    // 숫자 + 소수점만 허용
     const regex = /^\d*\.?\d*$/;
     if (!regex.test(value)) return;
 
-    // 빈 값 허용 → 내부엔 "" 저장
     if (value === "") {
       setQuantities({
         ...quantities,
@@ -74,7 +67,6 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
       return;
     }
 
-    // 중간 입력: "1." → 문자열 그대로 유지
     if (value.endsWith(".")) {
       setQuantities({
         ...quantities,
@@ -83,7 +75,6 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
       return;
     }
 
-    // 숫자로 변환 가능한 경우
     const num = Number(value);
     setQuantities({
       ...quantities,
@@ -91,7 +82,6 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
     });
   };
 
-  // ===== blur 시 숫자로 정리 "1." → 1 =====
   const handleBlur = (item: string, type: "kg" | "L") => {
     let v = quantities[item][type];
 
@@ -114,13 +104,12 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
     }
   };
 
-  // ===== 총합 계산 (string | number 문제 해결!!) =====
   const total = useMemo(() => {
     const sum = Object.values(quantities).reduce(
       (acc: { kg: number; L: number }, cur) => {
         const kg = Number(cur.kg) || 0;
         const L = Number(cur.L) || 0;
-  
+
         return {
           kg: acc.kg + kg,
           L: acc.L + L,
@@ -128,18 +117,13 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
       },
       { kg: 0, L: 0 }
     );
-  
-    // JS 부동소수점 보정 (소숫점 제한 없음)
+
     return {
       kg: parseFloat(sum.kg.toPrecision(12)),
       L: parseFloat(sum.L.toPrecision(12)),
     };
   }, [quantities]);
-  
-  
-  
 
-  // ===== 부모로 전달 (항상 number로 보냄) =====
   useEffect(() => {
     const wasteList = selectedItems.map((item) => ({
       wasteType: wasteTypeMap[item] || "ETC",
@@ -151,12 +135,12 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
 
   return (
     <section className="mb-10">
-      <h3 className="text-lg font-semibold mb-4">
+      <h3 className="text-base md:text-lg font-semibold mb-4">
         폐기물 <span className="text-red-500">*</span>
       </h3>
 
-      {/* ===== 총합 표시 ===== */}
-      <div className="border border-gray-300 text-sm border-l-0 border-r-0">
+      {/* 데스크톱 버전 */}
+      <div className="hidden md:block border border-gray-300 text-sm border-l-0 border-r-0">
         <div className="grid grid-cols-6 border-b border-gray-300 h-[44px]">
           <div className="bg-[#f7f8fa] px-4 py-2 font-medium border-r border-b border-gray-300 col-span-1 flex items-center">
             총 수거량(kg)
@@ -189,7 +173,6 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
           </div>
         </div>
 
-        {/* ===== 체크박스 ===== */}
         <div className="flex flex-wrap gap-6 px-4 py-4 border-b border-gray-300">
           {wasteOptions.map((item) => (
             <label key={item} className="flex items-center gap-2">
@@ -204,14 +187,11 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
           ))}
         </div>
 
-        {/* ===== 선택된 항목의 입력칸 ===== */}
         {selectedItems.length > 0 && (
           <div className="grid grid-cols-2 gap-y-10 gap-x-8 px-6 py-4 bg-white border-t border-gray-300">
             {selectedItems.map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <label className="w-16 font-medium text-gray-800">{item}</label>
-
-                {/* KG 입력 */}
                 <input
                   type="number"
                   step="1"
@@ -220,15 +200,12 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
                   onChange={(e) =>
                     handleQuantityChange(item, "kg", e.target.value)
                   }
-                  onBlur={(e) => handleBlur(item, "kg")}
-                  onFocus={(e) => e.target.select()}     // ✨ 클릭 시 전체 선택됨
+                  onBlur={() => handleBlur(item, "kg")}
+                  onFocus={(e) => e.target.select()}
                   className="w-16 border border-gray-300 rounded px-2 py-1 text-center bg-[#f7f8fa] text-gray-700"
                 />
                 <span className="text-gray-600">kg</span>
-
                 <span className="mx-1 text-gray-400">/</span>
-
-                {/* L 입력 */}
                 <input
                   type="number"
                   step="1"
@@ -237,11 +214,100 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
                   onChange={(e) =>
                     handleQuantityChange(item, "L", e.target.value)
                   }
-                  onBlur={(e) => handleBlur(item, "L")}
-                  onFocus={(e) => e.target.select()}     // ✨ 클릭 시 전체 선택됨
+                  onBlur={() => handleBlur(item, "L")}
+                  onFocus={(e) => e.target.select()}
                   className="w-16 border border-gray-300 rounded px-2 py-1 text-center bg-[#f7f8fa] text-gray-700"
                 />
                 <span className="text-gray-600">L</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 모바일 버전 */}
+      <div className="md:hidden border-t border-b border-gray-300">
+        {/* 총 수거량 */}
+        <div className="border-b border-gray-300 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-semibold text-gray-700">총 수거량(kg)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                readOnly
+                value={total.kg}
+                className="w-24 border border-gray-300 rounded bg-gray-50 text-center text-gray-700 py-2 text-sm"
+              />
+              <span className="text-sm text-gray-600">kg</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-gray-700">총 수거량(L)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                readOnly
+                value={total.L}
+                className="w-24 border border-gray-300 rounded bg-gray-50 text-center text-gray-700 py-2 text-sm"
+              />
+              <span className="text-sm text-gray-600">L</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 구분 체크박스 */}
+        <div className="border-b border-gray-300 py-4">
+          <label className="block text-sm font-semibold mb-3 text-gray-700">구분</label>
+          <div className="grid grid-cols-4 gap-3">
+            {wasteOptions.map((item) => (
+              <label key={item} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-sky-600"
+                  checked={selectedItems.includes(item)}
+                  onChange={() => handleCheckboxChange(item)}
+                />
+                <span className="text-gray-700">{item}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* 선택된 항목 입력 */}
+        {selectedItems.length > 0 && (
+          <div className="py-4 space-y-4">
+            <label className="block text-sm font-semibold text-gray-700">폐기물</label>
+            {selectedItems.map((item) => (
+              <div key={item} className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700 w-16">{item}</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="1"
+                    min={0}
+                    value={quantities[item]?.kg}
+                    onChange={(e) =>
+                      handleQuantityChange(item, "kg", e.target.value)
+                    }
+                    onBlur={() => handleBlur(item, "kg")}
+                    onFocus={(e) => e.target.select()}
+                    className="w-20 border border-gray-300 rounded px-2 py-2 text-center bg-white text-gray-700 text-sm"
+                  />
+                  <span className="text-sm text-gray-600">kg</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min={0}
+                    value={quantities[item]?.L}
+                    onChange={(e) =>
+                      handleQuantityChange(item, "L", e.target.value)
+                    }
+                    onBlur={() => handleBlur(item, "L")}
+                    onFocus={(e) => e.target.select()}
+                    className="w-20 border border-gray-300 rounded px-2 py-2 text-center bg-white text-gray-700 text-sm"
+                  />
+                  <span className="text-sm text-gray-600">L</span>
+                </div>
               </div>
             ))}
           </div>
