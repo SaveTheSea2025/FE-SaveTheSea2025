@@ -18,7 +18,7 @@ interface ActivityRecord {
 function Dashboard() {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
-  const [isHeaderScrolled, setIsHeaderScrolled] = useState(false);
+  const [, setIsHeaderScrolled] = useState(false);
 
   useEffect(() => {
     const fetchActivities = async () => {

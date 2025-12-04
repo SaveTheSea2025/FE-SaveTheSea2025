@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 
 // icons
 import filterIcon from "../assets/filterIcon.png";
-import searchIcon from "../assets/searchIcon.png";
 import downloadIcon from "../assets/downloadIcon.png";
 import pdfIcon from "../assets/pdfIcon.png";
 import excelIcon from "../assets/excelIcon.png";
@@ -56,57 +55,153 @@ export default function StatsPage() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("amount");
 
+  // ✅ 필터 상태
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  const [startDate, setStartDate] = useState<string>(
+    firstDayOfMonth.toISOString().split('T')[0]
+  );
+  const [endDate, setEndDate] = useState<string>(
+    today.toISOString().split('T')[0]
+  );
+  const [location, setLocation] = useState<string>("동해");
+  const [organization, setOrganization] = useState<string>("전체");
+  
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [orgOpen, setOrgOpen] = useState(false);
+
   // ✅ API 데이터 상태
-  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
-  const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([]);
-  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
-  const [regionData, setRegionData] = useState<RegionStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>({
+    activityCount: 24,
+    totalMembers: 1250,
+    totalWeight: 3450,
+    totalVolume: 5800,
+  });
+  const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([
+    { month: "1월", totalWeight: 450 },
+    { month: "2월", totalWeight: 520 },
+    { month: "3월", totalWeight: 680 },
+    { month: "4월", totalWeight: 720 },
+    { month: "5월", totalWeight: 580 },
+    { month: "6월", totalWeight: 500 },
+  ]);
+  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([
+    { wasteType: "PLASTIC", ratio: 35.5 },
+    { wasteType: "GLASS", ratio: 22.3 },
+    { wasteType: "CAN", ratio: 18.7 },
+    { wasteType: "PAPER", ratio: 15.2 },
+    { wasteType: "ETC", ratio: 8.3 },
+  ]);
+  const [regionData, setRegionData] = useState<RegionStats[]>([
+    { region: "동해", totalWeight: 1200, totalVolume: 2000 },
+    { region: "서해", totalWeight: 950, totalVolume: 1600 },
+    { region: "남해", totalWeight: 800, totalVolume: 1400 },
+    { region: "제주", totalWeight: 500, totalVolume: 800 },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+  // ✅ 장소 옵션
+  const locationOptions = ["전체", "동해", "서해", "남해", "제주"];
+
+  // ✅ 단체 옵션 (임시 데이터 - 실제로는 API에서 가져와야 함)
+  const organizationOptions = [
+    "전체",
+    "가나다단체",
+    "나라사랑모임",
+    "다같이환경",
+    "라온환경보호",
+    "마음모아",
+    "바다지킴이",
+    "사랑의손길",
+    "아름다운바다",
+  ];
+
   // ✅ 데이터 불러오기
   useEffect(() => {
+    // 🔧 임시로 API 호출 비활성화 - UI 테스트용
+    // TODO: API 서버 준비되면 주석 해제
+    
+    /*
     const fetchAllData = async () => {
       try {
         setLoading(true);
+        setError(null);
+
+        // 필터 파라미터 구성
+        const params = new URLSearchParams({
+          startDate,
+          endDate,
+          location: location === "전체" ? "" : location,
+          organization: organization === "전체" ? "" : organization,
+        });
+
+        // 타임아웃 설정 (5초)
+        const timeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('요청 시간 초과')), 5000)
+        );
 
         // 1. 전체 통계
-        const summaryRes = await fetch(`${BASE_URL}/api/statistics/summary`);
+        const summaryPromise = fetch(`${BASE_URL}/api/statistics/summary?${params}`);
+        const summaryRes = await Promise.race([summaryPromise, timeout]) as Response;
         const summaryData = await summaryRes.json();
         if (summaryData.code === 0) {
           setSummaryStats(summaryData.data);
         }
 
         // 2. 월별 수거량
-        const monthlyRes = await fetch(`${BASE_URL}/api/statistics/monthly-weight`);
+        const monthlyPromise = fetch(`${BASE_URL}/api/statistics/monthly-weight?${params}`);
+        const monthlyRes = await Promise.race([monthlyPromise, timeout]) as Response;
         const monthlyResult = await monthlyRes.json();
         if (monthlyResult.code === 0) {
           setMonthlyData(monthlyResult.data);
         }
 
         // 3. 폐기물 비율
-        const wasteRes = await fetch(`${BASE_URL}/api/statistics/waste-type-ratio`);
+        const wastePromise = fetch(`${BASE_URL}/api/statistics/waste-type-ratio?${params}`);
+        const wasteRes = await Promise.race([wastePromise, timeout]) as Response;
         const wasteResult = await wasteRes.json();
         if (wasteResult.code === 0) {
           setWasteRatio(wasteResult.data);
         }
 
         // 4. 지역별 통계
-        const regionRes = await fetch(`${BASE_URL}/api/statistics/region`);
+        const regionPromise = fetch(`${BASE_URL}/api/statistics/region?${params}`);
+        const regionRes = await Promise.race([regionPromise, timeout]) as Response;
         const regionResult = await regionRes.json();
         if (regionResult.code === 0) {
           setRegionData(regionResult.data);
         }
       } catch (error) {
         console.error("API 로드 오류:", error);
+        setError(error instanceof Error ? error.message : "데이터를 불러오는데 실패했습니다.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllData();
-  }, [BASE_URL]);
+    // BASE_URL이 있을 때만 API 호출
+    if (BASE_URL) {
+      fetchAllData();
+    } else {
+      setLoading(false);
+      console.warn("BASE_URL이 설정되지 않았습니다. .env 파일을 확인하세요.");
+    }
+    */
+    
+    console.log("필터 상태:", { startDate, endDate, location, organization });
+    console.log("더미 데이터로 UI 표시 중...");
+  }, [BASE_URL, startDate, endDate, location, organization]);
+
+  // ✅ 조회 버튼 클릭 핸들러
+  const handleSearch = () => {
+    // useEffect가 의존성 배열을 통해 자동으로 재실행되므로 별도 처리 불필요
+    // 필요시 여기서 추가 로직 구현
+  };
 
   // ✅ 폐기물 한글 변환
   const wasteTypeMap: Record<string, string> = {
@@ -132,6 +227,24 @@ export default function StatsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="w-full bg-[#e5edf2] min-h-screen">
+        <Header forceScrolled />
+        <div className="max-w-[1200px] mx-auto pt-20 pb-20 px-8 flex flex-col items-center justify-center min-h-[60vh]">
+          <p className="text-lg text-red-600 mb-4">⚠️ {error}</p>
+          <p className="text-sm text-gray-600 mb-4">API 서버 연결을 확인해주세요.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-[#0066aa] text-white rounded-lg hover:bg-[#005a95]"
+          >
+            새로고침
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full bg-[#e5edf2] min-h-screen">
       <Header forceScrolled />
@@ -146,20 +259,128 @@ export default function StatsPage() {
               <img src={filterIcon} className="w-5 h-5" />
             </button>
 
-            <SelectBox label="기간" />
-            <div className="w-px h-6 bg-gray-300"></div>
-            <SelectBox label="장소" />
-            <SelectBox label="활동 유형" />
-
+            {/* 기간 선택 */}
             <div className="relative">
-              <input
-                placeholder="단체 명을 입력해주세요."
-                className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm w-56 pr-10 focus:outline-none"
-              />
-              <img src={searchIcon} className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 opacity-70" />
+              <button
+                onClick={() => {
+                  setDatePickerOpen(!datePickerOpen);
+                  setLocationOpen(false);
+                  setOrgOpen(false);
+                }}
+                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
+              >
+                {startDate} ~ {endDate}
+              </button>
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">▼</span>
+              
+              {datePickerOpen && (
+                <div className="absolute left-0 mt-2 bg-white border border-gray-200 p-4 rounded-xl shadow-lg z-20 w-80">
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-600 mb-1">시작일</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0066aa]"
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-600 mb-1">종료일</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0066aa]"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setDatePickerOpen(false)}
+                    className="w-full px-4 py-2 bg-[#0066aa] text-white rounded-lg text-sm hover:bg-[#005a95] transition"
+                  >
+                    확인
+                  </button>
+                </div>
+              )}
             </div>
 
-            <button className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-sm hover:bg-[#005a95] transition">
+            <div className="w-px h-6 bg-gray-300"></div>
+
+            {/* 장소 선택 */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setLocationOpen(!locationOpen);
+                  setDatePickerOpen(false);
+                  setOrgOpen(false);
+                }}
+                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
+              >
+                {location}
+              </button>
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">▼</span>
+              
+              {locationOpen && (
+                <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-40">
+                  {locationOptions.map((loc) => (
+                    <div
+                      key={loc}
+                      onClick={() => {
+                        setLocation(loc);
+                        setLocationOpen(false);
+                      }}
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                        location === loc ? "bg-blue-50 text-[#0066aa] font-medium" : ""
+                      } ${loc === locationOptions[0] ? "rounded-t-xl" : ""} ${
+                        loc === locationOptions[locationOptions.length - 1] ? "rounded-b-xl" : ""
+                      }`}
+                    >
+                      {loc}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 단체명 선택 */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setOrgOpen(!orgOpen);
+                  setDatePickerOpen(false);
+                  setLocationOpen(false);
+                }}
+                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50 w-56"
+              >
+                {organization}
+              </button>
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">▼</span>
+              
+              {orgOpen && (
+                <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
+                  {organizationOptions.map((org, idx) => (
+                    <div
+                      key={org}
+                      onClick={() => {
+                        setOrganization(org);
+                        setOrgOpen(false);
+                      }}
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                        organization === org ? "bg-blue-50 text-[#0066aa] font-medium" : ""
+                      } ${idx === 0 ? "rounded-t-xl border-b border-gray-100" : ""} ${
+                        idx === organizationOptions.length - 1 ? "rounded-b-xl" : ""
+                      }`}
+                    >
+                      {org}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleSearch}
+              className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-sm hover:bg-[#005a95] transition"
+            >
               조회
             </button>
           </div>
@@ -333,17 +554,6 @@ export default function StatsPage() {
 /* ------------------------------------------------------ */
 /* Components */
 /* ------------------------------------------------------ */
-
-function SelectBox({ label }: { label: string }) {
-  return (
-    <div className="relative">
-      <select className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none">
-        <option>{label}</option>
-      </select>
-      <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">▼</span>
-    </div>
-  );
-}
 
 function SummaryCard({ title, value, icon }: any) {
   return (
