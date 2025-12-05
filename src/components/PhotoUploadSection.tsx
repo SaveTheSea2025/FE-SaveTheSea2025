@@ -3,8 +3,8 @@ import starOutline from "/src/assets/star-outline.png";
 import starFilled from "/src/assets/star-filled.png";
 
 interface PhotoUploadSectionProps {
-  onChange?: (files: File[]) => void; // ✅ 부모로 파일 전달
-  onFavoriteChange?: (index: number) => void; // ✅ 대표사진 index 전달
+  onChange?: (files: File[]) => void; 
+  onFavoriteChange?: (index: number) => void; 
 }
 
 const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionProps) => {
@@ -12,7 +12,6 @@ const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionPr
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ✅ 파일 추가 로직
   const handleFiles = (files: FileList) => {
     const newFiles = Array.from(files);
 
