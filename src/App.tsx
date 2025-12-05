@@ -5,7 +5,10 @@ import StatsPage from "./pages/StatsPage";
 import RankingPage from "./pages/RankingPage";
 import MyPage from "./pages/MyPage";
 import WritePage from "./pages/WritePage";
-
+import LoginPage from "./pages/LoginPage";
+import SignupTypePage from "./pages/SignupTypePage";
+import PersonalSignupPage from "./pages/PersonalSignupPage";
+import GroupSignupPage from "./pages/GroupSignupPage";
 
 function App() {
   return (
@@ -17,6 +20,10 @@ function App() {
         <Route path="/ranking" element={<RankingPage />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/write" element={<WritePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupTypePage />} />
+        <Route path="/signup/personal" element={<PersonalSignupPage />} />
+        <Route path="/signup/group" element={<GroupSignupPage />} />
       </Routes>
     </Router>
   )

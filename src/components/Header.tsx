@@ -64,8 +64,8 @@ function Header({ forceScrolled = false }: HeaderProps) {
           <Link
             to="/records"
             className={`transition-colors duration-300 ${scrolled
-                ? "hover:text-blue-400"
-                : "hover:text-sky-300"
+              ? "hover:text-blue-400"
+              : "hover:text-sky-300"
               }`}
           >
             함께한 기록
@@ -73,8 +73,8 @@ function Header({ forceScrolled = false }: HeaderProps) {
           <Link
             to="/stats"
             className={`transition-colors duration-300 ${scrolled
-                ? "hover:text-blue-400"
-                : "hover:text-sky-300"
+              ? "hover:text-blue-400"
+              : "hover:text-sky-300"
               }`}
           >
             통계
@@ -82,8 +82,8 @@ function Header({ forceScrolled = false }: HeaderProps) {
           <Link
             to="/ranking"
             className={`transition-colors duration-300 ${scrolled
-                ? "hover:text-blue-400"
-                : "hover:text-sky-300"
+              ? "hover:text-blue-400"
+              : "hover:text-sky-300"
               }`}
           >
             랭킹
@@ -95,8 +95,8 @@ function Header({ forceScrolled = false }: HeaderProps) {
           <button
             onClick={() => navigate("/write")}
             className={`flex items-center gap-2 rounded-full font-medium transition duration-300 px-5 py-2 ${scrolled
-                ? "bg-[#0C4A6E] text-white hover:bg-[#093d5d]"
-                : "bg-white text-sky-600 hover:bg-sky-100"
+              ? "bg-[#0C4A6E] text-white hover:bg-[#093d5d]"
+              : "bg-white text-sky-600 hover:bg-sky-100"
               }`}
           >
             <span>작성하기</span>

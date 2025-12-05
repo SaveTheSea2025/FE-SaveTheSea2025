@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { useEffect, useState } from "react";
@@ -6,8 +7,20 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
 
+// 💡 수정 1: ActivityRecord 타입 정의가 없으므로 임시로 정의합니다.
+// 실제 프로젝트의 타입 파일에서 가져와야 합니다. (예: import type { ActivityRecord } from "../types/activity";)
+interface ActivityRecord {
+  id: number;
+  thumbnail: string;
+  name: string;
+  totalWeight: number;
+  memberCount: number;
+}
+
+
 function Dashboard() {
   const navigate = useNavigate();
+  // ActivityRecord 타입이 정의되었다고 가정하고 사용합니다.
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
 
   useEffect(() => {
@@ -47,7 +60,7 @@ function Dashboard() {
         {/* 공용 컴포넌트에서 헤더씀 */}
         <Header />
 
-        {/* 메인  */}
+        {/* 메인  */}
         <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
           <h3 className="text-[40px] font-light tracking-wide">
             바다를 향한 우리의 시선
@@ -72,7 +85,9 @@ function Dashboard() {
                 "https://play.google.com/store/apps/details?id=com.letspl.oceankeeper&pcampaignid=web_share",
                 "_blank"
               );
-            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+            } 
+            // 💡 수정 2: window.MSStream 대신 타입 안전한 속성 존재 확인 사용
+            else if (/iPad|iPhone|iPod/.test(userAgent) && !('MSStream' in window)) {
               window.open(
                 "https://apps.apple.com/kr/app/%EC%98%A4%EC%85%98%ED%82%A4%ED%8D%BC/id6470431291",
                 "_blank"
@@ -105,59 +120,59 @@ function Dashboard() {
         </MainpageScrollReveal>
 
         {/* 가운데 아이콘 + 수거량 */}
-<MainpageScrollReveal delay={0.4}>
-  <div className="flex flex-col md:flex-row justify-center items-center gap-32 mt-10 relative">
-    {/* 아이콘 이미지 */}
-    <img
-      src="/src/assets/mainpage-cleanup.png"
-      alt="cleanup"
-      className="w-[200px] h-[200px] md:w-[260px] md:h-[260px]"
-    />
+        <MainpageScrollReveal delay={0.4}>
+          <div className="flex flex-col md:flex-row justify-center items-center gap-32 mt-10 relative">
+            {/* 아이콘 이미지 */}
+            <img
+              src="/src/assets/mainpage-cleanup.png"
+              alt="cleanup"
+              className="w-[200px] h-[200px] md:w-[260px] md:h-[260px]"
+            />
 
-    {/* 수거량 섹션 - 왼쪽으로 약간 이동 */}
-    <div className="flex flex-col md:flex-row gap-36 items-center md:-translate-x-8">
-      <div>
-        <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
-          수거량(kg)
-        </p>
-        <p className="text-[88px] md:text-[100px] font-extrabold text-[#0C4A6E]">
-          1,321
-        </p>
-      </div>
-      <div>
-        <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
-          수거량(L)
-        </p>
-        <p className="text-[88px] md:text-[100px] font-extrabold text-[#0C4A6E]">
-          745
-        </p>
-      </div>
-    </div>
-  </div>
-</MainpageScrollReveal>
+            {/* 수거량 섹션 - 왼쪽으로 약간 이동 */}
+            <div className="flex flex-col md:flex-row gap-36 items-center md:-translate-x-8">
+              <div>
+                <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+                  수거량(kg)
+                </p>
+                <p className="text-[88px] md:text-[100px] font-extrabold text-[#0C4A6E]">
+                  1,321
+                </p>
+              </div>
+              <div>
+                <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+                  수거량(L)
+                </p>
+                <p className="text-[88px] md:text-[100px] font-extrabold text-[#0C4A6E]">
+                  745
+                </p>
+              </div>
+            </div>
+          </div>
+        </MainpageScrollReveal>
 
 
-{/* 하단 활동건수 + 참여자수 */}
-<MainpageScrollReveal delay={0.6}>
-  <div className="flex justify-center items-center gap-44 mt-20">
-    <div>
-      <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
-        활동건수
-      </p>
-      <p className="text-[80px] md:text-[96px] font-extrabold text-[#0C4A6E]">
-        47
-      </p>
-    </div>
-    <div>
-      <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
-        참여자수
-      </p>
-      <p className="text-[80px] md:text-[96px] font-extrabold text-[#0C4A6E]">
-        897
-      </p>
-    </div>
-  </div>
-</MainpageScrollReveal>
+        {/* 하단 활동건수 + 참여자수 */}
+        <MainpageScrollReveal delay={0.6}>
+          <div className="flex justify-center items-center gap-44 mt-20">
+            <div>
+              <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+                활동건수
+              </p>
+              <p className="text-[80px] md:text-[96px] font-extrabold text-[#0C4A6E]">
+                47
+              </p>
+            </div>
+            <div>
+              <p className="text-[24px] md:text-[28px] text-[#0F575F] mb-3 font-semibold">
+                참여자수
+              </p>
+              <p className="text-[80px] md:text-[96px] font-extrabold text-[#0C4A6E]">
+                897
+              </p>
+            </div>
+          </div>
+        </MainpageScrollReveal>
 
       </section>
 
