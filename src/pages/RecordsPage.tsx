@@ -42,7 +42,7 @@ const RecordsPage: React.FC = () => {
 
   const [data, setData] = useState<CleanupItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [activeRegion, setActiveRegion] = useState<string>("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<CleanupItem | null>(null);

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState} from "react";
 import starOutline from "/src/assets/star-outline.png";
 import starFilled from "/src/assets/star-filled.png";
 

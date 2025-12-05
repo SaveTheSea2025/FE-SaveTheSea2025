@@ -7,8 +7,20 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
 
+// 💡 수정 1: ActivityRecord 타입 정의가 없으므로 임시로 정의합니다.
+// 실제 프로젝트의 타입 파일에서 가져와야 합니다. (예: import type { ActivityRecord } from "../types/activity";)
+interface ActivityRecord {
+  id: number;
+  thumbnail: string;
+  name: string;
+  totalWeight: number;
+  memberCount: number;
+}
+
+
 function Dashboard() {
   const navigate = useNavigate();
+  // ActivityRecord 타입이 정의되었다고 가정하고 사용합니다.
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
 
   useEffect(() => {
@@ -48,7 +60,7 @@ function Dashboard() {
         {/* 공용 컴포넌트에서 헤더씀 */}
         <Header />
 
-        {/* 메인  */}
+        {/* 메인  */}
         <section className="relative z-10 flex flex-col justify-center items-center text-center py-32">
           <h3 className="text-[40px] font-light tracking-wide">
             바다를 향한 우리의 시선
@@ -73,7 +85,9 @@ function Dashboard() {
                 "https://play.google.com/store/apps/details?id=com.letspl.oceankeeper&pcampaignid=web_share",
                 "_blank"
               );
-            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+            } 
+            // 💡 수정 2: window.MSStream 대신 타입 안전한 속성 존재 확인 사용
+            else if (/iPad|iPhone|iPod/.test(userAgent) && !('MSStream' in window)) {
               window.open(
                 "https://apps.apple.com/kr/app/%EC%98%A4%EC%85%98%ED%82%A4%ED%8D%BC/id6470431291",
                 "_blank"

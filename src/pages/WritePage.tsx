@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Header from "../components/Header";
 import WasteSection from "../components/WasteSection";
-import { loadKakaoCustom } from "../lib/loadKakaoCustom";
 import graycheck from "/src/assets/graycheck.png";
 import bluecheck from "/src/assets/bluecheck.png";
 import PhotoUploadSection from "../components/PhotoUploadSection";
@@ -16,13 +15,7 @@ const WritePage = () => {
   const [groupType, setGroupType] = useState("단체");
   const [groupName, setGroupName] = useState("");
 
-  const [startText, setStartText] = useState("");
-  const [endText, setEndText] = useState("");
-  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
-
-  const [selectedRegion, setSelectedRegion] = useState({ sido: "", sigungu: "" });
-  const [center, setCenter] = useState({ lat: 37.5665, lng: 126.978 });
+  const [selectedRegion] = useState({ sido: "", sigungu: "" });
 
   const [loading, setLoading] = useState(false);
 

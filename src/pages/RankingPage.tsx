@@ -7,8 +7,7 @@ import RankTop3Card from "../components/ranking/RankTop3Card";
 import RankListItem from "../components/ranking/RankListItem";
 import AwardCard from "../components/ranking/AwardCard";
 
-// 타입 정의를 가정하고 가져옵니다. (실제 경로에 맞게 수정하세요)
-import { RankingData, RankItem, StatItem } from "../types/ranking"; 
+import type { RankingData, RankItem, StatItem } from "../types/ranking"; 
 
 
 // 새로 추가된 API 최상위 응답 타입 정의
