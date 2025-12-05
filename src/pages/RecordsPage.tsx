@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useRef } from "react";
 import Header from "../components/Header";
@@ -23,8 +24,10 @@ type CleanupItem = {
   regionSigungu: string;
   startAddress: string;
   endAddress: string;
-  latitude: number;
-  longitude: number;
+  startLatitude: number;
+  startLongitude: number;
+  endLatitude: number;
+  endLongitude: number;
   memberCount: number;
   totalWeight: number;
   thumbnail: string;
@@ -39,7 +42,7 @@ const RecordsPage: React.FC = () => {
 
   const [data, setData] = useState<CleanupItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [activeRegion, setActiveRegion] = useState<string>("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<CleanupItem | null>(null);
@@ -213,8 +216,9 @@ const RecordsPage: React.FC = () => {
         // 🔹 히트맵 색상
         const color = "rgb(255, 60, 40)"; // 기본 빨간색 계열
 
-        const sw = new kakao.maps.LatLng(p.latitude - size, p.longitude - size);
-        const ne = new kakao.maps.LatLng(p.latitude + size, p.longitude + size);
+        const sw = new kakao.maps.LatLng(p.startLatitude - size, p.startLongitude - size);
+        const ne = new kakao.maps.LatLng(p.startLatitude + size, p.startLongitude + size);
+
         const bounds = new kakao.maps.LatLngBounds(sw, ne);
 
         const overlay = new (HeatCircle as any)(bounds, color, opacity);
@@ -229,9 +233,9 @@ const RecordsPage: React.FC = () => {
       const markers: any[] = [];
 
       data.forEach((d) => {
-        const markerPosition = new kakao.maps.LatLng(d.latitude, d.longitude);
+        const markerPosition = new kakao.maps.LatLng(d.startLatitude, d.startLongitude);
 
-        // ✅ 대표 썸네일이 있는 경우 CustomOverlay 사용
+        // 대표 썸네일이 있는 경우 CustomOverlay 사용
         if (d.thumbnail) {
           const content = `
       <div style="position: relative; width: 60px; height: 70px;">
@@ -341,10 +345,11 @@ const RecordsPage: React.FC = () => {
         // 🔹 보이는 영역에 해당하는 데이터 필터링
         const visible = data.filter(
           (d) =>
-            d.latitude >= bounds.getSouthWest().getLat() &&
-            d.latitude <= bounds.getNorthEast().getLat() &&
-            d.longitude >= bounds.getSouthWest().getLng() &&
-            d.longitude <= bounds.getNorthEast().getLng()
+            d.startLatitude >= bounds.getSouthWest().getLat()
+            && d.startLatitude <= bounds.getNorthEast().getLat()
+            && d.startLongitude >= bounds.getSouthWest().getLng()
+            && d.startLongitude <= bounds.getNorthEast().getLng()
+
         );
 
         // 🔹 필터링된 데이터만 오른쪽 카드 리스트에 표시
@@ -527,10 +532,18 @@ const RecordsPage: React.FC = () => {
       </div>
 
       {selectedRecord && (
-        <RecordDetailPanel
-          recordId={selectedRecord.id}
-          onClose={() => setSelectedRecord(null)}
-        />
+        <div
+          className="fixed inset-0 z-30 bg-black/10"
+          onClick={() => setSelectedRecord(null)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <RecordDetailPanel
+              recordId={selectedRecord.id}
+              totalWeight={selectedRecord.totalWeight}
+              onClose={() => setSelectedRecord(null)}
+            />
+          </div>
+        </div>
       )}
 
       {loading && (

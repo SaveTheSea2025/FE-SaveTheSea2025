@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Header from "../components/Header";
 import WasteSection from "../components/WasteSection";
-import { loadKakaoCustom } from "../lib/loadKakaoCustom";
 import graycheck from "/src/assets/graycheck.png";
 import bluecheck from "/src/assets/bluecheck.png";
 import PhotoUploadSection from "../components/PhotoUploadSection";
@@ -16,13 +15,7 @@ const WritePage = () => {
   const [groupType, setGroupType] = useState("단체");
   const [groupName, setGroupName] = useState("");
 
-  const [startText, setStartText] = useState("");
-  const [endText, setEndText] = useState("");
-  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
-
-  const [selectedRegion, setSelectedRegion] = useState({ sido: "", sigungu: "" });
-  const [center, setCenter] = useState({ lat: 37.5665, lng: 126.978 });
+  const [selectedRegion] = useState({ sido: "", sigungu: "" });
 
   const [loading, setLoading] = useState(false);
 
@@ -104,15 +97,16 @@ const WritePage = () => {
       const validStart = `${startDate}T${startTime}`;
       const validEnd = `${endDate}T${endTime}`;
 
-      const latitude = locationData?.endLat ?? locationData?.startLat ?? 0;
-      const longitude = locationData?.endLng ?? locationData?.startLng ?? 0;
 
 
-      const totalActivityTime = (() => {
-        const hours = Math.floor(volunteerHours);
-        const minutes = Math.round((volunteerHours - hours) * 60);
-        return `${hours}시간 ${minutes}분`;
-      })();
+
+
+
+      const startLatitude = locationData?.startLat ?? 0;
+      const startLongitude = locationData?.startLng ?? 0;
+      const endLatitude = locationData?.endLat ?? 0;
+      const endLongitude = locationData?.endLng ?? 0;
+
 
       const data = {
         groups: groupType === "단체",
@@ -127,8 +121,10 @@ const WritePage = () => {
         regionSigungu: locationData?.regionSigungu || selectedRegion.sigungu,
         startAddress: locationData?.startAddress || "",
         endAddress: locationData?.endAddress || "",
-        latitude,
-        longitude,
+        startLatitude,
+        startLongitude,
+        endLatitude,
+        endLongitude,
         specialNote: specialNote || "특이사항 없음",
         wasteList,
         thumbnailIndex,
@@ -159,6 +155,13 @@ const WritePage = () => {
       setLoading(false);
     }
   };
+
+  const totalActivityTime = (() => {
+    const hours = Math.floor(volunteerHours);
+    const minutes = Math.round((volunteerHours - hours) * 60);
+    return `${hours}시간 ${minutes}분`;
+  })();
+
 
   // ============================================================
 
@@ -311,7 +314,10 @@ const WritePage = () => {
                   <td className="p-0">
                     <div className="flex">
                       <div className="flex items-center justify-center w-1/3 border-r border-gray-300 bg-white text-sm text-gray-800">
-                        <span>{volunteerHours} 시간</span>
+                        <span>
+                          {Math.floor(volunteerHours)}시간 {Math.round((volunteerHours - Math.floor(volunteerHours)) * 60)}분
+                        </span>
+
                       </div>
 
                       <div className="flex items-center justify-start w-1/3 bg-[#f5f6f8] border-r border-gray-300 px-6 py-3">
