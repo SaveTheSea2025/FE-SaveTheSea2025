@@ -37,8 +37,7 @@ const RecordsPage: React.FC = () => {
   const mapRef = useRef<any>(null);
   const kakaoKey = import.meta.env.VITE_KAKAO_MAP_KEY;
   const BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
-    "https://be-savethesea2025.onrender.com";
+    import.meta.env.VITE_API_BASE_URL;
 
   const [data, setData] = useState<CleanupItem[]>([]);
   const [loading, setLoading] = useState(true);

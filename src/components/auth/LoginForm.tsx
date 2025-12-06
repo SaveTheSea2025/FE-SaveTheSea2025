@@ -1,16 +1,49 @@
 // src/components/auth/LoginForm.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../../api/auth';
+import { useAuth } from '../../context/AuthContext'; // ✅ useAuth 훅 임포트
 
 const LoginForm = () => {
     const navigate = useNavigate();
-    // 폼 제출 핸들러 (더미)
-    const handleSubmit = (e: React.FormEvent) => {
+    const { loadUser } = useAuth(); // ✅ loadUser 함수 가져오기
+
+    // 🔥 입력값 상태
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [memberType] = useState<"PERSONAL" | "GROUP">("PERSONAL"); // 기본값 개인회원
+
+    // 🔥 UI 상태
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
+
+    // 🔥 로그인 핸들러
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("로그인 시도");
-        // 실제 로그인 로직을 여기에 구현
+        setErrorMsg("");
+        setLoading(true);
+
+        try {
+            const res = await login(email, password, memberType);
+
+            if (res.code === 0) {
+                alert("로그인 성공!");
+
+                // ✅ 핵심: 로그인 성공 후 사용자 정보를 전역 상태에 로드
+                await loadUser();
+
+                navigate("/");
+            } else {
+                setErrorMsg(res.message || "로그인에 실패했습니다.");
+            }
+        } catch (err) {
+            console.error(err);
+            setErrorMsg("서버 오류가 발생했습니다.");
+        }
+
+        setLoading(false);
     };
 
     return (
@@ -26,7 +59,7 @@ const LoginForm = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* 이메일 아이디 입력 필드 */}
+                {/* 이메일 */}
                 <div>
                     <label className="text-gray-700 text-sm font-medium block mb-2">
                         이메일 아이디
@@ -38,11 +71,13 @@ const LoginForm = () => {
                             placeholder="example@ocean.com"
                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0270AD] focus:border-[#0270AD] transition duration-150"
                             required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
                 </div>
 
-                {/* 비밀번호 입력 필드 */}
+                {/* 비밀번호 */}
                 <div>
                     <label className="text-gray-700 text-sm font-medium block mb-2">
                         비밀번호
@@ -54,16 +89,24 @@ const LoginForm = () => {
                             placeholder="비밀번호 입력"
                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0270AD] focus:border-[#0270AD] transition duration-150 "
                             required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
                 </div>
 
+                {/* 🔥 서버 오류 메시지 */}
+                {errorMsg && (
+                    <p className="text-red-500 text-sm text-center">{errorMsg}</p>
+                )}
+
                 {/* 로그인 버튼 */}
                 <button
                     type="submit"
-                    className="w-full bg-[#0369A1] text-white py-3 rounded-lg font-semibold hover:bg-[#0C4A6E] transition duration-200 shadow-md"
+                    className="w-full bg-[#0369A1] text-white py-3 rounded-lg font-semibold hover:bg-[#0C4A6E] transition duration-200 shadow-md disabled:bg-gray-400"
+                    disabled={loading}
                 >
-                    로그인
+                    {loading ? "로그인 중..." : "로그인"}
                 </button>
             </form>
 
@@ -78,7 +121,7 @@ const LoginForm = () => {
                 <p className="text-center text-gray-500 text-sm mb-4">
                     아직 계정이 없으신가요?
                 </p>
-                {/* 회원가입 버튼 */}
+
                 <button
                     type="button"
                     className="w-full border border-[#0C4A6E] text-[#0C4A6E] py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-200"
