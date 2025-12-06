@@ -7,7 +7,6 @@ interface WasteSectionProps {
 }
 
 const WasteSection = ({ onChange }: WasteSectionProps) => {
-  // ✅ 한글 → 백엔드 ENUM 코드 매핑
   const wasteTypeMap: Record<string, string> = {
     마대수: "SACK",
     페트병: "PLASTIC",
@@ -21,7 +20,6 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
     기타: "ETC",
   };
 
-  // ✅ 체크박스 표시 항목
   const wasteOptions = [
     "마대수",
     "부표",
@@ -34,16 +32,17 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
   ];
 
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [quantities, setQuantities] = useState<{ [key: string]: { kg: number; L: number } }>({});
+  const [quantities, setQuantities] = useState<{
+    [key: string]: { kg: number | string; L: number | string };
+  }>({});
 
-  // ✅ 체크박스 선택/해제
   const handleCheckboxChange = (item: string) => {
     if (selectedItems.includes(item)) {
       const updated = selectedItems.filter((v) => v !== item);
       setSelectedItems(updated);
-      const qCopy = { ...quantities };
-      delete qCopy[item];
-      setQuantities(qCopy);
+      const copy = { ...quantities };
+      delete copy[item];
+      setQuantities(copy);
     } else {
       const updated = [...selectedItems, item];
       const sorted = wasteOptions.filter((opt) => updated.includes(opt));
@@ -52,44 +51,96 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
     }
   };
 
-  // ✅ 항목별 kg/L 입력
-  const handleQuantityChange = (item: string, type: "kg" | "L", value: string) => {
-    const num = Math.max(0, Number(value));
+  const handleQuantityChange = (
+    item: string,
+    type: "kg" | "L",
+    value: string
+  ) => {
+    const regex = /^\d*\.?\d*$/;
+    if (!regex.test(value)) return;
+
+    if (value === "") {
+      setQuantities({
+        ...quantities,
+        [item]: { ...quantities[item], [type]: "" },
+      });
+      return;
+    }
+
+    if (value.endsWith(".")) {
+      setQuantities({
+        ...quantities,
+        [item]: { ...quantities[item], [type]: value },
+      });
+      return;
+    }
+
+    const num = Number(value);
     setQuantities({
       ...quantities,
-      [item]: { ...quantities[item], [type]: num },
+      [item]: { ...quantities[item], [type]: isNaN(num) ? "" : num },
     });
   };
 
-  // ✅ 총합 계산
+  const handleBlur = (item: string, type: "kg" | "L") => {
+    let v = quantities[item][type];
+
+    if (v === "" || v === "." || v === "0.") {
+      setQuantities({
+        ...quantities,
+        [item]: { ...quantities[item], [type]: 0 },
+      });
+      return;
+    }
+
+    if (typeof v === "string" && v.endsWith(".")) {
+      setQuantities({
+        ...quantities,
+        [item]: {
+          ...quantities[item],
+          [type]: Number(v.slice(0, -1)),
+        },
+      });
+    }
+  };
+
   const total = useMemo(() => {
-    return Object.values(quantities).reduce(
-      (acc, cur) => ({
-        kg: acc.kg + (cur.kg || 0),
-        L: acc.L + (cur.L || 0),
-      }),
+    const sum = Object.values(quantities).reduce(
+      (acc: { kg: number; L: number }, cur) => {
+        const kg = Number(cur.kg) || 0;
+        const L = Number(cur.L) || 0;
+
+        return {
+          kg: acc.kg + kg,
+          L: acc.L + L,
+        };
+      },
       { kg: 0, L: 0 }
     );
+
+    return {
+      kg: parseFloat(sum.kg.toPrecision(12)),
+      L: parseFloat(sum.L.toPrecision(12)),
+    };
   }, [quantities]);
 
-  // ✅ 부모 컴포넌트로 데이터 전달 (백엔드 ENUM 변환)
   useEffect(() => {
     const wasteList = selectedItems.map((item) => ({
-      wasteType: wasteTypeMap[item] || "ETC", // ✅ 한글 → ENUM 변환
-      wasteWeight: quantities[item]?.kg || 0,
-      wasteVolume: quantities[item]?.L || 0,
+      wasteType: wasteTypeMap[item] || "ETC",
+      wasteWeight: Number(quantities[item]?.kg) || 0,
+      wasteVolume: Number(quantities[item]?.L) || 0,
     }));
     onChange?.(wasteList);
   }, [selectedItems, quantities, onChange]);
 
   return (
     <section className="mb-10">
-      <h3 className="text-lg font-semibold mb-4">
+      <h3 className="text-base md:text-lg font-semibold mb-4">
         폐기물 <span className="text-red-500">*</span>
       </h3>
 
-      {/* ==================== 상단 총 수거량 ==================== */}
-      <div className="border border-gray-300 text-sm border-l-0 border-r-0">
+      {/* 데스크톱 버전 */}
+      <div className="hidden md:block border border-gray-300 text-sm border-l-0 border-r-0">
         <div className="grid grid-cols-6 border-b border-gray-300 h-[44px]">
           <div className="bg-[#f7f8fa] px-4 py-2 font-medium border-r border-b border-gray-300 col-span-1 flex items-center">
             총 수거량(kg)
@@ -122,7 +173,6 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
           </div>
         </div>
 
-        {/* ==================== 체크박스 ==================== */}
         <div className="flex flex-wrap gap-6 px-4 py-4 border-b border-gray-300">
           {wasteOptions.map((item) => (
             <label key={item} className="flex items-center gap-2">
@@ -137,33 +187,129 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
           ))}
         </div>
 
-        {/* ==================== 선택된 항목 ==================== */}
         {selectedItems.length > 0 && (
           <div className="grid grid-cols-2 gap-y-10 gap-x-8 px-6 py-4 bg-white border-t border-gray-300">
-            {wasteOptions
-              .filter((item) => selectedItems.includes(item))
-              .map((item) => (
-                <div key={item} className="flex items-center gap-2">
-                  <label className="w-16 font-medium text-gray-800">{item}</label>
+            {selectedItems.map((item) => (
+              <div key={item} className="flex items-center gap-2">
+                <label className="w-16 font-medium text-gray-800">{item}</label>
+                <input
+                  type="number"
+                  step="1"
+                  min={0}
+                  value={quantities[item]?.kg}
+                  onChange={(e) =>
+                    handleQuantityChange(item, "kg", e.target.value)
+                  }
+                  onBlur={() => handleBlur(item, "kg")}
+                  onFocus={(e) => e.target.select()}
+                  className="w-16 border border-gray-300 rounded px-2 py-1 text-center bg-[#f7f8fa] text-gray-700"
+                />
+                <span className="text-gray-600">kg</span>
+                <span className="mx-1 text-gray-400">/</span>
+                <input
+                  type="number"
+                  step="1"
+                  min={0}
+                  value={quantities[item]?.L}
+                  onChange={(e) =>
+                    handleQuantityChange(item, "L", e.target.value)
+                  }
+                  onBlur={() => handleBlur(item, "L")}
+                  onFocus={(e) => e.target.select()}
+                  className="w-16 border border-gray-300 rounded px-2 py-1 text-center bg-[#f7f8fa] text-gray-700"
+                />
+                <span className="text-gray-600">L</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 모바일 버전 */}
+      <div className="md:hidden border-t border-b border-gray-300">
+        {/* 총 수거량 */}
+        <div className="border-b border-gray-300 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-semibold text-gray-700">총 수거량(kg)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                readOnly
+                value={total.kg}
+                className="w-24 border border-gray-300 rounded bg-gray-50 text-center text-gray-700 py-2 text-sm"
+              />
+              <span className="text-sm text-gray-600">kg</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-gray-700">총 수거량(L)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                readOnly
+                value={total.L}
+                className="w-24 border border-gray-300 rounded bg-gray-50 text-center text-gray-700 py-2 text-sm"
+              />
+              <span className="text-sm text-gray-600">L</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 구분 체크박스 */}
+        <div className="border-b border-gray-300 py-4">
+          <label className="block text-sm font-semibold mb-3 text-gray-700">구분</label>
+          <div className="grid grid-cols-4 gap-3">
+            {wasteOptions.map((item) => (
+              <label key={item} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-sky-600"
+                  checked={selectedItems.includes(item)}
+                  onChange={() => handleCheckboxChange(item)}
+                />
+                <span className="text-gray-700">{item}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* 선택된 항목 입력 */}
+        {selectedItems.length > 0 && (
+          <div className="py-4 space-y-4">
+            <label className="block text-sm font-semibold text-gray-700">폐기물</label>
+            {selectedItems.map((item) => (
+              <div key={item} className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700 w-16">{item}</span>
+                <div className="flex items-center gap-2">
                   <input
                     type="number"
+                    step="1"
                     min={0}
-                    value={quantities[item]?.kg || 0}
-                    onChange={(e) => handleQuantityChange(item, "kg", e.target.value)}
-                    className="w-16 border border-gray-300 rounded px-2 py-1 text-center bg-[#f7f8fa] text-gray-700"
+                    value={quantities[item]?.kg}
+                    onChange={(e) =>
+                      handleQuantityChange(item, "kg", e.target.value)
+                    }
+                    onBlur={() => handleBlur(item, "kg")}
+                    onFocus={(e) => e.target.select()}
+                    className="w-20 border border-gray-300 rounded px-2 py-2 text-center bg-white text-gray-700 text-sm"
                   />
-                  <span className="text-gray-600">kg</span>
-                  <span className="mx-1 text-gray-400">/</span>
+                  <span className="text-sm text-gray-600">kg</span>
                   <input
                     type="number"
+                    step="1"
                     min={0}
-                    value={quantities[item]?.L || 0}
-                    onChange={(e) => handleQuantityChange(item, "L", e.target.value)}
-                    className="w-16 border border-gray-300 rounded px-2 py-1 text-center bg-[#f7f8fa] text-gray-700"
+                    value={quantities[item]?.L}
+                    onChange={(e) =>
+                      handleQuantityChange(item, "L", e.target.value)
+                    }
+                    onBlur={() => handleBlur(item, "L")}
+                    onFocus={(e) => e.target.select()}
+                    className="w-20 border border-gray-300 rounded px-2 py-2 text-center bg-white text-gray-700 text-sm"
                   />
-                  <span className="text-gray-600">L</span>
+                  <span className="text-sm text-gray-600">L</span>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         )}
       </div>

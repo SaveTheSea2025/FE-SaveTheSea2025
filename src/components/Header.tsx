@@ -20,7 +20,10 @@ function Header({ forceScrolled = false }: HeaderProps) {
     if (forceScrolled) return;
     const handleScroll = () => setIsScrolled(window.scrollY > 80);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, [forceScrolled]);
 
   const scrolled = forceScrolled || isScrolled;
@@ -56,7 +59,7 @@ function Header({ forceScrolled = false }: HeaderProps) {
           <img
             src="/src/assets/logoimage.png"
             alt="바다보다 로고"
-            className="w-[57px] h-[57px] object-contain"
+            className="w-[45px] h-[45px] md:w-[57px] md:h-[57px] object-contain"
           />
           <div className="flex flex-col leading-tight">
             <span className={`font-semibold ${scrolled ? "text-sky-700 text-[17px]" : "text-white text-[20px]"}`}>
@@ -121,11 +124,64 @@ function Header({ forceScrolled = false }: HeaderProps) {
             </button>
           )}
         </div>
+
+        {/* 모바일 햄버거 메뉴 버튼 */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className={`md:hidden flex flex-col gap-1.5 ${
+            scrolled ? "text-[#0C4A6E]" : "text-white"
+          }`}
+        >
+          <span className="block w-6 h-0.5 bg-current transition-all"></span>
+          <span className="block w-6 h-0.5 bg-current transition-all"></span>
+          <span className="block w-6 h-0.5 bg-current transition-all"></span>
+        </button>
       </div>
 
-      {showLoginPrompt && (
-        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-red-500 text-white py-2 px-4 rounded-md">
-          <span>로그인이 필요합니다.</span>
+      {/* 모바일 드롭다운 메뉴 */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-white shadow-lg">
+          <nav className="flex flex-col px-6 py-4 gap-4 text-[#2C3E50]">
+            <Link
+              to="/records"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-2 hover:text-blue-400 transition-colors"
+            >
+              함께한 기록
+            </Link>
+            <Link
+              to="/stats"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-2 hover:text-blue-400 transition-colors"
+            >
+              통계
+            </Link>
+            <Link
+              to="/ranking"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-2 hover:text-blue-400 transition-colors"
+            >
+              랭킹
+            </Link>
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                navigate("/write");
+              }}
+              className="bg-[#0C4A6E] text-white py-2 px-4 rounded-full hover:bg-[#093d5d] transition"
+            >
+              작성하기
+            </button>
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                navigate("/login");
+              }}
+              className="text-[#0C4A6E] py-2 hover:text-sky-800 transition"
+            >
+              로그인이 필요합니다
+            </button>
+          </nav>
         </div>
       )}
     </header>
