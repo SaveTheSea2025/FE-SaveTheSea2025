@@ -58,16 +58,16 @@ export default function StatsPage() {
   // ✅ 필터 상태
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  
+
   const [startDate, setStartDate] = useState<string>(
-    firstDayOfMonth.toISOString().split('T')[0]
+    firstDayOfMonth.toISOString().split("T")[0]
   );
   const [endDate, setEndDate] = useState<string>(
-    today.toISOString().split('T')[0]
+    today.toISOString().split("T")[0]
   );
   const [location, setLocation] = useState<string>("동해");
   const [organization, setOrganization] = useState<string>("전체");
-  
+
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [orgOpen, setOrgOpen] = useState(false);
@@ -126,7 +126,9 @@ export default function StatsPage() {
     const fetchAllData = async () => {
       // BASE_URL이 없으면 더미 데이터 사용
       if (!BASE_URL) {
-        console.warn("BASE_URL이 설정되지 않았습니다. 더미 데이터를 사용합니다.");
+        console.warn(
+          "BASE_URL이 설정되지 않았습니다. 더미 데이터를 사용합니다."
+        );
         return;
       }
 
@@ -143,7 +145,9 @@ export default function StatsPage() {
 
         // 1. 전체 통계
         try {
-          const summaryRes = await fetch(`${BASE_URL}/api/statistics/summary?${params}`);
+          const summaryRes = await fetch(
+            `${BASE_URL}/api/statistics/summary?${params}`
+          );
           const summaryData = await summaryRes.json();
           if (summaryData.code === 0) {
             setSummaryStats(summaryData.data);
@@ -155,7 +159,9 @@ export default function StatsPage() {
 
         // 2. 월별 수거량
         try {
-          const monthlyRes = await fetch(`${BASE_URL}/api/statistics/monthly-weight?${params}`);
+          const monthlyRes = await fetch(
+            `${BASE_URL}/api/statistics/monthly-weight?${params}`
+          );
           const monthlyResult = await monthlyRes.json();
           if (monthlyResult.code === 0) {
             setMonthlyData(monthlyResult.data);
@@ -167,7 +173,9 @@ export default function StatsPage() {
 
         // 3. 폐기물 비율
         try {
-          const wasteRes = await fetch(`${BASE_URL}/api/statistics/waste-type-ratio?${params}`);
+          const wasteRes = await fetch(
+            `${BASE_URL}/api/statistics/waste-type-ratio?${params}`
+          );
           const wasteResult = await wasteRes.json();
           if (wasteResult.code === 0) {
             setWasteRatio(wasteResult.data);
@@ -179,7 +187,9 @@ export default function StatsPage() {
 
         // 4. 지역별 통계
         try {
-          const regionRes = await fetch(`${BASE_URL}/api/statistics/region?${params}`);
+          const regionRes = await fetch(
+            `${BASE_URL}/api/statistics/region?${params}`
+          );
           const regionResult = await regionRes.json();
           if (regionResult.code === 0) {
             setRegionData(regionResult.data);
@@ -246,12 +256,16 @@ export default function StatsPage() {
               >
                 {startDate} ~ {endDate}
               </button>
-              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">▼</span>
-              
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">
+                ▼
+              </span>
+
               {datePickerOpen && (
                 <div className="absolute left-0 mt-2 bg-white border border-gray-200 p-4 rounded-xl shadow-lg z-20 w-80">
                   <div className="mb-3">
-                    <label className="block text-xs text-gray-600 mb-1">시작일</label>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      시작일
+                    </label>
                     <input
                       type="date"
                       value={startDate}
@@ -260,7 +274,9 @@ export default function StatsPage() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="block text-xs text-gray-600 mb-1">종료일</label>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      종료일
+                    </label>
                     <input
                       type="date"
                       value={endDate}
@@ -292,8 +308,10 @@ export default function StatsPage() {
               >
                 {location}
               </button>
-              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">▼</span>
-              
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">
+                ▼
+              </span>
+
               {locationOpen && (
                 <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-40">
                   {locationOptions.map((loc) => (
@@ -304,9 +322,13 @@ export default function StatsPage() {
                         setLocationOpen(false);
                       }}
                       className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        location === loc ? "bg-blue-50 text-[#0066aa] font-medium" : ""
+                        location === loc
+                          ? "bg-blue-50 text-[#0066aa] font-medium"
+                          : ""
                       } ${loc === locationOptions[0] ? "rounded-t-xl" : ""} ${
-                        loc === locationOptions[locationOptions.length - 1] ? "rounded-b-xl" : ""
+                        loc === locationOptions[locationOptions.length - 1]
+                          ? "rounded-b-xl"
+                          : ""
                       }`}
                     >
                       {loc}
@@ -328,8 +350,10 @@ export default function StatsPage() {
               >
                 {organization}
               </button>
-              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">▼</span>
-              
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">
+                ▼
+              </span>
+
               {orgOpen && (
                 <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
                   {organizationOptions.map((org, idx) => (
@@ -340,9 +364,15 @@ export default function StatsPage() {
                         setOrgOpen(false);
                       }}
                       className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        organization === org ? "bg-blue-50 text-[#0066aa] font-medium" : ""
-                      } ${idx === 0 ? "rounded-t-xl border-b border-gray-100" : ""} ${
-                        idx === organizationOptions.length - 1 ? "rounded-b-xl" : ""
+                        organization === org
+                          ? "bg-blue-50 text-[#0066aa] font-medium"
+                          : ""
+                      } ${
+                        idx === 0 ? "rounded-t-xl border-b border-gray-100" : ""
+                      } ${
+                        idx === organizationOptions.length - 1
+                          ? "rounded-b-xl"
+                          : ""
                       }`}
                     >
                       {org}
@@ -375,7 +405,8 @@ export default function StatsPage() {
                   <img src={pdfIcon} className="w-5 h-5" /> PDF 보고서 다운로드
                 </div>
                 <div className="flex items-center gap-2 px-2 py-2 mt-1 hover:bg-gray-50 rounded-md cursor-pointer">
-                  <img src={excelIcon} className="w-5 h-5" /> 데이터 엑셀 다운로드
+                  <img src={excelIcon} className="w-5 h-5" /> 데이터 엑셀
+                  다운로드
                 </div>
               </div>
             )}
@@ -414,7 +445,9 @@ export default function StatsPage() {
             <button
               onClick={() => setUnit("kg")}
               className={`px-4 py-1 rounded-full text-sm ${
-                unit === "kg" ? "bg-[#0066aa] text-white" : "bg-gray-200 text-gray-600"
+                unit === "kg"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
               }`}
             >
               kg
@@ -422,7 +455,9 @@ export default function StatsPage() {
             <button
               onClick={() => setUnit("l")}
               className={`px-4 py-1 rounded-full text-sm ${
-                unit === "l" ? "bg-[#0066aa] text-white" : "bg-gray-200 text-gray-600"
+                unit === "l"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
               }`}
             >
               L
@@ -466,8 +501,8 @@ export default function StatsPage() {
                     strokeWidth={3}
                     labelLine={false}
                     label={({ name, value }) => {
-                      const percentage = typeof value === 'number' ? value.toFixed(1) : '0.0';
-                      return `${name} ${percentage}%`;
+                      const safeValue = Number(value ?? 0).toFixed(1);
+                      return `${name} ${safeValue}%`;
                     }}
                   >
                     {wasteRatio.map((_, idx) => (
@@ -483,7 +518,7 @@ export default function StatsPage() {
                 <LegendRow
                   key={item.wasteType}
                   label={wasteTypeMap[item.wasteType] || item.wasteType}
-                  percent={`${typeof item.ratio === 'number' ? item.ratio.toFixed(1) : '0.0'}%`}
+                  percent={`${Number(item.ratio ?? 0).toFixed(1)}%`}
                   color={COLORS[idx % COLORS.length]}
                 />
               ))}
@@ -499,7 +534,9 @@ export default function StatsPage() {
               <button
                 onClick={() => setRegionMode("amount")}
                 className={`px-4 py-1 rounded-md text-sm ${
-                  regionMode === "amount" ? "bg-[#0066aa] text-white" : "bg-gray-200 text-gray-600"
+                  regionMode === "amount"
+                    ? "bg-[#0066aa] text-white"
+                    : "bg-gray-200 text-gray-600"
                 }`}
               >
                 수거량별
@@ -515,7 +552,9 @@ export default function StatsPage() {
                 <YAxis />
                 <Tooltip />
                 <Bar
-                  dataKey={regionMode === "amount" ? "totalWeight" : "totalVolume"}
+                  dataKey={
+                    regionMode === "amount" ? "totalWeight" : "totalVolume"
+                  }
                   fill="#0066aa"
                   barSize={65}
                   radius={[6, 6, 0, 0]}
