@@ -54,10 +54,10 @@ const PersonalSignupPage: React.FC = () => {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setProfileFile(file);
+            setProfileFile(file); // 파일을 상태에 저장
             const reader = new FileReader();
             reader.onloadend = () => setProfileImage(reader.result as string);
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(file); // 이미지 미리보기
         }
     };
 
@@ -136,16 +136,8 @@ const PersonalSignupPage: React.FC = () => {
             region: region.toUpperCase(),
             memberType: "PERSONAL",
         };
-
-        const res = await signup(data, profileFile ? [profileFile] : undefined);
-
-        if (res.code === 0) {
-            alert("회원가입 성공!");
-            navigate("/login");
-        } else {
-            alert(res.message || "회원가입 실패");
-        }
     };
+
 
     return (
         <div className="min-h-screen flex flex-col items-center bg-[#F9F9F9]">

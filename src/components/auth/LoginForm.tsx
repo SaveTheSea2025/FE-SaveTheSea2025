@@ -95,7 +95,6 @@ const LoginForm = () => {
                     </div>
                 </div>
 
-                {/* 🔥 서버 오류 메시지 */}
                 {errorMsg && (
                     <p className="text-red-500 text-sm text-center">{errorMsg}</p>
                 )}
