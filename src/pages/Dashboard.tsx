@@ -45,7 +45,7 @@ function Dashboard() {
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-white custom-scroll">
       {/* 헤더까지 전체 배경 이미지 넣기 */}
       <div
         className="relative text-white"
@@ -85,7 +85,7 @@ function Dashboard() {
                 "https://play.google.com/store/apps/details?id=com.letspl.oceankeeper&pcampaignid=web_share",
                 "_blank"
               );
-            } 
+            }
             // 💡 수정 2: window.MSStream 대신 타입 안전한 속성 존재 확인 사용
             else if (/iPad|iPhone|iPod/.test(userAgent) && !('MSStream' in window)) {
               window.open(

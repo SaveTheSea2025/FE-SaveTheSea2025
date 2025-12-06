@@ -151,7 +151,7 @@ const RankingPage = () => {
     // 데이터 없음
     if (top10.length === 0) {
         return (
-            <div className="min-h-screen flex flex-col bg-[#e8e8e8]">
+            <div className="min-h-screen flex flex-col bg-[#F9F9F9]">
                 <Header forceScrolled={true} />
 
                 <section className="mt-60">
@@ -163,21 +163,19 @@ const RankingPage = () => {
                 <section className="flex justify-center mt-6 gap-3">
                     <button
                         onClick={() => setTab("group")}
-                        className={`px-5 py-2 rounded-full text-sm font-medium border ${
-                            tab === "group"
-                                ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-                                : "bg-white text-gray-600 border-gray-300"
-                        }`}
+                        className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "group"
+                            ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
+                            : "bg-white text-gray-600 border-gray-300"
+                            }`}
                     >
                         단체별
                     </button>
                     <button
                         onClick={() => setTab("personal")}
-                        className={`px-5 py-2 rounded-full text-sm font-medium border ${
-                            tab === "personal"
-                                ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-                                : "bg-white text-gray-600 border-gray-300"
-                        }`}
+                        className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "personal"
+                            ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
+                            : "bg-white text-gray-600 border-gray-300"
+                            }`}
                     >
                         개인별
                     </button>
@@ -187,7 +185,6 @@ const RankingPage = () => {
                     <p className="text-xl text-gray-500 font-semibold mb-4">
                         이번 달 랭킹 데이터가 없습니다.
                     </p>
-                    <p className="text-gray-600">다음 달을 기대해 주세요!</p>
                 </div>
 
                 <Footer />
@@ -196,7 +193,7 @@ const RankingPage = () => {
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-[#e8e8e8]">
+        <div className="min-h-screen flex flex-col bg-[#F9F9F9]">
             <Header forceScrolled={true} />
 
             <section className="mt-60">
@@ -207,22 +204,20 @@ const RankingPage = () => {
             <section className="flex justify-center mt-6 gap-3">
                 <button
                     onClick={() => setTab("group")}
-                    className={`px-5 py-2 rounded-full text-sm font-medium border ${
-                        tab === "group"
-                            ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-                            : "bg-white text-gray-600 border-gray-300"
-                    }`}
+                    className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "group"
+                        ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
+                        : "bg-white text-gray-600 border-gray-300"
+                        }`}
                 >
                     단체별
                 </button>
 
                 <button
                     onClick={() => setTab("personal")}
-                    className={`px-5 py-2 rounded-full text-sm font-medium border ${
-                        tab === "personal"
-                            ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-                            : "bg-white text-gray-600 border-gray-300"
-                    }`}
+                    className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "personal"
+                        ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
+                        : "bg-white text-gray-600 border-gray-300"
+                        }`}
                 >
                     개인별
                 </button>
@@ -240,15 +235,19 @@ const RankingPage = () => {
             </section>
 
             {/* 4 ~ 10위 */}
-            <section className="mt-12 px-6 max-w-3xl mx-auto w-full">
-                <h3 className="text-xl font-bold text-gray-700 mb-6">4위 - 10위</h3>
+            {/* 4 ~ 10위 — 데이터가 최소 4개 이상일 때만 표시 */}
+            {top10.length >= 4 && (
+                <section className="mt-12 px-6 max-w-3xl mx-auto w-full">
+                    <h3 className="text-xl font-bold text-gray-700 mb-6">4위 - 10위</h3>
 
-                <div className="space-y-4">
-                    {rankList.map(item => (
-                        <RankListItem key={item.rank} data={item} />
-                    ))}
-                </div>
-            </section>
+                    <div className="space-y-4">
+                        {rankList.map(item => (
+                            <RankListItem key={item.rank} data={item} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
 
             {/* 이달의 업적 */}
             <section className="mt-20 px-6 pb-20 pt-10 bg-F9F9F9">

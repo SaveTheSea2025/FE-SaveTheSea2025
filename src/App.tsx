@@ -4,7 +4,7 @@ import React from 'react';
 //import RecordsPage from "./pages/RecordsPage";
 //import RankingPage from "./pages/RankingPage";
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const RecordsPage  = React.lazy(() => import('./pages/RecordsPage'));
+const RecordsPage = React.lazy(() => import('./pages/RecordsPage'));
 const RankingPage = React.lazy(() => import('./pages/RankingPage'));
 import StatsPage from "./pages/StatsPage";
 import MyPage from "./pages/MyPage";
