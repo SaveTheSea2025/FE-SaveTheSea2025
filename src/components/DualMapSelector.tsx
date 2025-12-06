@@ -11,12 +11,19 @@ interface DualMapSelectorProps {
     endAddress: string;
     endLat: number;
     endLng: number;
+
+    // WritePage에서 필요한 필드 추가
+    startLatitude: number;
+    startLongitude: number;
+    endLatitude: number;
+    endLongitude: number;
   }) => void;
 }
 
 const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
+
   const startMarkerRef = useRef<any>(null);
   const endMarkerRef = useRef<any>(null);
   const geocoderRef = useRef<any>(null);
@@ -30,6 +37,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
   const FOLLOW_THRESHOLD_M = 5000;
 
   const toRad = (v: number) => (v * Math.PI) / 180;
+
   const getDistanceMeters = (aLat: number, aLng: number, bLat: number, bLng: number) => {
     const R = 6371000;
     const dLat = toRad(bLat - aLat);
@@ -142,7 +150,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
       });
 
       kakao.maps.event.addListener(startMarker, "dragend", () => {
-        const sPos = startMarker.getPosition();
+        const pos = startMarker.getPosition();
         startMarker.setImage(startImage);
         map.panTo(sPos);
 
@@ -150,19 +158,21 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
 
         const ePos = endMarker.getPosition();
         const distance = getDistanceMeters(
-          sPos.getLat(),
-          sPos.getLng(),
+          pos.getLat(),
+          pos.getLng(),
           ePos.getLat(),
           ePos.getLng()
         );
 
+        // 🔥 25km 이상이면 도착 마커를 출발지 옆으로 이동
         if (distance > FOLLOW_THRESHOLD_M) {
-          const newEndLat = sPos.getLat() - OFFSET_LAT;
-          const newEndLng = sPos.getLng() + OFFSET_LNG;
+          const newEndLat = pos.getLat() - OFFSET_LAT;
+          const newEndLng = pos.getLng() + OFFSET_LNG;
           const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
 
           endMarker.setPosition(newEndPos);
-          updateAddress(newEndLat, newEndLng, "end");
+          map.panTo(newEndPos);
+          updateAddress(kakao, newEndLat, newEndLng, "end");
         }
       });
 
@@ -174,7 +184,8 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
         const pos = endMarker.getPosition();
         endMarker.setImage(endImage);
         map.panTo(pos);
-        updateAddress(pos.getLat(), pos.getLng(), "end");
+
+        updateAddress(kakao, pos.getLat(), pos.getLng(), "end");
       });
 
       const sPos = startMarker.getPosition();
@@ -198,7 +209,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     const ps = new kakao.maps.services.Places();
     const map = mapInstance.current;
 
-    ps.keywordSearch(address, (data: any[], status: string) => {
+    ps.keywordSearch(keyword, (data: any[], status: string) => {
       if (status === kakao.maps.services.Status.OK && data[0]) {
         const { y, x } = data[0];
         const baseLat = parseFloat(y);
@@ -213,6 +224,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
 
           const newEndLat = baseLat - OFFSET_LAT;
           const newEndLng = baseLng + OFFSET_LNG;
+
           const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
           endMarkerRef.current.setPosition(newEndPos);
           updateAddress(newEndLat, newEndLng, "end");
@@ -240,13 +252,13 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
             type="text"
             value={startAddress}
             onChange={(e) => setStartAddress(e.target.value)}
-            placeholder="예: 강릉 경포해변 / 서울 강남구 테헤란로 10"
-            className="flex-1 border border-gray-300 bg-[#f5f6f8] rounded px-5 py-2 mx-5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
             onKeyDown={(e) => e.key === "Enter" && handlePlaceSearch("start")}
+            placeholder="예: 강릉 경포해변 / 서울 강남구 테헤란로 10"
+            className="flex-1 border border-gray-300 bg-[#f5f6f8] rounded px-5 py-2 mx-5"
           />
           <button
             onClick={() => handlePlaceSearch("start")}
-            className="ml-2 px-5 py-1 bg-[#0284C7] text-white text-sm rounded hover:bg-[#0369A1]"
+            className="ml-2 px-5 py-1 bg-[#0369A1] text-white text-sm rounded"
           >
             검색
           </button>
@@ -260,13 +272,13 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
             type="text"
             value={endAddress}
             onChange={(e) => setEndAddress(e.target.value)}
-            placeholder="예: 서울역, 강릉 경포대 등"
-            className="flex-1 border border-gray-300 bg-[#f5f6f8] rounded px-5 py-2 mx-5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
             onKeyDown={(e) => e.key === "Enter" && handlePlaceSearch("end")}
+            placeholder="예: 서울역, 강릉 경포대 등"
+            className="flex-1 border border-gray-300 bg-[#f5f6f8] rounded px-5 py-2 mx-5"
           />
           <button
             onClick={() => handlePlaceSearch("end")}
-            className="ml-2 px-5 py-1 bg-[#0369A1] text-white text-sm rounded hover:bg-[#025985]"
+            className="ml-2 px-5 py-1 bg-[#0369A1] text-white text-sm rounded"
           >
             검색
           </button>

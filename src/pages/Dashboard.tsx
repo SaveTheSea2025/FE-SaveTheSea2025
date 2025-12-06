@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { useEffect, useState } from "react";
@@ -17,6 +18,7 @@ interface ActivityRecord {
 
 function Dashboard() {
   const navigate = useNavigate();
+  // ActivityRecord 타입이 정의되었다고 가정하고 사용합니다.
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [, setIsHeaderScrolled] = useState(false);
 

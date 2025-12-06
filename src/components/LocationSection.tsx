@@ -27,13 +27,13 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
 
-  const [startAddr, ] = useState("");
+  const [startAddr] = useState("");
   const [endAddr, setEndAddr] = useState("");
-  const [startPos, ] = useState<{ lat: number; lng: number } | null>(null);
+  const [startPos] = useState<{ lat: number; lng: number } | null>(null);
   const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const [locked, setLocked] = useState(false);
-  const [hasEditedEndMap, ] = useState(false);
+  const [hasEditedEndMap] = useState(false);
 
   const regionCenter =
     sido && sigungu && regionCenters[sido]?.[sigungu]
