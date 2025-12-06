@@ -1,14 +1,11 @@
 // RankingPage.tsx
-
 import Header from "../components/Header";
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
-
 import RankTop3Card from "../components/ranking/RankTop3Card";
 import RankListItem from "../components/ranking/RankListItem";
 import AwardCard from "../components/ranking/AwardCard";
-
-import type { RankingData, RankItem, StatItem } from "../types/ranking";
+import type { RankingData, StatItem } from "../types/ranking";
 
 axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
 
@@ -30,7 +27,6 @@ interface MonthlyAwardsData {
     mostMember: AwardItem;
 }
 
-// 🔥 stats → AwardCard용 구조로 변환
 const getAwardsData = (stats: StatItem[]): MonthlyAwardsData => {
     const findStat = (cat: StatItem["category"]) =>
         stats.find(s => s.category === cat);
@@ -72,7 +68,7 @@ const RankingPage = () => {
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
 
-    // 🔥 API 호출 공통 함수
+    // API 호출 공통 함수
     const callRankingAPI = async (
         url: string,
         setter: (data: RankingData) => void,
@@ -122,9 +118,18 @@ const RankingPage = () => {
 
     const isLoading = tab === "group" ? groupLoading : personalLoading;
 
+    // 개인 탭 여부
+    const isPersonalTab = tab === "personal";
+
+    // Top 3 데이터 추출 로직
     const top10 = currentRankingData?.top10 ?? [];
-    const top3 = top10.slice(0, 3);
-    const rankList = top10.slice(3, 10);
+
+    // top10 배열에서 순위별 데이터 추출 (없으면 null)
+    const rank1Data = top10.find(item => item.rank === 1) || null;
+    const rank2Data = top10.find(item => item.rank === 2) || null;
+    const rank3Data = top10.find(item => item.rank === 3) || null;
+
+    const rankList = top10.slice(3, 10); // 4위부터 10위까지 목록
 
     const stats = currentRankingData?.stats ?? [];
     const awards = getAwardsData(stats);
@@ -228,14 +233,18 @@ const RankingPage = () => {
                 <h2 className="text-center text-xl font-bold mb-8 text-gray-700">Top 3</h2>
 
                 <div className="flex flex-col md:flex-row justify-center items-end gap-5 max-w-6xl mx-auto">
-                    {top3.map(item => (
-                        <RankTop3Card key={item.rank} data={item} />
-                    ))}
+                    {/* 2위 */}
+                    <RankTop3Card data={rank2Data} rank={2} />
+
+                    {/* 1위 */}
+                    <RankTop3Card data={rank1Data} rank={1} />
+
+                    {/* 3위 */}
+                    <RankTop3Card data={rank3Data} rank={3} />
                 </div>
             </section>
 
             {/* 4 ~ 10위 */}
-            {/* 4 ~ 10위 — 데이터가 최소 4개 이상일 때만 표시 */}
             {top10.length >= 4 && (
                 <section className="mt-12 px-6 max-w-3xl mx-auto w-full">
                     <h3 className="text-xl font-bold text-gray-700 mb-6">4위 - 10위</h3>
@@ -248,15 +257,22 @@ const RankingPage = () => {
                 </section>
             )}
 
-
             {/* 이달의 업적 */}
             <section className="mt-20 px-6 pb-20 pt-10 bg-F9F9F9">
                 <h2 className="text-center text-2xl font-bold mb-10 text-[#0C4A6E]">이달의 업적</h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                    <AwardCard data={awards.mostActivity} />
-                    <AwardCard data={awards.mostWeight} />
-                    <AwardCard data={awards.mostMember} />
+                <div
+                    className={`grid grid-cols-1 gap-6 max-w-6xl mx-auto ${isPersonalTab
+                        ? "md:grid-cols-2 md:max-w-3xl" // 개인 탭: 2열, 최대 너비를 줄여 중앙에 모이게 함
+                        : "md:grid-cols-3" // 단체 탭: 3열
+                        }`}
+                >
+                    <AwardCard data={awards.mostActivity} isPersonalTab={isPersonalTab} />
+                    <AwardCard data={awards.mostWeight} isPersonalTab={isPersonalTab} />
+
+                    {!isPersonalTab && (
+                        <AwardCard data={awards.mostMember} isPersonalTab={isPersonalTab} />
+                    )}
                 </div>
             </section>
 
