@@ -136,6 +136,24 @@ const PersonalSignupPage: React.FC = () => {
             region: region.toUpperCase(),
             memberType: "PERSONAL",
         };
+
+        try {
+            // ✅ 1. profileFile 상태를 배열로 변환 (signup API가 File[]를 받도록 되어 있음)
+            const filesToUpload = profileFile ? [profileFile] : [];
+
+            // ✅ 2. signup 함수 호출 시 data와 파일을 함께 전달
+            const res = await signup(data, filesToUpload);
+
+            if (res.code === 0) {
+                alert("회원가입이 완료되었습니다!");
+                navigate("/login"); // 성공 시 로그인 페이지로 이동
+            } else {
+                alert(res.errorMessage || "회원가입에 실패했습니다. 다시 시도해 주세요.");
+            }
+        } catch (error) {
+            console.error("Signup error:", error);
+            alert("서버 오류로 회원가입에 실패했습니다.");
+        }
     };
 
 

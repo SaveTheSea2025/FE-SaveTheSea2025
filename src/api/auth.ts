@@ -157,31 +157,29 @@ export function getMyInfo(): Promise<ApiResponse<User>> {
     });
 }
 
-// src/api/auth.ts (signup 함수 재수정)
+
+// src/api/auth.ts
 
 /* =========================================================
- *  회원가입 API (FormData 기반 파일 업로드 포함)
+ * 회원가입 API (FormData 기반 파일 업로드 포함)
  * ========================================================= */
 
-/**
- * 회원가입을 처리합니다. JSON 데이터 및 프로필 사진 파일을 함께 전송합니다.
- * POST /api/auth/signup
- */
+// 💡 매개변수 타입을 File[] (File 배열)로 수정합니다.
 export async function signup(data: any, photos?: File[]): Promise<ApiResponse> {
     const formData = new FormData();
 
-    // JSON 데이터를 문자열로 변환하여 'data' 필드에 추가 (API 명세 준수)
+    // JSON 데이터 추가 (이하 동일)
     formData.append("data", new Blob([JSON.stringify(data)], { type: "application/json" }));
 
-    // 프로필 이미지 파일을 'photos' 필드에 추가
-    if (photos?.length) {
+    // ✅ File 배열을 순회하며 'photos' 필드에 추가합니다.
+    if (photos && photos.length > 0) {
         photos.forEach((file) => {
-            formData.append("photos", file, file.name); // 'photos' 필드에 파일 추가
+            formData.append("profileImage", file, file.name);
         });
     }
 
     return request(`/api/auth/signup`, {
         method: "POST",
-        body: formData, // FormData를 body로 전달
+        body: formData,
     });
 }
