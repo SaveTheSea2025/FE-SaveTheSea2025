@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import { Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../../api/auth';   // 🔥 우리가 만든 API 함수
+import { login } from '../../api/auth';
+import { useAuth } from '../../context/AuthContext'; // ✅ useAuth 훅 임포트
 
 const LoginForm = () => {
     const navigate = useNavigate();
+    const { loadUser } = useAuth(); // ✅ loadUser 함수 가져오기
 
     // 🔥 입력값 상태
     const [email, setEmail] = useState("");
@@ -28,6 +30,9 @@ const LoginForm = () => {
 
             if (res.code === 0) {
                 alert("로그인 성공!");
+
+                // ✅ 핵심: 로그인 성공 후 사용자 정보를 전역 상태에 로드
+                await loadUser();
 
                 navigate("/");
             } else {

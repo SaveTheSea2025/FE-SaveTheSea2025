@@ -1,142 +1,170 @@
+// src/api/auth.ts (최종 수정본)
+
 /**
  * =========================================================
  * Auth API Client
- * - 이메일 인증
- * - 로그인 / 로그아웃
- * - 회원가입 (FormData)
- * - 토큰 자동 저장
  * =========================================================
  */
+
+// ✅ 1. User 정보 타입 정의 (AuthContext와 공유)
+export interface User {
+    userId: number;
+    email: string;
+    userName: string;
+    memberType: 'PERSONAL' | 'GROUP';
+    region: string;
+    profileUrl: string | null;
+}
+
+export interface ApiResponse<T = any> {
+    code: number;
+    message: string;
+    data: T | null;
+}
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
- * 공통 Fetch Wrapper
- * - BASE_URL 자동 적용
- * - accessToken 헤더 자동 저장
- * - refreshToken 쿠키 자동 포함
- *
- * @param url 요청 URL (BASE_URL 기준 상대 경로)
+ * 공통 Fetch Wrapper (제네릭 적용)
+ * ✅ AccessToken 자동 삽입 로직 포함
+ * @param url 요청 URL
  * @param options fetch 옵션
+ * @returns Promise<ApiResponse<T>>
  */
-async function request(url: string, options: RequestInit = {}) {
-  const isFormData = options.body instanceof FormData;
+async function request<T>(url: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    const isFormData = options.body instanceof FormData;
 
-  const res = await fetch(`${BASE_URL}${url}`, {
-    ...options,
-    headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(options.headers || {}),
-    },
-    credentials: "include", // refreshToken 쿠키 포함
-  });
+    // ✅ 토큰을 가져와 모든 요청에 Authorization 헤더 자동 추가
+    const token = localStorage.getItem("accessToken");
 
-  // accessToken 헤더에 담겨오면 저장
-  const newAccessToken = res.headers.get("accessToken");
-  if (newAccessToken) {
-    localStorage.setItem("accessToken", newAccessToken);
-  }
+    // Content-Type 기본 헤더 설정
+    const defaultHeaders: Record<string, string> = {
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    };
 
-  return res.json();
+    // AccessToken이 있을 경우 Authorization 헤더 추가
+    if (token) {
+        defaultHeaders.Authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${BASE_URL}${url}`, {
+        ...options,
+        headers: {
+            ...defaultHeaders, // ✅ 기본 헤더 (Content-Type, Authorization) 먼저 적용
+            ...(options.headers || {}), // ✅ options에서 전달된 헤더로 덮어쓰거나 병합
+        },
+        credentials: "include", // refreshToken 쿠키 포함
+    });
+
+    // accessToken 헤더에 담겨오면 저장 (서버가 헤더로 토큰을 줄 경우 대비)
+    const newAccessToken = res.headers.get("accessToken");
+    if (newAccessToken) {
+        localStorage.setItem("accessToken", newAccessToken);
+    }
+
+    // JSON 응답을 ApiResponse<T> 타입으로 반환
+    return res.json() as Promise<ApiResponse<T>>;
 }
 
 /* =========================================================
- *  이메일 인증 API
+ *  이메일 인증 API
  * ========================================================= */
 
 /**
  * 이메일 인증 코드 발송
  * POST /api/auth/send-code
- *
- * @param email 사용자 이메일
- * @returns { code: number, message: string }
  */
-export function sendEmailCode(email: string) {
-  return request(`/api/auth/send-code`, {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
+export function sendEmailCode(email: string): Promise<ApiResponse> {
+    return request(`/api/auth/send-code`, {
+        method: "POST",
+        body: JSON.stringify({ email }),
+    });
 }
 
 /**
  * 이메일 인증 코드 검증
  * POST /api/auth/verify-code
- *
- * @param email 사용자 이메일
- * @param code 인증 코드
  */
-export function verifyEmailCode(email: string, code: string) {
-  return request(`/api/auth/verify-code`, {
-    method: "POST",
-    body: JSON.stringify({ email, code }),
-  });
+export function verifyEmailCode(email: string, code: string): Promise<ApiResponse> {
+    return request(`/api/auth/verify-code`, {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+    });
 }
 
-/* =========================================================
- *  로그인 & 사용자 정보
- * ========================================================= */
+// src/api/auth.ts (login 함수 수정)
 
 /**
  * 로그인
  * POST /api/auth/login
- *
- * @param email 이메일
- * @param password 비밀번호
- * @param memberType PERSONAL | GROUP
+ * 응답 데이터에 User 정보 또는 accessToken이 포함
  */
-export function login(email: string, password: string, memberType: string) {
-  return request(`/api/auth/login`, {
-    method: "POST",
-    body: JSON.stringify({ email, password, memberType }),
-  });
+// src/api/auth.ts (login 함수 수정)
+
+export function login(email: string, password: string, memberType: string): Promise<ApiResponse<User | { accessToken?: string }>> {
+    return request(`/api/auth/login`, {
+        method: "POST",
+        body: JSON.stringify({
+            email,
+            password,
+            memberType
+        }),
+    }).then((response) => {
+        // ✅ 오류 해결: response.data가 객체이고, 'accessToken' 키가 있는지 확인
+        if (
+            response.code === 0 &&
+            response.data &&
+            typeof response.data === 'object' && // 객체 타입인지 확인 (TypeScript에게 안전함을 보장)
+            !Array.isArray(response.data) && // 배열이 아닌지 확인 (선택적)
+            'accessToken' in response.data
+        ) {
+            // response.data를 { accessToken: string } 타입으로 단언하고 저장
+            const responseDataWithToken = response.data as { accessToken: string };
+            localStorage.setItem('accessToken', responseDataWithToken.accessToken);
+        }
+        return response;
+    });
 }
 
 /**
  * 내 정보 조회
  * GET /api/auth/me
- *
- * Authorization: Bearer AccessToken
+ * ✅ request 함수에서 토큰을 자동 삽입하므로, 수동 삽입 로직 제거
  */
-export function getMyInfo() {
-  const token = localStorage.getItem("accessToken");
-
-  return request(`/api/auth/me`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export function getMyInfo(): Promise<ApiResponse<User>> {
+    // ❌ const token = localStorage.getItem("accessToken"); (제거)
+    return request(`/api/auth/me`, {
+        method: "GET",
+        // ❌ headers: { Authorization: `Bearer ${token}` } (제거)
+    });
 }
 
 /* =========================================================
- *  회원가입 API (FormData)
+ *  회원가입 API (FormData)
  * ========================================================= */
 
 /**
  * 회원가입
  * POST /api/auth/signup
- *
- * @param data JSON 데이터 (email, password, userName, memberType, region)
- * @param photos 선택적 이미지 파일 배열
  */
-export async function signup(data: any, photos?: File[]) {
-  const formData = new FormData();
+export async function signup(data: any, photos?: File[]): Promise<ApiResponse> {
+    const formData = new FormData();
 
-  // JSON 파트
-  formData.append(
-    "data",
-    new Blob([JSON.stringify(data)], { type: "application/json" })
-  );
+    // JSON 파트
+    formData.append(
+        "data",
+        new Blob([JSON.stringify(data)], { type: "application/json" })
+    );
 
-  // 파일 파트
-  if (photos?.length) {
-    photos.forEach((file) => {
-      formData.append("photos", file);
+    // 파일 파트
+    if (photos?.length) {
+        photos.forEach((file) => {
+            formData.append("photos", file);
+        });
+    }
+
+    return request(`/api/auth/signup`, {
+        method: "POST",
+        body: formData,
     });
-  }
-
-  return request(`/api/auth/signup`, {
-    method: "POST",
-    body: formData,
-  });
 }

@@ -47,8 +47,7 @@ type Props = {
 
 const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) => {
     const BASE_URL =
-        import.meta.env.VITE_API_BASE_URL ||
-        "https://be-savethesea2025.onrender.com";
+        import.meta.env.VITE_API_BASE_URL;
 
     const [detail, setDetail] = useState<DetailData | null>(null);
     const [loading, setLoading] = useState(true);

@@ -10,6 +10,7 @@ import LocationSection from "../components/LocationSection";
 import axios from "axios";
 
 const WritePage = () => {
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const [description, setDescription] = useState("");
   const maxLength = 500;
   const [groupType, setGroupType] = useState("단체");
@@ -135,7 +136,7 @@ const WritePage = () => {
       photoFiles.forEach((file) => formData.append("photos", file));
 
       const response = await axios.post(
-        "https://be-savethesea2025.onrender.com/api/activity-records",
+        `${BASE_URL}/api/activity-records`,
         formData,
         {
           headers: {
