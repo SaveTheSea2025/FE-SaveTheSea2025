@@ -315,8 +315,8 @@ export default function StatsPage() {
     <div className="w-full bg-[#e5edf2] min-h-screen">
       <Header forceScrolled />
 
-      <div className="max-w-[1200px] mx-auto pt-20 pb-20 px-8">
-        <h1 className="text-center text-4xl font-light mb-20">통계</h1>
+      <div className="max-w-[1200px] mx-auto pt-48 pb-20 px-8">
+        <h2 className="text-center text-[22px] md:text-[30px] font-bold text-center mb-20 leading-normal">통계</h2>
 
         {/* 🔹 필터 바 */}
         <div className="flex items-center justify-between mb-10">
@@ -530,13 +530,15 @@ export default function StatsPage() {
             </button>
 
             {downloadOpen && (
-              <div className="absolute right-0 mt-2 bg-white border p-3 rounded-xl shadow-md w-44 z-10">
-                <div className="flex items-center gap-2 px-2 py-2 hover:bg-gray-50 rounded-md cursor-pointer">
-                  <img src={pdfIcon} className="w-5 h-5" /> PDF 보고서 다운로드
+              <div className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[220px]">
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-t-xl cursor-pointer transition">
+                  <img src={pdfIcon} className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm whitespace-nowrap">PDF 보고서 다운로드</span>
                 </div>
-                <div className="flex items-center gap-2 px-2 py-2 mt-1 hover:bg-gray-50 rounded-md cursor-pointer">
-                  <img src={excelIcon} className="w-5 h-5" /> 데이터 엑셀
-                  다운로드
+                <div className="h-px bg-gray-100"></div>
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-b-xl cursor-pointer transition">
+                  <img src={excelIcon} className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm whitespace-nowrap">데이터 엑셀 다운로드</span>
                 </div>
               </div>
             )}
