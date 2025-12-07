@@ -13,7 +13,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-import Header from "../components/Header";
+import Header from "../components/common/Header";
 import { sendEmailCode, verifyEmailCode, signup } from "../api/auth";
 
 const GroupSignupPage: React.FC = () => {
@@ -186,11 +186,10 @@ const GroupSignupPage: React.FC = () => {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className={`w-28 h-28 rounded-full flex flex-col items-center justify-center text-gray-400 hover:border-[#0C4A6E] overflow-hidden ${
-                logoPreview
+              className={`w-28 h-28 rounded-full flex flex-col items-center justify-center text-gray-400 hover:border-[#0C4A6E] overflow-hidden ${logoPreview
                   ? "border-4 border-[#0C4A6E]"
                   : "border-2 border-gray-300"
-              }`}
+                }`}
             >
               {logoPreview ? (
                 <img src={logoPreview} className="w-full h-full object-cover" />

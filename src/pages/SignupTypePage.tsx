@@ -3,12 +3,12 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'; // 💡 [추가] 페이지 이동을 위한 useNavigate
-import Header from '../components/Header';
+import Header from '../components/common/Header';
 
 // 가정된 이미지 경로 (실제 PNG 파일을 여기에 배치해야 합니다)
 const ICON_PATHS = {
-    DOLPHIN: '/src/assets/dolphin-icon.png', // 개인 회원 (돌고래)
-    OTTER: '/src/assets/otter-icon.png',     // 단체 회원 (수달)
+    DOLPHIN: '/src/assets/auth/dolphin-icon.png', // 개인 회원 (돌고래)
+    OTTER: '/src/assets/auth/otter-icon.png',     // 단체 회원 (수달)
 };
 
 interface SelectionCardProps {

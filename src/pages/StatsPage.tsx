@@ -1,15 +1,17 @@
-import Header from "../components/Header";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
+import Header from "../components/common/Header";
 import { useState, useEffect } from "react";
 
 // icons
-import filterIcon from "../assets/filterIcon.png";
-import downloadIcon from "../assets/downloadIcon.png";
-import pdfIcon from "../assets/pdfIcon.png";
-import excelIcon from "../assets/excelIcon.png";
-import activityIcon from "../assets/activityIcon.png";
-import personIcon from "../assets/personIcon.png";
-import weightIcon from "../assets/weightIcon.png";
-import volumeIcon from "../assets/volumeIcon.png";
+import filterIcon from "../assets/stats/filterIcon.png";
+import downloadIcon from "../assets/stats/downloadIcon.png";
+import pdfIcon from "../assets/stats/pdfIcon.png";
+import excelIcon from "../assets/stats/excelIcon.png";
+import activityIcon from "../assets/stats/activityIcon.png";
+import personIcon from "../assets/stats/personIcon.png";
+import weightIcon from "../assets/stats/weightIcon.png";
+import volumeIcon from "../assets/stats/volumeIcon.png";
 
 import {
   LineChart,
@@ -235,7 +237,7 @@ export default function StatsPage() {
     // 초기 표시 날짜 설정
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-    
+
     fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -245,7 +247,7 @@ export default function StatsPage() {
     // 표시 날짜 업데이트
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-    
+
     // 모든 API 데이터 다시 불러오기
     fetchAllData();
   };
@@ -263,10 +265,10 @@ export default function StatsPage() {
     while (current <= endMonth) {
       const year = current.getFullYear();
       const month = current.getMonth() + 1;
-      
+
       // 월 표시 형식: "12월" 또는 "2024-12월" (년도가 다른 경우)
-      const monthLabel = 
-        start.getFullYear() === end.getFullYear() 
+      const monthLabel =
+        start.getFullYear() === end.getFullYear()
           ? `${month}월`
           : `${year}-${month}월`;
 
@@ -404,15 +406,13 @@ export default function StatsPage() {
                         setLocation(loc);
                         setLocationOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        location === loc
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                        idx === locationOptions.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${location === loc
+                        ? "bg-blue-50 text-[#0066aa] font-medium"
+                        : ""
+                        } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === locationOptions.length - 1
                           ? "rounded-b-xl"
                           : ""
-                      }`}
+                        }`}
                     >
                       {loc}
                     </div>
@@ -447,15 +447,13 @@ export default function StatsPage() {
                         setActivityType(type);
                         setActivityTypeOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        activityType === type
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                        idx === activityTypeOptions.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${activityType === type
+                        ? "bg-blue-50 text-[#0066aa] font-medium"
+                        : ""
+                        } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === activityTypeOptions.length - 1
                           ? "rounded-b-xl"
                           : ""
-                      }`}
+                        }`}
                     >
                       {type}
                     </div>
@@ -493,17 +491,14 @@ export default function StatsPage() {
                         setSearchText(org);
                         setOrgOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        organization === org
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${
-                        idx === 0 ? "rounded-t-xl border-b border-gray-100" : ""
-                      } ${
-                        idx === filteredOrganizations.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${organization === org
+                        ? "bg-blue-50 text-[#0066aa] font-medium"
+                        : ""
+                        } ${idx === 0 ? "rounded-t-xl border-b border-gray-100" : ""
+                        } ${idx === filteredOrganizations.length - 1
                           ? "rounded-b-xl"
                           : ""
-                      }`}
+                        }`}
                     >
                       {org}
                     </div>
@@ -578,21 +573,19 @@ export default function StatsPage() {
           <div className="flex justify-end mb-4 gap-2">
             <button
               onClick={() => setUnit("kg")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "kg"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
+              className={`px-4 py-1 rounded-full text-sm ${unit === "kg"
+                ? "bg-[#0066aa] text-white"
+                : "bg-gray-200 text-gray-600"
+                }`}
             >
               kg
             </button>
             <button
               onClick={() => setUnit("l")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "l"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
+              className={`px-4 py-1 rounded-full text-sm ${unit === "l"
+                ? "bg-[#0066aa] text-white"
+                : "bg-gray-200 text-gray-600"
+                }`}
             >
               L
             </button>
@@ -652,7 +645,7 @@ export default function StatsPage() {
                       const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
                       const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
                       const safeValue = Number(value ?? 0).toFixed(0);
-                      
+
                       return (
                         <text
                           x={x}
@@ -715,21 +708,19 @@ export default function StatsPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`px-4 py-1 rounded-md text-sm ${
-                  regionMode === "count"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+                className={`px-4 py-1 rounded-md text-sm ${regionMode === "count"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+                  }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`px-4 py-1 rounded-md text-sm ${
-                  regionMode === "amount"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+                className={`px-4 py-1 rounded-md text-sm ${regionMode === "amount"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+                  }`}
               >
                 수거량별
               </button>

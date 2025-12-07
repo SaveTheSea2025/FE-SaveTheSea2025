@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, User, MapPin, Camera, CheckCircle } from "lucide-react";
-import Header from "../components/Header";
+import Header from "../components/common/Header";
 
 import { sendEmailCode, verifyEmailCode, signup } from "../api/auth";
 

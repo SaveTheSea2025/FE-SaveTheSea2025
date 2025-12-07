@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import DualMapSelector from "./DualMapSelector";
-import { regionCenters } from "../data/regionCenters";
+import { regionCenters } from "../../data/regionCenters";
 
 declare global {
   interface Window {
