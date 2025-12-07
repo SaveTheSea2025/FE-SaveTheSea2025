@@ -25,7 +25,7 @@ const GroupSignupPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [groupName, setGroupName] = useState("");
-  const [leaderName, setLeaderName] = useState("");
+  const [, setLeaderName] = useState("");
   const [region, setRegion] = useState("");
 
   // -------------------------
@@ -187,8 +187,8 @@ const GroupSignupPage: React.FC = () => {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className={`w-28 h-28 rounded-full flex flex-col items-center justify-center text-gray-400 hover:border-[#0C4A6E] overflow-hidden ${logoPreview
-                  ? "border-4 border-[#0C4A6E]"
-                  : "border-2 border-gray-300"
+                ? "border-4 border-[#0C4A6E]"
+                : "border-2 border-gray-300"
                 }`}
             >
               {logoPreview ? (

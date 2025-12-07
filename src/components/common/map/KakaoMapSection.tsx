@@ -1,5 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+//KakaoMapSection.tsx
 import React, { useEffect, useRef, useState } from "react";
-import { loadKakao } from "../lib/loadKakao";
+import { loadKakao } from "../../../lib/loadKakao";
 
 interface KakaoMapSectionProps {
   center: { lat: number; lng: number };

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef } from "react";
-import { loadKakao } from "../lib/loadKakao";
+import { loadKakao } from "../../../lib/loadKakao";
 
 interface Props {
   center: { lat: number; lng: number };

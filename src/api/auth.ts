@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/api/auth.ts (최종 수정본)
 
 /**
@@ -17,6 +18,7 @@ export interface User {
 }
 
 export interface ApiResponse<T = any> {
+    errorMessage: string;
     code: number;
     message: string;
     data: T | null;
@@ -67,7 +69,7 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<ApiRe
 }
 
 /* =========================================================
- *  이메일 인증 API
+ * 이메일 인증 API
  * ========================================================= */
 
 /**
@@ -101,7 +103,7 @@ export function verifyEmailCode(email: string, code: string): Promise<ApiRespons
  */
 // src/api/auth.ts (login 함수 수정)
 
-export function login(email: string, password: string, memberType: string): Promise<ApiResponse<User | { accessToken?: string }>> {
+export function login(email: string, password: string, memberType: string): Promise<ApiResponse<User | { accessToken?: string }> | ApiResponse<unknown>> {
     return request(`/api/auth/login`, {
         method: "POST",
         body: JSON.stringify({
@@ -140,7 +142,7 @@ export function getMyInfo(): Promise<ApiResponse<User>> {
 }
 
 /* =========================================================
- *  회원가입 API (FormData)
+ * 회원가입 API (FormData)
  * ========================================================= */
 
 /**

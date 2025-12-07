@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/context/AuthContext.tsx
 
-import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
+import { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 import { getMyInfo, type User } from '../api/auth';
 
 interface AuthContextType {
@@ -62,7 +63,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // 이 함수는 현재 로직에서는 사용되지 않지만, AuthContextType을 맞추기 위해 남겨둡니다.
     // 만약 login API가 사용자 정보를 직접 반환한다면 유용합니다.
-    const loginSuccess = () => { /* no-op */ };
 
     const logout = () => {
         localStorage.removeItem('accessToken');
