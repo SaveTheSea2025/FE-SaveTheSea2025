@@ -11,10 +11,41 @@ import axios from "axios";
 
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  
+  // ✅ 로그인한 사용자 정보 - 더미 데이터로 초기화
+  const [userInfo, setUserInfo] = useState<{
+    memberType: "PERSONAL" | "GROUP";
+    name: string;
+  }>({
+    memberType: "GROUP",    // 단체
+    name: "바다지킴이"      // 단체명
+    // 개인으로 테스트하려면:
+    // memberType: "PERSONAL",
+    // name: "홍길동"
+  });
+  
+  // ✅ 개발 중: 임시 토큰 자동 설정
+  useEffect(() => {
+    if (!localStorage.getItem("accessToken")) {
+      localStorage.setItem("accessToken", "임시개발토큰12345");
+      console.log("⚠️ 개발 모드: 임시 토큰 자동 설정됨");
+    }
+  }, []);
+
   const [description, setDescription] = useState("");
   const maxLength = 500;
-  const [groupType, setGroupType] = useState("단체");
-  const [groupName, setGroupName] = useState("");
+  
+  // ✅ 로그인 정보에서 자동 설정 (수정 불가)
+  const groupType = userInfo.memberType === "GROUP" ? "단체" : "개인";
+  const groupName = userInfo.name;
+  
+  // 🔍 디버그 로그
+  console.log("📊 userInfo:", userInfo);
+  console.log("📊 groupType:", groupType);
+  console.log("📊 groupName:", groupName);
+  console.log("📊 단체 체크:", groupType === "단체");
+  console.log("📊 개인 체크:", groupType === "개인");
+  
   const [selectedRegion] = useState({ sido: "", sigungu: "" });
   const [loading, setLoading] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -54,7 +85,7 @@ const WritePage = () => {
       const memberCountInput = document.getElementById("volunteerCount") as HTMLInputElement | null;
       const memberCount = Number(memberCountInput?.value || 0);
 
-      if (!groupName.trim()) missing.push("groupName");
+      // groupName은 로그인 정보에서 자동 입력되므로 검증 불필요
       if (!activityName.trim()) missing.push("activityName");
       if (!startDate || !startTime || !endDate || !endTime) missing.push("dateTime");
       if (memberCount <= 0) missing.push("memberCount");
@@ -64,9 +95,7 @@ const WritePage = () => {
         setMissingFields(missing);
         const first = missing[0];
         const targetId =
-          first === "groupName"
-            ? "group-input"
-            : first === "activityName"
+          first === "activityName"
             ? "activityName-input"
             : first === "dateTime"
             ? "dateTime-row"
@@ -159,6 +188,12 @@ const WritePage = () => {
       ></div>
 
       <main className="mt-8 md:mt-20 max-w-5xl mx-auto bg-white px-4 md:px-10 pb-10 relative z-10">
+        {/* ⚠️ 개발 모드 표시 */}
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 mb-6 rounded text-sm">
+          <p className="font-semibold">🔧 개발 모드</p>
+          <p className="text-xs">임시 토큰으로 실행 중입니다. 백엔드 연결 후 이 부분을 제거하세요.</p>
+        </div>
+
         <h2 className="text-[22px] md:text-[30px] font-bold text-center mb-8 md:mb-20 leading-normal">
           봉사활동 기록하기
         </h2>
@@ -187,7 +222,8 @@ const WritePage = () => {
                             type="radio"
                             name="group"
                             checked={groupType === "단체"}
-                            onChange={() => setGroupType("단체")}
+                            disabled
+                            className="cursor-not-allowed"
                           />
                           단체
                         </label>
@@ -196,7 +232,8 @@ const WritePage = () => {
                             type="radio"
                             name="group"
                             checked={groupType === "개인"}
-                            onChange={() => setGroupType("개인")}
+                            disabled
+                            className="cursor-not-allowed"
                           />
                           개인
                         </label>
@@ -207,15 +244,12 @@ const WritePage = () => {
                           <input
                             id="group-input"
                             type="text"
-                            placeholder={groupType === "단체" ? "단체명을 입력해주세요." : "이름을 입력해주세요."}
                             value={groupName}
-                            onChange={(e) => setGroupName(e.target.value.replace(/\s+/g, ""))}
-                            className={`border border-gray-300 bg-gray-50 rounded px-3 py-1.5 w-64 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                              missingFields.includes("groupName") ? "border-red-500" : ""
-                            }`}
+                            disabled
+                            className="border border-gray-300 bg-gray-100 rounded px-3 py-1.5 w-64 text-gray-500 cursor-not-allowed"
                           />
-                          <img src={groupName.trim() ? bluecheck : graycheck} alt="check" className="w-5 h-5" />
-                          <p className="text-xs text-gray-400">띄어쓰기 없이 입력해주세요.</p>
+                          <img src={bluecheck} alt="check" className="w-5 h-5" />
+                          <p className="text-xs text-gray-400">로그인 정보에서 자동 입력됨</p>
                         </div>
                       </div>
                     </div>
@@ -385,36 +419,33 @@ const WritePage = () => {
                     type="radio"
                     name="group"
                     checked={groupType === "단체"}
-                    onChange={() => setGroupType("단체")}
-                    className="w-4 h-4"
+                    disabled
+                    className="w-4 h-4 cursor-not-allowed"
                   />
-                  <span>단체</span>
+                  <span className={groupType === "단체" ? "text-gray-900" : "text-gray-400"}>단체</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
                     name="group"
                     checked={groupType === "개인"}
-                    onChange={() => setGroupType("개인")}
-                    className="w-4 h-4"
+                    disabled
+                    className="w-4 h-4 cursor-not-allowed"
                   />
-                  <span>개인</span>
+                  <span className={groupType === "개인" ? "text-gray-900" : "text-gray-400"}>개인</span>
                 </label>
               </div>
               <div className="flex items-center gap-2">
                 <input
                   id="group-input"
                   type="text"
-                  placeholder={groupType === "단체" ? "단체명 입력" : "이름 입력"}
                   value={groupName}
-                  onChange={(e) => setGroupName(e.target.value.replace(/\s+/g, ""))}
-                  className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${
-                    missingFields.includes("groupName") ? "border-red-500" : "border-gray-300"
-                  }`}
+                  disabled
+                  className="flex-1 border bg-gray-100 rounded px-3 py-2.5 text-sm text-gray-500 cursor-not-allowed border-gray-300"
                 />
-                <img src={groupName.trim() ? bluecheck : graycheck} alt="check" className="w-5 h-5" />
+                <img src={bluecheck} alt="check" className="w-5 h-5" />
               </div>
-              <p className="text-xs text-gray-400 mt-2">띄어쓰기 없이 입력해주세요.</p>
+              <p className="text-xs text-gray-400 mt-2">로그인 정보에서 자동 입력됨</p>
             </div>
 
             {/* 봉사활동명 */}

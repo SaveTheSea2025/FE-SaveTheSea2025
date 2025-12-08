@@ -20,6 +20,11 @@ interface LocationSectionProps {
     endLng: number;
     regionSido: string;
     regionSigungu: string;
+    // ✅ WritePage에서 사용하는 필드 추가
+    startLatitude: number;
+    startLongitude: number;
+    endLatitude: number;
+    endLongitude: number;
   }) => void;
 }
 
@@ -51,6 +56,11 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         endLng: endPos.lng,
         regionSido: sido,
         regionSigungu: sigungu,
+        // ✅ WritePage 필드 추가
+        startLatitude: startPos.lat,
+        startLongitude: startPos.lng,
+        endLatitude: endPos.lat,
+        endLongitude: endPos.lng,
       });
     }
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
@@ -227,18 +237,37 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                   if (status === kakao.maps.services.Status.OK && result[0]) {
                     const addr = result[0].address.address_name;
                     onChange?.({
-                      ...data,
+                      startAddress: data.startAddress,
+                      startLat: data.startLat,
+                      startLng: data.startLng,
                       endAddress: addr,
+                      endLat: data.endLat,
+                      endLng: data.endLng,
                       regionSido: sido,
                       regionSigungu: sigungu,
+                      // ✅ WritePage 필드 추가
+                      startLatitude: data.startLat,
+                      startLongitude: data.startLng,
+                      endLatitude: data.endLat,
+                      endLongitude: data.endLng,
                     });
                   }
                 });
               } else {
                 onChange?.({
-                  ...data,
+                  startAddress: data.startAddress,
+                  startLat: data.startLat,
+                  startLng: data.startLng,
+                  endAddress: data.endAddress,
+                  endLat: data.endLat,
+                  endLng: data.endLng,
                   regionSido: sido,
                   regionSigungu: sigungu,
+                  // ✅ WritePage 필드 추가
+                  startLatitude: data.startLat,
+                  startLongitude: data.startLng,
+                  endLatitude: data.endLat,
+                  endLongitude: data.endLng,
                 });
               }
             }}

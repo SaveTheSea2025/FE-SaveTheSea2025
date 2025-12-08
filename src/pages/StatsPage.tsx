@@ -1,5 +1,5 @@
 import Header from "../components/Header";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // icons
 import filterIcon from "../assets/filterIcon.png";
@@ -57,6 +57,9 @@ export default function StatsPage() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
 
+  // ✅ 드롭다운 ref (바깥 클릭 감지용)
+  const downloadRef = useRef<HTMLDivElement>(null);
+
   // ✅ 필터 상태 - 오늘부터 1년 전까지 기본값
   const today = new Date();
   const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
@@ -68,9 +71,12 @@ export default function StatsPage() {
     today.toISOString().split("T")[0]
   );
   const [location, setLocation] = useState<string>("전체");
-  const [activityType, setActivityType] = useState<string>("단체");
-  const [organization, setOrganization] = useState<string>("전체");
-  const [searchText, setSearchText] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"personal" | "organization">("personal");
+
+  // ✅ 사용자 정보 (로그인 후 토큰에서 가져올 정보)
+  // TODO: 실제로는 /api/auth/me에서 가져와야 함
+  const [userId, setUserId] = useState<number | null>(null);
+  const [organizationId, setOrganizationId] = useState<number | null>(null);
 
   // ✅ 조회된 날짜 상태 (조회 버튼 클릭 시에만 업데이트)
   const [displayStartDate, setDisplayStartDate] = useState<string>(
@@ -82,8 +88,6 @@ export default function StatsPage() {
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [activityTypeOpen, setActivityTypeOpen] = useState(false);
-  const [orgOpen, setOrgOpen] = useState(false);
 
   // ✅ API 데이터 상태
   const [summaryStats, setSummaryStats] = useState<SummaryStats | null>({
@@ -116,31 +120,64 @@ export default function StatsPage() {
   // ✅ 컴포넌트 마운트 시 초기 월별 데이터 구조 생성
   useEffect(() => {
     generateMonthlyDataStructure();
+    fetchUserInfo(); // 사용자 정보 가져오기
   }, []);
+
+  // ✅ 사용자 정보 가져오기 (로그인 토큰으로부터)
+  const fetchUserInfo = async () => {
+    try {
+      // TODO: 실제 토큰은 localStorage나 쿠키에서 가져와야 함
+      const token = localStorage.getItem("accessToken");
+      
+      if (!token) {
+        console.warn("로그인이 필요합니다.");
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+      
+      if (result.code === 0) {
+        const userData = result.data;
+        setUserId(userData.userId);
+        
+        // 단체 회원이면 organizationId도 설정
+        // TODO: API 응답에 organizationId가 포함되어 있는지 확인 필요
+        if (userData.organizationId) {
+          setOrganizationId(userData.organizationId);
+        }
+        
+        console.log("✅ 사용자 정보 로드:", userData);
+      }
+    } catch (error) {
+      console.error("❌ 사용자 정보 로드 실패:", error);
+    }
+  };
+
+  // ✅ 드롭다운 바깥 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (downloadRef.current && !downloadRef.current.contains(event.target as Node)) {
+        setDownloadOpen(false);
+      }
+    };
+
+    if (downloadOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [downloadOpen]);
 
   // ✅ 장소 옵션
   const locationOptions = ["전체", "동해", "서해", "남해", "제주"];
-
-  // ✅ 활동유형 옵션
-  const activityTypeOptions = ["단체", "개인"];
-
-  // ✅ 단체 옵션 (검색 필터링용)
-  const organizationOptions = [
-    "전체",
-    "가나다단체",
-    "나라사랑모임",
-    "다같이환경",
-    "라온환경보호",
-    "마음모아",
-    "바다지킴이",
-    "사랑의손길",
-    "아름다운바다",
-  ];
-
-  // ✅ 검색어로 필터링된 단체 목록
-  const filteredOrganizations = organizationOptions.filter((org) =>
-    org.toLowerCase().includes(searchText.toLowerCase())
-  );
 
   // ✅ 데이터 불러오기
   const fetchAllData = async () => {
@@ -158,9 +195,14 @@ export default function StatsPage() {
         startDate,
         endDate,
         location: location === "전체" ? "" : location,
-        activityType: activityType,
-        organization: organization === "전체" ? "" : organization,
       });
+
+      // viewMode에 따라 userId 또는 organizationId 추가
+      if (viewMode === "personal" && userId) {
+        params.append("userId", userId.toString());
+      } else if (viewMode === "organization" && organizationId) {
+        params.append("organizationId", organizationId.toString());
+      }
 
       console.log("API 호출 시작:", `${BASE_URL}/api/statistics/*?${params}`);
 
@@ -331,8 +373,6 @@ export default function StatsPage() {
                 onClick={() => {
                   setDatePickerOpen(!datePickerOpen);
                   setLocationOpen(false);
-                  setActivityTypeOpen(false);
-                  setOrgOpen(false);
                 }}
                 className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
               >
@@ -384,8 +424,6 @@ export default function StatsPage() {
                 onClick={() => {
                   setLocationOpen(!locationOpen);
                   setDatePickerOpen(false);
-                  setActivityTypeOpen(false);
-                  setOrgOpen(false);
                 }}
                 className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
               >
@@ -421,95 +459,28 @@ export default function StatsPage() {
               )}
             </div>
 
-            {/* 활동유형 선택 */}
-            <div className="relative">
+            {/* 내 정보 / 단체 버튼 */}
+            <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setActivityTypeOpen(!activityTypeOpen);
-                  setDatePickerOpen(false);
-                  setLocationOpen(false);
-                  setOrgOpen(false);
-                }}
-                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
+                onClick={() => setViewMode("personal")}
+                className={`px-4 py-2 rounded-xl text-sm transition-all ${
+                  viewMode === "personal"
+                    ? "bg-[#0066aa] text-white shadow-sm"
+                    : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                }`}
               >
-                {activityType}
+                내 정보
               </button>
-              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">
-                ▼
-              </span>
-
-              {activityTypeOpen && (
-                <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-32">
-                  {activityTypeOptions.map((type, idx) => (
-                    <div
-                      key={type}
-                      onClick={() => {
-                        setActivityType(type);
-                        setActivityTypeOpen(false);
-                      }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        activityType === type
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                        idx === activityTypeOptions.length - 1
-                          ? "rounded-b-xl"
-                          : ""
-                      }`}
-                    >
-                      {type}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 단체명 검색 */}
-            <div className="relative">
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => {
-                  setSearchText(e.target.value);
-                  setOrgOpen(true);
-                }}
-                onFocus={() => {
-                  setOrgOpen(true);
-                  setDatePickerOpen(false);
-                  setLocationOpen(false);
-                  setActivityTypeOpen(false);
-                }}
-                placeholder="단체명을 입력해주세요"
-                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm focus:outline-none hover:bg-gray-50 w-56"
-              />
-
-              {orgOpen && filteredOrganizations.length > 0 && (
-                <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
-                  {filteredOrganizations.map((org, idx) => (
-                    <div
-                      key={org}
-                      onClick={() => {
-                        setOrganization(org);
-                        setSearchText(org);
-                        setOrgOpen(false);
-                      }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        organization === org
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${
-                        idx === 0 ? "rounded-t-xl border-b border-gray-100" : ""
-                      } ${
-                        idx === filteredOrganizations.length - 1
-                          ? "rounded-b-xl"
-                          : ""
-                      }`}
-                    >
-                      {org}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <button
+                onClick={() => setViewMode("organization")}
+                className={`px-4 py-2 rounded-xl text-sm transition-all ${
+                  viewMode === "organization"
+                    ? "bg-[#0066aa] text-white shadow-sm"
+                    : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                단체
+              </button>
             </div>
 
             <button
@@ -520,7 +491,7 @@ export default function StatsPage() {
             </button>
           </div>
 
-          <div className="relative">
+          <div className="relative" ref={downloadRef}>
             <button
               onClick={() => setDownloadOpen(!downloadOpen)}
               className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white border border-gray-200 text-sm shadow-sm hover:bg-gray-50 transition"
