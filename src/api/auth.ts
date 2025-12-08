@@ -152,16 +152,17 @@ export function getMyInfo(): Promise<ApiResponse<User>> {
 export async function signup(data: any, photos?: File[]): Promise<ApiResponse> {
     const formData = new FormData();
 
-    // JSON 파트
+    // JSON 파트 (변경 없음)
     formData.append(
         "data",
         new Blob([JSON.stringify(data)], { type: "application/json" })
     );
 
-    // 파일 파트
+    // 파일 파트: 회원가입 API가 'profileImage' 키를 기대하므로 변경
     if (photos?.length) {
         photos.forEach((file) => {
-            formData.append("photos", file);
+            // 🔴 여기가 핵심: 'photos' -> 'profileImage'로 키 변경
+            formData.append("profileImage", file);
         });
     }
 

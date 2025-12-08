@@ -29,10 +29,10 @@ const GroupSignupPage: React.FC = () => {
   const [region, setRegion] = useState("");
 
   // -------------------------
-  // 이미지 업로드
+  // 이미지 업로드 (변수명 통일: profileFile 사용)
   // -------------------------
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null); // 이전: logoPreview
+  const [profileFile, setProfileFile] = useState<File | null>(null);     // 이전: logoFile
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // -------------------------
@@ -58,18 +58,36 @@ const GroupSignupPage: React.FC = () => {
     ).padStart(2, "0")}`;
 
   // -------------------------
-  // 이미지 처리
+  // 이미지 처리 (Blob URL 로직)
   // -------------------------
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+    const file = e.target.files?.[0];
 
-    setLogoFile(f);
+    // 이전 Blob URL이 있다면 해제 (메모리 정리)
+    if (profileImage && profileImage.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImage);
+    }
 
-    const reader = new FileReader();
-    reader.onloadend = () => setLogoPreview(reader.result as string);
-    reader.readAsDataURL(f);
+    if (file) {
+      setProfileFile(file);
+      // Blob URL 생성 및 저장
+      const blobUrl = URL.createObjectURL(file);
+      setProfileImage(blobUrl);
+    } else {
+      setProfileFile(null);
+      setProfileImage(null);
+    }
   };
+
+  // 컴포넌트 언마운트 및 상태 변경 시 Blob URL 정리
+  useEffect(() => {
+    return () => {
+      if (profileImage && profileImage.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImage);
+      }
+    };
+  }, [profileImage]);
+
 
   // -------------------------
   // 이메일 인증 요청
@@ -129,7 +147,7 @@ const GroupSignupPage: React.FC = () => {
   };
 
   // -------------------------
-  // 회원가입 제출
+  // 회원가입 제출 (API 호출 방식 수정)
   // -------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,7 +165,8 @@ const GroupSignupPage: React.FC = () => {
       memberType: "GROUP",
     };
 
-    const res = await signup(data, logoFile ? [logoFile] : undefined);
+    // ✅ profileFile이 null이 아니면 배열로 감싸서 전달합니다. (PersonalSignupPage와 동일)
+    const res = await signup(data, profileFile ? [profileFile] : undefined);
 
     if (res.code === 0) {
       alert("단체 회원가입 성공!");
@@ -173,7 +192,7 @@ const GroupSignupPage: React.FC = () => {
             </p>
           </div>
 
-          {/* 로고 업로드 */}
+          {/* 로고/프로필 이미지 업로드 */}
           <div className="flex justify-center mb-12">
             <input
               type="file"
@@ -186,13 +205,13 @@ const GroupSignupPage: React.FC = () => {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className={`w-28 h-28 rounded-full flex flex-col items-center justify-center text-gray-400 hover:border-[#0C4A6E] overflow-hidden ${logoPreview
+              className={`w-28 h-28 rounded-full flex flex-col items-center justify-center text-gray-400 hover:border-[#0C4A6E] overflow-hidden ${profileImage
                 ? "border-4 border-[#0C4A6E]"
                 : "border-2 border-gray-300"
                 }`}
             >
-              {logoPreview ? (
-                <img src={logoPreview} className="w-full h-full object-cover" />
+              {profileImage ? (
+                <img src={profileImage} className="w-full h-full object-cover" />
               ) : (
                 <>
                   <Camera className="w-6 h-6 mb-1" />
