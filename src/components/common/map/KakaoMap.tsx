@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useRef } from "react";
-import { loadKakao } from "../lib/loadKakao";
+import { loadKakao } from "../../../lib/loadKakao";
 
 type Marker = { lat: number; lng: number; title?: string };
 export default function KakaoMap({

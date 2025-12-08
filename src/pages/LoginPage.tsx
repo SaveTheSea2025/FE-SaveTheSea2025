@@ -1,7 +1,7 @@
 // src/pages/LoginPage.tsx
 
 import LoginForm from "../components/auth/LoginForm";
-import Header from "../components/Header"; // Header 컴포넌트의 경로를 가정
+import Header from "../components/common/Header"; // Header 컴포넌트의 경로를 가정
 
 const LoginPage = () => {
     return (

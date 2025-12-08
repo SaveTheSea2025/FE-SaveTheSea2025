@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react";
-import Header from "../components/Header";
-import WasteSection from "../components/WasteSection";
-import graycheck from "/src/assets/graycheck.png";
-import bluecheck from "/src/assets/bluecheck.png";
-import PhotoUploadSection from "../components/PhotoUploadSection";
-import LocationSection from "../components/LocationSection";
+import Header from "../components/common/Header";
+import WasteSection from "../components/write/WasteSection";
+import graycheck from "/src/assets/write/graycheck.png";
+import bluecheck from "/src/assets/write/bluecheck.png";
+import PhotoUploadSection from "../components/write/PhotoUploadSection";
+import LocationSection from "../components/write/LocationSection";
 import axios from "axios";
 
 const WritePage = () => {
@@ -67,12 +67,12 @@ const WritePage = () => {
           first === "groupName"
             ? "group-input"
             : first === "activityName"
-            ? "activityName-input"
-            : first === "dateTime"
-            ? "dateTime-row"
-            : first === "memberCount"
-            ? "memberCount-input"
-            : "location-section";
+              ? "activityName-input"
+              : first === "dateTime"
+                ? "dateTime-row"
+                : first === "memberCount"
+                  ? "memberCount-input"
+                  : "location-section";
 
         const el = document.getElementById(targetId);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -155,7 +155,7 @@ const WritePage = () => {
 
       <div
         className="w-full h-[200px] md:h-[300px] bg-cover bg-center"
-        style={{ backgroundImage: "url('/src/assets/backgroundimage2.png')" }}
+        style={{ backgroundImage: "url('/src/assets/write/backgroundimage2.png')" }}
       ></div>
 
       <main className="mt-8 md:mt-20 max-w-5xl mx-auto bg-white px-4 md:px-10 pb-10 relative z-10">
@@ -210,9 +210,8 @@ const WritePage = () => {
                             placeholder={groupType === "단체" ? "단체명을 입력해주세요." : "이름을 입력해주세요."}
                             value={groupName}
                             onChange={(e) => setGroupName(e.target.value.replace(/\s+/g, ""))}
-                            className={`border border-gray-300 bg-gray-50 rounded px-3 py-1.5 w-64 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                              missingFields.includes("groupName") ? "border-red-500" : ""
-                            }`}
+                            className={`border border-gray-300 bg-gray-50 rounded px-3 py-1.5 w-64 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${missingFields.includes("groupName") ? "border-red-500" : ""
+                              }`}
                           />
                           <img src={groupName.trim() ? bluecheck : graycheck} alt="check" className="w-5 h-5" />
                           <p className="text-xs text-gray-400">띄어쓰기 없이 입력해주세요.</p>
@@ -233,9 +232,8 @@ const WritePage = () => {
                       placeholder="봉사활동 명을 입력해주세요."
                       value={activityName}
                       onChange={(e) => setActivityName(e.target.value)}
-                      className={`w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                        missingFields.includes("activityName") ? "border-red-500" : ""
-                      }`}
+                      className={`w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${missingFields.includes("activityName") ? "border-red-500" : ""
+                        }`}
                     />
                   </td>
                 </tr>
@@ -250,34 +248,30 @@ const WritePage = () => {
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                       <input
                         type="time"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                       <span className="text-gray-500 text-[20px] mx-1">~</span>
                       <input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                       <input
                         type="time"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${
-                          missingFields.includes("dateTime") ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
+                          }`}
                       />
                     </div>
                   </td>
@@ -302,9 +296,8 @@ const WritePage = () => {
                       <div className="flex items-center justify-start w-1/3 bg-white px-6 py-3">
                         <div
                           id="memberCount-input"
-                          className={`flex items-center border rounded-md overflow-hidden ${
-                            missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
-                          }`}
+                          className={`flex items-center border rounded-md overflow-hidden ${missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
+                            }`}
                         >
                           <button
                             type="button"
@@ -356,9 +349,8 @@ const WritePage = () => {
                       className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400"
                     ></textarea>
                     <div
-                      className={`text-right text-xs mt-1 ${
-                        description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
-                      }`}
+                      className={`text-right text-xs mt-1 ${description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
+                        }`}
                     >
                       {description.length}/{maxLength}자
                     </div>
@@ -408,9 +400,8 @@ const WritePage = () => {
                   placeholder={groupType === "단체" ? "단체명 입력" : "이름 입력"}
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value.replace(/\s+/g, ""))}
-                  className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${
-                    missingFields.includes("groupName") ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("groupName") ? "border-red-500" : "border-gray-300"
+                    }`}
                 />
                 <img src={groupName.trim() ? bluecheck : graycheck} alt="check" className="w-5 h-5" />
               </div>
@@ -428,9 +419,8 @@ const WritePage = () => {
                 placeholder="봉사활동 명을 입력해주세요."
                 value={activityName}
                 onChange={(e) => setActivityName(e.target.value)}
-                className={`w-full border bg-white rounded px-3 py-2.5 text-sm ${
-                  missingFields.includes("activityName") ? "border-red-500" : "border-gray-300"
-                }`}
+                className={`w-full border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("activityName") ? "border-red-500" : "border-gray-300"
+                  }`}
               />
             </div>
 
@@ -445,17 +435,15 @@ const WritePage = () => {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${
-                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                      }`}
                   />
                   <input
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${
-                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                      }`}
                   />
                 </div>
                 <div className="flex items-center justify-center py-1">
@@ -466,17 +454,15 @@ const WritePage = () => {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${
-                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                      }`}
                   />
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${
-                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                      }`}
                   />
                 </div>
               </div>
@@ -498,9 +484,8 @@ const WritePage = () => {
               <div className="flex items-center justify-between">
                 <div
                   id="memberCount-input"
-                  className={`flex items-center border rounded-lg overflow-hidden ${
-                    missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`flex items-center border rounded-lg overflow-hidden ${missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
+                    }`}
                 >
                   <button
                     type="button"
@@ -548,9 +533,8 @@ const WritePage = () => {
                 className="w-full border border-gray-300 bg-white rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400"
               ></textarea>
               <div
-                className={`text-right text-xs mt-1 ${
-                  description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
-                }`}
+                className={`text-right text-xs mt-1 ${description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
+                  }`}
               >
                 {description.length}/{maxLength}자
               </div>

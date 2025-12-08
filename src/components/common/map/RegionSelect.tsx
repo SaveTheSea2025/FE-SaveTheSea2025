@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { regions } from "../data/regions";
+import { regions } from "../../../data/regions";
 
 interface Props {
   onSelect: (region: { sido: string; sigungu: string }) => void;

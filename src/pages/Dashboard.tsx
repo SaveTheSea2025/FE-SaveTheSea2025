@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
+import Header from "../components/common/Header";
 import { useEffect, useState } from "react";
-import MainpageScrollReveal from "../components/MainpageScrollReveal";
+import MainpageScrollReveal from "../components/main/MainpageScrollReveal";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -45,7 +45,7 @@ function Dashboard() {
   // ✅ 스크롤 감지 (모바일 snap 컨테이너용)
   useEffect(() => {
     const container = document.getElementById('scroll-container');
-    
+
     const handleScroll = () => {
       if (container) {
         setIsHeaderScrolled(container.scrollTop > 100);
@@ -62,12 +62,12 @@ function Dashboard() {
     <div className="min-h-screen flex flex-col bg-white">
       {/* 모바일: 스냅 스크롤 / 데스크톱: 일반 플로우 */}
       <div className="md:contents snap-y snap-mandatory h-screen overflow-y-scroll md:overflow-visible">
-        
+
         {/* 섹션 1: 메인 히어로 */}
         <div
           className="snap-start h-screen md:h-auto relative text-white flex flex-col"
           style={{
-            backgroundImage: "url('/src/assets/backgroundimage.png')",
+            backgroundImage: "url('/src/assets/main/backgroundimage.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -180,7 +180,7 @@ function Dashboard() {
             <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-32 mt-6 md:mt-10 relative">
               {/* 아이콘 이미지 */}
               <img
-                src="/src/assets/mainpage-cleanup.png"
+                src="/src/assets/main/mainpage-cleanup.png"
                 alt="cleanup"
                 className="w-[100px] h-[100px] md:w-[260px] md:h-[260px]"
               />
@@ -269,11 +269,11 @@ function Dashboard() {
                   </h3>
                   <div className="flex items-center gap-3 text-[10px] text-[#0C4A6E]">
                     <div className="flex items-center gap-1">
-                      <img src="/src/assets/mainpage-trashcan.png" alt="trash" className="w-3 h-3" />
+                      <img src="/src/assets/main/mainpage-trashcan.png" alt="trash" className="w-3 h-3" />
                       <span>{activity.totalWeight}kg</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <img src="/src/assets/mainpage-people.png" alt="people" className="w-3 h-3" />
+                      <img src="/src/assets/main/mainpage-people.png" alt="people" className="w-3 h-3" />
                       <span>{activity.memberCount}명</span>
                     </div>
                   </div>
@@ -318,7 +318,7 @@ function Dashboard() {
                         <div className="flex items-center gap-5">
                           <div className="flex items-center gap-2">
                             <img
-                              src="/src/assets/mainpage-trashcan.png"
+                              src="/src/assets/main/mainpage-trashcan.png"
                               alt="trash"
                               className="w-4 h-4"
                             />
@@ -327,7 +327,7 @@ function Dashboard() {
 
                           <div className="flex items-center gap-2">
                             <img
-                              src="/src/assets/mainpage-people.png"
+                              src="/src/assets/main/mainpage-people.png"
                               alt="people"
                               className="w-4 h-4"
                             />
@@ -336,7 +336,7 @@ function Dashboard() {
                         </div>
 
                         <img
-                          src="/src/assets/mainpage-arrow.png"
+                          src="/src/assets/main/mainpage-arrow.png"
                           alt="arrow"
                           className="w-5 h-5"
                         />
@@ -394,7 +394,7 @@ function Dashboard() {
                 rel="noopener noreferrer"
               >
                 <img
-                  src="/src/assets/mainpage-youtube.png"
+                  src="/src/assets/main/mainpage-youtube.png"
                   alt="YouTube"
                   className="w-6 h-6 hover:opacity-80 transition-opacity"
                 />
@@ -406,7 +406,7 @@ function Dashboard() {
                 rel="noopener noreferrer"
               >
                 <img
-                  src="/src/assets/mainpage-earth.png"
+                  src="/src/assets/main/mainpage-earth.png"
                   alt="Website"
                   className="w-6 h-6 hover:opacity-80 transition-opacity"
                 />

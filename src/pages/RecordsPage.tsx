@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useRef } from "react";
-import Header from "../components/Header";
-import RecordCard from "../components/RecordCard";
-import RecordDetailPanel from "../components/RecordDetailPanel";
-import FilterModal from "../components/FilterModal";
+import Header from "../components/common/Header";
+import RecordCard from "../components/record/RecordCard";
+import RecordDetailPanel from "../components/record/RecordDetailPanel";
+import FilterModal from "../components/record/FilterModal";
 import { SlidersHorizontal } from "lucide-react";
 
 declare global {
@@ -240,7 +240,7 @@ const RecordsPage: React.FC = () => {
       <div style="position: relative; width: 60px; height: 70px;">
         <!-- 기본 마커 -->
         <img 
-          src="/marker.png" 
+          src="/src/assets/record/marker.png"
           style="width: 60px; height: 70px; display: block;"
           alt="marker"
         />
@@ -284,7 +284,7 @@ const RecordsPage: React.FC = () => {
           markers.push(overlay);
         } else {
           // ✅ 썸네일이 없는 경우 기본 marker.png만 사용
-          const imageSrc = "/marker.png";
+          const imageSrc = "/src/assets/record/marker.png";
           const imageSize = new kakao.maps.Size(52, 52);
           const imageOption = { offset: new kakao.maps.Point(26, 52) };
           const markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);

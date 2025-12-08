@@ -1,15 +1,17 @@
-import Header from "../components/Header";
-import { useState, useEffect } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
+import Header from "../components/common/Header";
+import { useState, useEffect, useRef } from "react";
 
 // icons
-import filterIcon from "../assets/filterIcon.png";
-import downloadIcon from "../assets/downloadIcon.png";
-import pdfIcon from "../assets/pdfIcon.png";
-import excelIcon from "../assets/excelIcon.png";
-import activityIcon from "../assets/activityIcon.png";
-import personIcon from "../assets/personIcon.png";
-import weightIcon from "../assets/weightIcon.png";
-import volumeIcon from "../assets/volumeIcon.png";
+import filterIcon from "../assets/stats/filterIcon.png";
+import downloadIcon from "../assets/stats/downloadIcon.png";
+import pdfIcon from "../assets/stats/pdfIcon.png";
+import excelIcon from "../assets/stats/excelIcon.png";
+import activityIcon from "../assets/stats/activityIcon.png";
+import personIcon from "../assets/stats/personIcon.png";
+import weightIcon from "../assets/stats/weightIcon.png";
+import volumeIcon from "../assets/stats/volumeIcon.png";
 
 import {
   LineChart,
@@ -57,6 +59,9 @@ export default function StatsPage() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
 
+  // ✅ 드롭다운 ref (바깥 클릭 감지용)
+  const downloadRef = useRef<HTMLDivElement>(null);
+
   // ✅ 필터 상태 - 오늘부터 1년 전까지 기본값
   const today = new Date();
   const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
@@ -68,9 +73,12 @@ export default function StatsPage() {
     today.toISOString().split("T")[0]
   );
   const [location, setLocation] = useState<string>("전체");
-  const [activityType, setActivityType] = useState<string>("단체");
-  const [organization, setOrganization] = useState<string>("전체");
-  const [searchText, setSearchText] = useState<string>("");
+  // 💡 뷰 모드 추가
+  const [viewMode, setViewMode] = useState<"personal" | "organization">("personal");
+
+  // ✅ 사용자 정보 (로그인 후 토큰에서 가져올 정보)
+  const [userId, setUserId] = useState<number | null>(null);
+  const [organizationId, setOrganizationId] = useState<number | null>(null);
 
   // ✅ 조회된 날짜 상태 (조회 버튼 클릭 시에만 업데이트)
   const [displayStartDate, setDisplayStartDate] = useState<string>(
@@ -82,72 +90,91 @@ export default function StatsPage() {
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [activityTypeOpen, setActivityTypeOpen] = useState(false);
-  const [orgOpen, setOrgOpen] = useState(false);
 
-  // ✅ API 데이터 상태
-  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>({
-    activityCount: 24,
-    totalMembers: 1250,
-    totalWeight: 3450,
-    totalVolume: 5800,
-  });
+  // ✅ API 데이터 상태 (더미 데이터 제거 및 초기화)
+  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([]);
-  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([
-    { wasteType: "PLASTIC", ratio: 45, weight: 3500 },
-    { wasteType: "BUOY", ratio: 15, weight: 1200 },
-    { wasteType: "FISH_NET", ratio: 45, weight: 3500 },
-    { wasteType: "SACK", ratio: 45, weight: 3500 },
-    { wasteType: "FISH_TRAP", ratio: 45, weight: 3500 },
-    { wasteType: "SYRINGE", ratio: 45, weight: 3500 },
-    { wasteType: "MEDICINE", ratio: 45, weight: 3500 },
-    { wasteType: "ETC", ratio: 45, weight: 1300 },
-  ]);
-  const [regionData, setRegionData] = useState<RegionStats[]>([
-    { region: "동해", activityCount: 150, totalWeight: 1200, totalVolume: 2000 },
-    { region: "서해", activityCount: 98, totalWeight: 950, totalVolume: 1600 },
-    { region: "남해", activityCount: 120, totalWeight: 800, totalVolume: 1400 },
-    { region: "제주", activityCount: 85, totalWeight: 500, totalVolume: 800 },
-    { region: "인천", activityCount: 72, totalWeight: 650, totalVolume: 1100 },
-  ]);
+  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
+  const [regionData, setRegionData] = useState<RegionStats[]>([]);
+  // ❌ 사용하지 않는/정리해야 할 상태 제거: setActivityType, setOrganization, setSearchText, setOrgOpen, setActivityTypeOpen
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // ✅ 컴포넌트 마운트 시 초기 월별 데이터 구조 생성
   useEffect(() => {
     generateMonthlyDataStructure();
+    fetchUserInfo(); // 사용자 정보 가져오기
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ 드롭다운 바깥 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // 모든 드롭다운 닫기
+      if (downloadRef.current && !downloadRef.current.contains(event.target as Node)) {
+        setDownloadOpen(false);
+      }
+      // 날짜, 장소 등 다른 드롭다운도 여기서 처리할 수 있습니다.
+      // (현재는 datePickerOpen, locationOpen이 이 useEffect 외부에 의존성을 가질 수 있어 경고 발생 가능)
+    };
+
+    if (downloadOpen || datePickerOpen || locationOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [downloadOpen, datePickerOpen, locationOpen]);
+
+
+  // ✅ 사용자 정보 가져오기 (로그인 토큰으로부터)
+  const fetchUserInfo = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      if (!token) {
+        console.warn("로그인이 필요합니다.");
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.code === 0) {
+        const userData = result.data;
+        setUserId(userData.userId);
+
+        // 단체 회원이면 organizationId도 설정
+        // (organizationId는 API 응답 타입에 포함되어 있어야 함)
+        if (userData.organizationId) {
+          setOrganizationId(userData.organizationId);
+        }
+        // 사용자가 단체 소속인 경우 기본 뷰 모드를 'organization'으로 설정 (선택 사항)
+        // if (userData.memberType === 'GROUP') { setViewMode('organization'); }
+
+
+        console.log("✅ 사용자 정보 로드:", userData);
+      }
+    } catch (error) {
+      console.error("❌ 사용자 정보 로드 실패:", error);
+    }
+  };
 
   // ✅ 장소 옵션
   const locationOptions = ["전체", "동해", "서해", "남해", "제주"];
 
-  // ✅ 활동유형 옵션
-  const activityTypeOptions = ["단체", "개인"];
-
-  // ✅ 단체 옵션 (검색 필터링용)
-  const organizationOptions = [
-    "전체",
-    "가나다단체",
-    "나라사랑모임",
-    "다같이환경",
-    "라온환경보호",
-    "마음모아",
-    "바다지킴이",
-    "사랑의손길",
-    "아름다운바다",
-  ];
-
-  // ✅ 검색어로 필터링된 단체 목록
-  const filteredOrganizations = organizationOptions.filter((org) =>
-    org.toLowerCase().includes(searchText.toLowerCase())
-  );
-
   // ✅ 데이터 불러오기
   const fetchAllData = async () => {
-    // BASE_URL이 없으면 더미 데이터 사용
+    // BASE_URL이 없으면 API 호출하지 않음
     if (!BASE_URL) {
       console.warn(
-        "BASE_URL이 설정되지 않았습니다. 더미 데이터를 사용합니다."
+        "BASE_URL이 설정되지 않았습니다. API 호출을 건너뜁니다."
       );
       return;
     }
@@ -158,9 +185,14 @@ export default function StatsPage() {
         startDate,
         endDate,
         location: location === "전체" ? "" : location,
-        activityType: activityType,
-        organization: organization === "전체" ? "" : organization,
       });
+
+      // viewMode에 따라 userId 또는 organizationId 추가
+      if (viewMode === "personal" && userId) {
+        params.append("userId", userId.toString());
+      } else if (viewMode === "organization" && organizationId) {
+        params.append("organizationId", organizationId.toString());
+      }
 
       console.log("API 호출 시작:", `${BASE_URL}/api/statistics/*?${params}`);
 
@@ -230,22 +262,32 @@ export default function StatsPage() {
     }
   };
 
-  // ✅ 초기 로드 시에만 데이터 불러오기
+  // ✅ 초기 로드 시 및 뷰 모드/사용자 ID 변경 시 데이터 불러오기
   useEffect(() => {
     // 초기 표시 날짜 설정
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-    
-    fetchAllData();
+
+    // userId나 organizationId가 유효할 때만 데이터 로드를 시도합니다.
+    if (viewMode === 'personal' && userId !== null) {
+      fetchAllData();
+    } else if (viewMode === 'organization' && organizationId !== null) {
+      fetchAllData();
+    } else if (userId === null && organizationId === null) {
+      // 사용자 정보가 로드되지 않았거나, 전역 모드일 경우 (현재는 해당 필터 없음)
+      // 일단 fetchAllData를 호출하여 전체 데이터를 로드합니다.
+      fetchAllData();
+    }
+    // 💡 의존성 배열에 viewMode, userId, organizationId 추가
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [viewMode, userId, organizationId]);
 
   // ✅ 조회 버튼 클릭 핸들러
   const handleSearch = () => {
     // 표시 날짜 업데이트
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-    
+
     // 모든 API 데이터 다시 불러오기
     fetchAllData();
   };
@@ -257,25 +299,23 @@ export default function StatsPage() {
     const months: MonthlyWeight[] = [];
 
     // 시작 월부터 종료 월까지 반복
-    let current = new Date(start.getFullYear(), start.getMonth(), 1);
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
     const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
 
     while (current <= endMonth) {
       const year = current.getFullYear();
       const month = current.getMonth() + 1;
-      
+
       // 월 표시 형식: "12월" 또는 "2024-12월" (년도가 다른 경우)
-      const monthLabel = 
-        start.getFullYear() === end.getFullYear() 
+      const monthLabel =
+        start.getFullYear() === end.getFullYear()
           ? `${month}월`
           : `${year}-${month}월`;
 
-      // 더미 데이터: 400~800 사이의 랜덤 값 생성
-      const dummyWeight = Math.floor(Math.random() * 400) + 400;
-
+      // 💡 더미 데이터 생성 로직 대신 0으로 초기화
       months.push({
         month: monthLabel,
-        totalWeight: dummyWeight,
+        totalWeight: 0,
       });
 
       // 다음 달로 이동
@@ -331,8 +371,6 @@ export default function StatsPage() {
                 onClick={() => {
                   setDatePickerOpen(!datePickerOpen);
                   setLocationOpen(false);
-                  setActivityTypeOpen(false);
-                  setOrgOpen(false);
                 }}
                 className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
               >
@@ -384,8 +422,6 @@ export default function StatsPage() {
                 onClick={() => {
                   setLocationOpen(!locationOpen);
                   setDatePickerOpen(false);
-                  setActivityTypeOpen(false);
-                  setOrgOpen(false);
                 }}
                 className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
               >
@@ -404,15 +440,13 @@ export default function StatsPage() {
                         setLocation(loc);
                         setLocationOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        location === loc
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                        idx === locationOptions.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${location === loc
+                        ? "bg-blue-50 text-[#0066aa] font-medium"
+                        : ""
+                        } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === locationOptions.length - 1
                           ? "rounded-b-xl"
                           : ""
-                      }`}
+                        }`}
                     >
                       {loc}
                     </div>
@@ -421,95 +455,26 @@ export default function StatsPage() {
               )}
             </div>
 
-            {/* 활동유형 선택 */}
-            <div className="relative">
+            {/* 내 정보 / 단체 버튼 */}
+            <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setActivityTypeOpen(!activityTypeOpen);
-                  setDatePickerOpen(false);
-                  setLocationOpen(false);
-                  setOrgOpen(false);
-                }}
-                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50"
+                onClick={() => setViewMode("personal")}
+                className={`px-4 py-2 rounded-xl text-sm transition-all ${viewMode === "personal"
+                  ? "bg-[#0066aa] text-white shadow-sm"
+                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                  }`}
               >
-                {activityType}
+                내 정보
               </button>
-              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">
-                ▼
-              </span>
-
-              {activityTypeOpen && (
-                <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-32">
-                  {activityTypeOptions.map((type, idx) => (
-                    <div
-                      key={type}
-                      onClick={() => {
-                        setActivityType(type);
-                        setActivityTypeOpen(false);
-                      }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        activityType === type
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                        idx === activityTypeOptions.length - 1
-                          ? "rounded-b-xl"
-                          : ""
-                      }`}
-                    >
-                      {type}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 단체명 검색 */}
-            <div className="relative">
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => {
-                  setSearchText(e.target.value);
-                  setOrgOpen(true);
-                }}
-                onFocus={() => {
-                  setOrgOpen(true);
-                  setDatePickerOpen(false);
-                  setLocationOpen(false);
-                  setActivityTypeOpen(false);
-                }}
-                placeholder="단체명을 입력해주세요"
-                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm focus:outline-none hover:bg-gray-50 w-56"
-              />
-
-              {orgOpen && filteredOrganizations.length > 0 && (
-                <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
-                  {filteredOrganizations.map((org, idx) => (
-                    <div
-                      key={org}
-                      onClick={() => {
-                        setOrganization(org);
-                        setSearchText(org);
-                        setOrgOpen(false);
-                      }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        organization === org
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${
-                        idx === 0 ? "rounded-t-xl border-b border-gray-100" : ""
-                      } ${
-                        idx === filteredOrganizations.length - 1
-                          ? "rounded-b-xl"
-                          : ""
-                      }`}
-                    >
-                      {org}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <button
+                onClick={() => setViewMode("organization")}
+                className={`px-4 py-2 rounded-xl text-sm transition-all ${viewMode === "organization"
+                  ? "bg-[#0066aa] text-white shadow-sm"
+                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                  }`}
+              >
+                단체
+              </button>
             </div>
 
             <button
@@ -520,7 +485,7 @@ export default function StatsPage() {
             </button>
           </div>
 
-          <div className="relative">
+          <div className="relative" ref={downloadRef}>
             <button
               onClick={() => setDownloadOpen(!downloadOpen)}
               className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white border border-gray-200 text-sm shadow-sm hover:bg-gray-50 transition"
@@ -578,21 +543,19 @@ export default function StatsPage() {
           <div className="flex justify-end mb-4 gap-2">
             <button
               onClick={() => setUnit("kg")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "kg"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
+              className={`px-4 py-1 rounded-full text-sm ${unit === "kg"
+                ? "bg-[#0066aa] text-white"
+                : "bg-gray-200 text-gray-600"
+                }`}
             >
               kg
             </button>
             <button
               onClick={() => setUnit("l")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "l"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
+              className={`px-4 py-1 rounded-full text-sm ${unit === "l"
+                ? "bg-[#0066aa] text-white"
+                : "bg-gray-200 text-gray-600"
+                }`}
             >
               L
             </button>
@@ -610,7 +573,6 @@ export default function StatsPage() {
                     backgroundColor: "white",
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
-                    padding: "8px 12px",
                   }}
                   labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
                 />
@@ -652,7 +614,7 @@ export default function StatsPage() {
                       const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
                       const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
                       const safeValue = Number(value ?? 0).toFixed(0);
-                      
+
                       return (
                         <text
                           x={x}
@@ -715,21 +677,19 @@ export default function StatsPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`px-4 py-1 rounded-md text-sm ${
-                  regionMode === "count"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+                className={`px-4 py-1 rounded-md text-sm ${regionMode === "count"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+                  }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`px-4 py-1 rounded-md text-sm ${
-                  regionMode === "amount"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+                className={`px-4 py-1 rounded-md text-sm ${regionMode === "amount"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+                  }`}
               >
                 수거량별
               </button>

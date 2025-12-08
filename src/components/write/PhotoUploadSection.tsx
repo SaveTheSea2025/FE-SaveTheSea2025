@@ -1,6 +1,6 @@
-import { useRef, useState} from "react";
-import starOutline from "/src/assets/star-outline.png";
-import starFilled from "/src/assets/star-filled.png";
+import { useRef, useState } from "react";
+import starOutline from "/src/assets/write/star-outline.png";
+import starFilled from "/src/assets/write/star-filled.png";
 
 interface PhotoUploadSectionProps {
   onChange?: (files: File[]) => void;
@@ -87,9 +87,8 @@ const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionPr
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`${
-            isDragging ? "border-sky-500 bg-sky-50" : "border-gray-300 bg-gray-50"
-          } border border-dashed rounded-md py-8 md:py-10 px-4 md:px-6 text-center text-gray-500 mb-4 transition-colors`}
+          className={`${isDragging ? "border-sky-500 bg-sky-50" : "border-gray-300 bg-gray-50"
+            } border border-dashed rounded-md py-8 md:py-10 px-4 md:px-6 text-center text-gray-500 mb-4 transition-colors`}
         >
           {images.length === 0 ? (
             <p className="text-xs md:text-sm">버튼을 클릭하거나, 이미지를 마우스로 끌어와 업로드하세요.</p>

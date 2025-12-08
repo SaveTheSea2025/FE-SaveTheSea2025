@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 import { useState, useMemo, useEffect } from "react";
 
 interface WasteSectionProps {

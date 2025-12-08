@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+//MapSelector.tsx
 import { useEffect, useRef, useState } from "react";
-import { loadKakaoCustom } from "../lib/loadKakaoCustom";
+import { loadKakaoCustom } from "../../lib/loadKakaoCustom";
 
 interface MapSelectorProps {
   label: string;
@@ -88,17 +89,17 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
           });
         };
         if (label === "종료지점") {
-  (window as any).endMapInstance = map;
-  (window as any).endMarkerRef = marker;
-  (window as any).endMapReady = false;
+          (window as any).endMapInstance = map;
+          (window as any).endMarkerRef = marker;
+          (window as any).endMapReady = false;
 
-  kakao.maps.event.addListener(map, "tilesloaded", () => {
-    if (!(window as any).endMapReady) {
-      (window as any).endMapReady = true;
-      console.log("✅ 종료지도 로드 완료");
-    }
-  });
-}
+          kakao.maps.event.addListener(map, "tilesloaded", () => {
+            if (!(window as any).endMapReady) {
+              (window as any).endMapReady = true;
+              console.log("✅ 종료지도 로드 완료");
+            }
+          });
+        }
 
 
 
@@ -122,47 +123,47 @@ const MapSelector = ({ label, regionCenter, onChange }: MapSelectorProps) => {
 
   // ✅ 장소 검색
   // ✅ 장소 검색
-const handlePlaceSearch = async () => {
-  if (!address.trim()) return alert("장소명을 입력해주세요!");
-  try {
-    await loadKakaoCustom();
-    const kakao = (window as any).kakao;
-    if (!kakao?.maps?.services || !mapInstance.current) return;
+  const handlePlaceSearch = async () => {
+    if (!address.trim()) return alert("장소명을 입력해주세요!");
+    try {
+      await loadKakaoCustom();
+      const kakao = (window as any).kakao;
+      if (!kakao?.maps?.services || !mapInstance.current) return;
 
-    const ps = new kakao.maps.services.Places();
-    const map = mapInstance.current;
-    const marker = markerRef.current;
+      const ps = new kakao.maps.services.Places();
+      const map = mapInstance.current;
+      const marker = markerRef.current;
 
-    ps.keywordSearch(address, (data: any[], status: string) => {
-      if (status === kakao.maps.services.Status.OK && data[0]) {
-        const place = data[0];
-        let lat = parseFloat(place.y);
-        let lng = parseFloat(place.x);
+      ps.keywordSearch(address, (data: any[], status: string) => {
+        if (status === kakao.maps.services.Status.OK && data[0]) {
+          const place = data[0];
+          let lat = parseFloat(place.y);
+          let lng = parseFloat(place.x);
 
-        // ✅ 도착지점일 때만 살짝 오른쪽 아래로 이동시킴
-        if (label === "종료지점") {
-          lat -= 0.0005;
-          lng += 0.0007;
+          // ✅ 도착지점일 때만 살짝 오른쪽 아래로 이동시킴
+          if (label === "종료지점") {
+            lat -= 0.0005;
+            lng += 0.0007;
+          }
+
+          const moveLatLon = new kakao.maps.LatLng(lat, lng);
+          marker.setPosition(moveLatLon);
+          map.panTo(moveLatLon);
+
+          setAddress(`${place.place_name} (${place.address_name})`);
+          onChange?.({
+            lat,
+            lng,
+            address: `${place.place_name} (${place.address_name})`,
+          });
+        } else {
+          alert("검색 결과가 없습니다!");
         }
-
-        const moveLatLon = new kakao.maps.LatLng(lat, lng);
-        marker.setPosition(moveLatLon);
-        map.panTo(moveLatLon);
-
-        setAddress(`${place.place_name} (${place.address_name})`);
-        onChange?.({
-          lat,
-          lng,
-          address: `${place.place_name} (${place.address_name})`,
-        });
-      } else {
-        alert("검색 결과가 없습니다!");
-      }
-    });
-  } catch (err) {
-    console.error("❌ 장소 검색 오류:", err);
-  }
-};
+      });
+    } catch (err) {
+      console.error("❌ 장소 검색 오류:", err);
+    }
+  };
 
 
   // ✅ 주소 검색 (다음 우편번호)
