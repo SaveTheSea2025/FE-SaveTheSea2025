@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext"; // ✅ 추가
 import Header from "../components/Header";
 import WasteSection from "../components/WasteSection";
-import graycheck from "/src/assets/graycheck.png";
 import bluecheck from "/src/assets/bluecheck.png";
 import PhotoUploadSection from "../components/PhotoUploadSection";
 import LocationSection from "../components/LocationSection";
@@ -11,40 +11,23 @@ import axios from "axios";
 
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const { user } = useAuth(); // ✅ 실제 로그인 정보
   
-  // ✅ 로그인한 사용자 정보 - 더미 데이터로 초기화
-  const [userInfo, setUserInfo] = useState<{
-    memberType: "PERSONAL" | "GROUP";
-    name: string;
-  }>({
-    memberType: "GROUP",    // 단체
-    name: "바다지킴이"      // 단체명
-    // 개인으로 테스트하려면:
-    // memberType: "PERSONAL",
-    // name: "홍길동"
-  });
-  
-  // ✅ 개발 중: 임시 토큰 자동 설정
-  useEffect(() => {
-    if (!localStorage.getItem("accessToken")) {
-      localStorage.setItem("accessToken", "임시개발토큰12345");
-      console.log("⚠️ 개발 모드: 임시 토큰 자동 설정됨");
-    }
-  }, []);
-
-  const [description, setDescription] = useState("");
-  const maxLength = 500;
-  
-  // ✅ 로그인 정보에서 자동 설정 (수정 불가)
-  const groupType = userInfo.memberType === "GROUP" ? "단체" : "개인";
-  const groupName = userInfo.name;
+  // ✅ 로그인 정보에서 자동 설정 (실제 API 데이터 사용)
+  const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
+  const groupName = user?.memberType === "GROUP" 
+    ? (user as any)?.organizationName || user?.userName || "" 
+    : user?.userName || "";
   
   // 🔍 디버그 로그
-  console.log("📊 userInfo:", userInfo);
+  console.log("🔍 실제 로그인 정보:", user);
   console.log("📊 groupType:", groupType);
   console.log("📊 groupName:", groupName);
   console.log("📊 단체 체크:", groupType === "단체");
   console.log("📊 개인 체크:", groupType === "개인");
+
+  const [description, setDescription] = useState("");
+  const maxLength = 500;
   
   const [selectedRegion] = useState({ sido: "", sigungu: "" });
   const [loading, setLoading] = useState(false);
@@ -85,11 +68,36 @@ const WritePage = () => {
       const memberCountInput = document.getElementById("volunteerCount") as HTMLInputElement | null;
       const memberCount = Number(memberCountInput?.value || 0);
 
+      // 🔍 디버깅 로그
+      console.log("=== 필수 항목 검증 시작 ===");
+      console.log("activityName:", activityName);
+      console.log("startDate:", startDate, "startTime:", startTime);
+      console.log("endDate:", endDate, "endTime:", endTime);
+      console.log("memberCount:", memberCount);
+      console.log("locationData:", locationData);
+      console.log("startAddress:", locationData?.startAddress);
+      console.log("endAddress:", locationData?.endAddress);
+
       // groupName은 로그인 정보에서 자동 입력되므로 검증 불필요
-      if (!activityName.trim()) missing.push("activityName");
-      if (!startDate || !startTime || !endDate || !endTime) missing.push("dateTime");
-      if (memberCount <= 0) missing.push("memberCount");
-      if (!locationData?.startAddress || !locationData?.endAddress) missing.push("location");
+      if (!activityName.trim()) {
+        console.log("❌ activityName 누락");
+        missing.push("activityName");
+      }
+      if (!startDate || !startTime || !endDate || !endTime) {
+        console.log("❌ 날짜/시간 누락");
+        missing.push("dateTime");
+      }
+      if (memberCount <= 0) {
+        console.log("❌ memberCount 누락 또는 0");
+        missing.push("memberCount");
+      }
+      if (!locationData?.startAddress || !locationData?.endAddress) {
+        console.log("❌ 위치 정보 누락");
+        missing.push("location");
+      }
+
+      console.log("누락된 필드:", missing);
+      console.log("=== 검증 완료 ===");
 
       if (missing.length > 0) {
         setMissingFields(missing);
@@ -188,12 +196,6 @@ const WritePage = () => {
       ></div>
 
       <main className="mt-8 md:mt-20 max-w-5xl mx-auto bg-white px-4 md:px-10 pb-10 relative z-10">
-        {/* ⚠️ 개발 모드 표시 */}
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 mb-6 rounded text-sm">
-          <p className="font-semibold">🔧 개발 모드</p>
-          <p className="text-xs">임시 토큰으로 실행 중입니다. 백엔드 연결 후 이 부분을 제거하세요.</p>
-        </div>
-
         <h2 className="text-[22px] md:text-[30px] font-bold text-center mb-8 md:mb-20 leading-normal">
           봉사활동 기록하기
         </h2>
@@ -222,20 +224,32 @@ const WritePage = () => {
                             type="radio"
                             name="group"
                             checked={groupType === "단체"}
-                            disabled
-                            className="cursor-not-allowed"
+                            readOnly
+                            className="w-4 h-4 pointer-events-none"
+                            style={{
+                              accentColor: "#0369A1",
+                              opacity: 1
+                            }}
                           />
-                          단체
+                          <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                            단체
+                          </span>
                         </label>
                         <label className="flex items-center gap-1">
                           <input
                             type="radio"
                             name="group"
                             checked={groupType === "개인"}
-                            disabled
-                            className="cursor-not-allowed"
+                            readOnly
+                            className="w-4 h-4 pointer-events-none"
+                            style={{
+                              accentColor: "#0369A1",
+                              opacity: 1
+                            }}
                           />
-                          개인
+                          <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                            개인
+                          </span>
                         </label>
                       </div>
 
@@ -419,20 +433,32 @@ const WritePage = () => {
                     type="radio"
                     name="group"
                     checked={groupType === "단체"}
-                    disabled
-                    className="w-4 h-4 cursor-not-allowed"
+                    readOnly
+                    className="w-4 h-4 pointer-events-none"
+                    style={{
+                      accentColor: "#0369A1",
+                      opacity: 1
+                    }}
                   />
-                  <span className={groupType === "단체" ? "text-gray-900" : "text-gray-400"}>단체</span>
+                  <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                    단체
+                  </span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
                     name="group"
                     checked={groupType === "개인"}
-                    disabled
-                    className="w-4 h-4 cursor-not-allowed"
+                    readOnly
+                    className="w-4 h-4 pointer-events-none"
+                    style={{
+                      accentColor: "#0369A1",
+                      opacity: 1
+                    }}
                   />
-                  <span className={groupType === "개인" ? "text-gray-900" : "text-gray-400"}>개인</span>
+                  <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                    개인
+                  </span>
                 </label>
               </div>
               <div className="flex items-center gap-2">

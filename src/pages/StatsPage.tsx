@@ -1,5 +1,6 @@
 import Header from "../components/Header";
 import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../context/AuthContext"; // ✅ 추가
 
 // icons
 import filterIcon from "../assets/filterIcon.png";
@@ -53,6 +54,8 @@ interface RegionStats {
 }
 
 export default function StatsPage() {
+  const { user } = useAuth(); // ✅ 실제 로그인 정보
+  
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
@@ -73,11 +76,6 @@ export default function StatsPage() {
   const [location, setLocation] = useState<string>("전체");
   const [viewMode, setViewMode] = useState<"personal" | "organization">("personal");
 
-  // ✅ 사용자 정보 (로그인 후 토큰에서 가져올 정보)
-  // TODO: 실제로는 /api/auth/me에서 가져와야 함
-  const [userId, setUserId] = useState<number | null>(null);
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
-
   // ✅ 조회된 날짜 상태 (조회 버튼 클릭 시에만 업데이트)
   const [displayStartDate, setDisplayStartDate] = useState<string>(
     oneYearAgo.toISOString().split("T")[0]
@@ -89,75 +87,28 @@ export default function StatsPage() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
 
-  // ✅ API 데이터 상태
-  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>({
-    activityCount: 24,
-    totalMembers: 1250,
-    totalWeight: 3450,
-    totalVolume: 5800,
-  });
+  // ✅ API 데이터 상태 (더미 데이터 제거)
+  const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([]);
-  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([
-    { wasteType: "PLASTIC", ratio: 45, weight: 3500 },
-    { wasteType: "BUOY", ratio: 15, weight: 1200 },
-    { wasteType: "FISH_NET", ratio: 45, weight: 3500 },
-    { wasteType: "SACK", ratio: 45, weight: 3500 },
-    { wasteType: "FISH_TRAP", ratio: 45, weight: 3500 },
-    { wasteType: "SYRINGE", ratio: 45, weight: 3500 },
-    { wasteType: "MEDICINE", ratio: 45, weight: 3500 },
-    { wasteType: "ETC", ratio: 45, weight: 1300 },
-  ]);
-  const [regionData, setRegionData] = useState<RegionStats[]>([
-    { region: "동해", activityCount: 150, totalWeight: 1200, totalVolume: 2000 },
-    { region: "서해", activityCount: 98, totalWeight: 950, totalVolume: 1600 },
-    { region: "남해", activityCount: 120, totalWeight: 800, totalVolume: 1400 },
-    { region: "제주", activityCount: 85, totalWeight: 500, totalVolume: 800 },
-    { region: "인천", activityCount: 72, totalWeight: 650, totalVolume: 1100 },
-  ]);
+  const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
+  const [regionData, setRegionData] = useState<RegionStats[]>([]);
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  // ✅ 컴포넌트 마운트 시 초기 월별 데이터 구조 생성
+  // ✅ 로그인 정보 디버그
+  console.log("🔍 StatsPage 로그인 정보:", user);
+  console.log("📊 userId:", user?.userId);
+  console.log("📊 organizationId:", (user as any)?.organizationId);
+
+  // ✅ 컴포넌트 마운트 시 초기 데이터 불러오기
   useEffect(() => {
-    generateMonthlyDataStructure();
-    fetchUserInfo(); // 사용자 정보 가져오기
-  }, []);
-
-  // ✅ 사용자 정보 가져오기 (로그인 토큰으로부터)
-  const fetchUserInfo = async () => {
-    try {
-      // TODO: 실제 토큰은 localStorage나 쿠키에서 가져와야 함
-      const token = localStorage.getItem("accessToken");
-      
-      if (!token) {
-        console.warn("로그인이 필요합니다.");
-        return;
-      }
-
-      const response = await fetch(`${BASE_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const result = await response.json();
-      
-      if (result.code === 0) {
-        const userData = result.data;
-        setUserId(userData.userId);
-        
-        // 단체 회원이면 organizationId도 설정
-        // TODO: API 응답에 organizationId가 포함되어 있는지 확인 필요
-        if (userData.organizationId) {
-          setOrganizationId(userData.organizationId);
-        }
-        
-        console.log("✅ 사용자 정보 로드:", userData);
-      }
-    } catch (error) {
-      console.error("❌ 사용자 정보 로드 실패:", error);
+    if (user) {
+      setDisplayStartDate(startDate);
+      setDisplayEndDate(endDate);
+      fetchAllData();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // ✅ 드롭다운 바깥 클릭 시 닫기
   useEffect(() => {
@@ -181,11 +132,13 @@ export default function StatsPage() {
 
   // ✅ 데이터 불러오기
   const fetchAllData = async () => {
-    // BASE_URL이 없으면 더미 데이터 사용
     if (!BASE_URL) {
-      console.warn(
-        "BASE_URL이 설정되지 않았습니다. 더미 데이터를 사용합니다."
-      );
+      console.warn("BASE_URL이 설정되지 않았습니다.");
+      return;
+    }
+
+    if (!user) {
+      console.warn("로그인 정보가 없습니다.");
       return;
     }
 
@@ -198,10 +151,10 @@ export default function StatsPage() {
       });
 
       // viewMode에 따라 userId 또는 organizationId 추가
-      if (viewMode === "personal" && userId) {
-        params.append("userId", userId.toString());
-      } else if (viewMode === "organization" && organizationId) {
-        params.append("organizationId", organizationId.toString());
+      if (viewMode === "personal" && user.userId) {
+        params.append("userId", user.userId.toString());
+      } else if (viewMode === "organization" && (user as any).organizationId) {
+        params.append("organizationId", (user as any).organizationId.toString());
       }
 
       console.log("API 호출 시작:", `${BASE_URL}/api/statistics/*?${params}`);
@@ -230,12 +183,11 @@ export default function StatsPage() {
           setMonthlyData(monthlyResult.data);
           console.log("✅ 월별 수거량 로드 완료");
         } else {
-          // API 데이터가 없으면 선택한 기간에 맞는 빈 구조 생성
-          generateMonthlyDataStructure();
+          setMonthlyData([]);
         }
       } catch (err) {
         console.error("❌ 월별 수거량 API 실패:", err);
-        generateMonthlyDataStructure();
+        setMonthlyData([]);
       }
 
       // 3. 폐기물 비율
@@ -272,59 +224,11 @@ export default function StatsPage() {
     }
   };
 
-  // ✅ 초기 로드 시에만 데이터 불러오기
-  useEffect(() => {
-    // 초기 표시 날짜 설정
-    setDisplayStartDate(startDate);
-    setDisplayEndDate(endDate);
-    
-    fetchAllData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ✅ 조회 버튼 클릭 핸들러
   const handleSearch = () => {
-    // 표시 날짜 업데이트
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-    
-    // 모든 API 데이터 다시 불러오기
     fetchAllData();
-  };
-
-  // ✅ 선택한 기간에 맞는 월별 데이터 생성 함수
-  const generateMonthlyDataStructure = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const months: MonthlyWeight[] = [];
-
-    // 시작 월부터 종료 월까지 반복
-    let current = new Date(start.getFullYear(), start.getMonth(), 1);
-    const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
-
-    while (current <= endMonth) {
-      const year = current.getFullYear();
-      const month = current.getMonth() + 1;
-      
-      // 월 표시 형식: "12월" 또는 "2024-12월" (년도가 다른 경우)
-      const monthLabel = 
-        start.getFullYear() === end.getFullYear() 
-          ? `${month}월`
-          : `${year}-${month}월`;
-
-      // 더미 데이터: 400~800 사이의 랜덤 값 생성
-      const dummyWeight = Math.floor(Math.random() * 400) + 400;
-
-      months.push({
-        month: monthLabel,
-        totalWeight: dummyWeight,
-      });
-
-      // 다음 달로 이동
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    setMonthlyData(months);
   };
 
   // ✅ 폐기물 한글 변환
@@ -352,6 +256,24 @@ export default function StatsPage() {
     "#95b8d1",
     "#7fa3c3",
   ];
+
+  // ✅ 로그인하지 않은 경우
+  if (!user) {
+    return (
+      <div className="w-full bg-[#e5edf2] min-h-screen">
+        <Header forceScrolled />
+        <div className="max-w-[1200px] mx-auto pt-48 pb-20 px-8 text-center">
+          <p className="text-xl text-gray-600 mb-4">로그인이 필요합니다.</p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="bg-[#0369A1] text-white px-6 py-3 rounded-lg"
+          >
+            로그인 페이지로 이동
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-[#e5edf2] min-h-screen">
@@ -710,7 +632,6 @@ export default function StatsPage() {
           <div className="w-full h-72">
             <ResponsiveContainer>
               {regionMode === "count" ? (
-                // 활동 횟수별 - 단일 막대 그래프
                 <BarChart data={regionData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="region" />
@@ -733,7 +654,6 @@ export default function StatsPage() {
                   />
                 </BarChart>
               ) : (
-                // 수거량별 - kg와 L 두 개의 막대 그래프
                 <BarChart data={regionData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="region" />
