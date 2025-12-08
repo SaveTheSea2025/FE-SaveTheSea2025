@@ -1,0 +1,18 @@
+# 의존성 폴더 (대부분 Dockerfile에서 새로 설치하므로 제외)
+node_modules
+npm-debug.log*
+
+# Git 관련 파일 및 폴더
+.git
+.gitignore
+
+# 로컬 개발 환경 파일
+.env
+.env.*
+.vscode
+.idea
+*.log
+
+# 빌드 결과 폴더 (Docker 빌드 과정에서 새로 생성할 것이므로 제외)
+dist
+build
