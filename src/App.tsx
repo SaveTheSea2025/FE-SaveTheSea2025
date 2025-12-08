@@ -1,9 +1,9 @@
 // src/App.tsx
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import React, { Suspense } from 'react'; // ✅ Suspense 임포트
-import { useAuth } from './context/AuthContext'; // ✅ useAuth 임포트
-import ProtectedRoute from './components/auth/ProtectedRoute'; // ✅ ProtectedRoute 임포트
+import React, { Suspense } from 'react'; // 
+import { useAuth } from './context/AuthContext'; // 
+import ProtectedRoute from './components/auth/ProtectedRoute'; //
 
 // Lazy Loading Pages
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));

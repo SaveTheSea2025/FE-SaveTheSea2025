@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Header from "../components/common/Header";
+import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
-import graycheck from "/src/assets/write/graycheck.png";
 import bluecheck from "/src/assets/write/bluecheck.png";
 import PhotoUploadSection from "../components/write/PhotoUploadSection";
 import LocationSection from "../components/write/LocationSection";
@@ -11,10 +11,24 @@ import axios from "axios";
 
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const { user } = useAuth(); // ✅ 실제 로그인 정보
+
+  // ✅ 로그인 정보에서 자동 설정 (실제 API 데이터 사용)
+  const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
+  const groupName = user?.memberType === "GROUP"
+    ? (user as any)?.organizationName || user?.userName || ""
+    : user?.userName || "";
+
+  // 🔍 디버그 로그
+  console.log("🔍 실제 로그인 정보:", user);
+  console.log("📊 groupType:", groupType);
+  console.log("📊 groupName:", groupName);
+  console.log("📊 단체 체크:", groupType === "단체");
+  console.log("📊 개인 체크:", groupType === "개인");
+
   const [description, setDescription] = useState("");
   const maxLength = 500;
-  const [groupType, setGroupType] = useState("단체");
-  const [groupName, setGroupName] = useState("");
+
   const [selectedRegion] = useState({ sido: "", sigungu: "" });
   const [loading, setLoading] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -54,25 +68,48 @@ const WritePage = () => {
       const memberCountInput = document.getElementById("volunteerCount") as HTMLInputElement | null;
       const memberCount = Number(memberCountInput?.value || 0);
 
-      if (!groupName.trim()) missing.push("groupName");
-      if (!activityName.trim()) missing.push("activityName");
-      if (!startDate || !startTime || !endDate || !endTime) missing.push("dateTime");
-      if (memberCount <= 0) missing.push("memberCount");
-      if (!locationData?.startAddress || !locationData?.endAddress) missing.push("location");
+      // 🔍 디버깅 로그
+      console.log("=== 필수 항목 검증 시작 ===");
+      console.log("activityName:", activityName);
+      console.log("startDate:", startDate, "startTime:", startTime);
+      console.log("endDate:", endDate, "endTime:", endTime);
+      console.log("memberCount:", memberCount);
+      console.log("locationData:", locationData);
+      console.log("startAddress:", locationData?.startAddress);
+      console.log("endAddress:", locationData?.endAddress);
+
+      // groupName은 로그인 정보에서 자동 입력되므로 검증 불필요
+      if (!activityName.trim()) {
+        console.log("❌ activityName 누락");
+        missing.push("activityName");
+      }
+      if (!startDate || !startTime || !endDate || !endTime) {
+        console.log("❌ 날짜/시간 누락");
+        missing.push("dateTime");
+      }
+      if (memberCount <= 0) {
+        console.log("❌ memberCount 누락 또는 0");
+        missing.push("memberCount");
+      }
+      if (!locationData?.startAddress || !locationData?.endAddress) {
+        console.log("❌ 위치 정보 누락");
+        missing.push("location");
+      }
+
+      console.log("누락된 필드:", missing);
+      console.log("=== 검증 완료 ===");
 
       if (missing.length > 0) {
         setMissingFields(missing);
         const first = missing[0];
         const targetId =
-          first === "groupName"
-            ? "group-input"
-            : first === "activityName"
-              ? "activityName-input"
-              : first === "dateTime"
-                ? "dateTime-row"
-                : first === "memberCount"
-                  ? "memberCount-input"
-                  : "location-section";
+          first === "activityName"
+            ? "activityName-input"
+            : first === "dateTime"
+              ? "dateTime-row"
+              : first === "memberCount"
+                ? "memberCount-input"
+                : "location-section";
 
         const el = document.getElementById(targetId);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -155,7 +192,7 @@ const WritePage = () => {
 
       <div
         className="w-full h-[200px] md:h-[300px] bg-cover bg-center"
-        style={{ backgroundImage: "url('/src/assets/write/backgroundimage2.png')" }}
+        style={{ backgroundImage: "url('/src/assets/backgroundimage2.png')" }}
       ></div>
 
       <main className="mt-8 md:mt-20 max-w-5xl mx-auto bg-white px-4 md:px-10 pb-10 relative z-10">
@@ -187,18 +224,32 @@ const WritePage = () => {
                             type="radio"
                             name="group"
                             checked={groupType === "단체"}
-                            onChange={() => setGroupType("단체")}
+                            readOnly
+                            className="w-4 h-4 pointer-events-none"
+                            style={{
+                              accentColor: "#0369A1",
+                              opacity: 1
+                            }}
                           />
-                          단체
+                          <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                            단체
+                          </span>
                         </label>
                         <label className="flex items-center gap-1">
                           <input
                             type="radio"
                             name="group"
                             checked={groupType === "개인"}
-                            onChange={() => setGroupType("개인")}
+                            readOnly
+                            className="w-4 h-4 pointer-events-none"
+                            style={{
+                              accentColor: "#0369A1",
+                              opacity: 1
+                            }}
                           />
-                          개인
+                          <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                            개인
+                          </span>
                         </label>
                       </div>
 
@@ -207,14 +258,12 @@ const WritePage = () => {
                           <input
                             id="group-input"
                             type="text"
-                            placeholder={groupType === "단체" ? "단체명을 입력해주세요." : "이름을 입력해주세요."}
                             value={groupName}
-                            onChange={(e) => setGroupName(e.target.value.replace(/\s+/g, ""))}
-                            className={`border border-gray-300 bg-gray-50 rounded px-3 py-1.5 w-64 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${missingFields.includes("groupName") ? "border-red-500" : ""
-                              }`}
+                            disabled
+                            className="border border-gray-300 bg-gray-100 rounded px-3 py-1.5 w-64 text-gray-500 cursor-not-allowed"
                           />
-                          <img src={groupName.trim() ? bluecheck : graycheck} alt="check" className="w-5 h-5" />
-                          <p className="text-xs text-gray-400">띄어쓰기 없이 입력해주세요.</p>
+                          <img src={bluecheck} alt="check" className="w-5 h-5" />
+                          <p className="text-xs text-gray-400">로그인 정보에서 자동 입력됨</p>
                         </div>
                       </div>
                     </div>
@@ -377,35 +426,45 @@ const WritePage = () => {
                     type="radio"
                     name="group"
                     checked={groupType === "단체"}
-                    onChange={() => setGroupType("단체")}
-                    className="w-4 h-4"
+                    readOnly
+                    className="w-4 h-4 pointer-events-none"
+                    style={{
+                      accentColor: "#0369A1",
+                      opacity: 1
+                    }}
                   />
-                  <span>단체</span>
+                  <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                    단체
+                  </span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
                     name="group"
                     checked={groupType === "개인"}
-                    onChange={() => setGroupType("개인")}
-                    className="w-4 h-4"
+                    readOnly
+                    className="w-4 h-4 pointer-events-none"
+                    style={{
+                      accentColor: "#0369A1",
+                      opacity: 1
+                    }}
                   />
-                  <span>개인</span>
+                  <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
+                    개인
+                  </span>
                 </label>
               </div>
               <div className="flex items-center gap-2">
                 <input
                   id="group-input"
                   type="text"
-                  placeholder={groupType === "단체" ? "단체명 입력" : "이름 입력"}
                   value={groupName}
-                  onChange={(e) => setGroupName(e.target.value.replace(/\s+/g, ""))}
-                  className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("groupName") ? "border-red-500" : "border-gray-300"
-                    }`}
+                  disabled
+                  className="flex-1 border bg-gray-100 rounded px-3 py-2.5 text-sm text-gray-500 cursor-not-allowed border-gray-300"
                 />
-                <img src={groupName.trim() ? bluecheck : graycheck} alt="check" className="w-5 h-5" />
+                <img src={bluecheck} alt="check" className="w-5 h-5" />
               </div>
-              <p className="text-xs text-gray-400 mt-2">띄어쓰기 없이 입력해주세요.</p>
+              <p className="text-xs text-gray-400 mt-2">로그인 정보에서 자동 입력됨</p>
             </div>
 
             {/* 봉사활동명 */}

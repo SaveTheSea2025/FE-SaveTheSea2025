@@ -21,6 +21,11 @@ interface LocationSectionProps {
     endLng: number;
     regionSido: string;
     regionSigungu: string;
+    // ✅ WritePage에서 사용하는 필드 추가
+    startLatitude: number;
+    startLongitude: number;
+    endLatitude: number;
+    endLongitude: number;
   }) => void;
 }
 
@@ -28,9 +33,9 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
 
-  const [startAddr] = useState("");
+  const [startAddr, setStartAddr] = useState("");  // ✅ setter 추가
   const [endAddr, setEndAddr] = useState("");
-  const [startPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);  // ✅ setter 추가
   const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const [locked, setLocked] = useState(false);
@@ -52,6 +57,11 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         endLng: endPos.lng,
         regionSido: sido,
         regionSigungu: sigungu,
+        // ✅ WritePage 필드 추가
+        startLatitude: startPos.lat,
+        startLongitude: startPos.lng,
+        endLatitude: endPos.lat,
+        endLongitude: endPos.lng,
       });
     }
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
@@ -220,6 +230,12 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
           <DualMapSelector
             regionCenter={regionCenter}
             onChange={(data) => {
+              // ✅ LocationSection 상태 업데이트
+              setStartAddr(data.startAddress);
+              setStartPos({ lat: data.startLat, lng: data.startLng });
+              setEndAddr(data.endAddress);
+              setEndPos({ lat: data.endLat, lng: data.endLng });
+
               const kakao = (window as any).kakao;
               const geocoder = new kakao.maps.services.Geocoder();
 
@@ -227,19 +243,37 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                 geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
                   if (status === kakao.maps.services.Status.OK && result[0]) {
                     const addr = result[0].address.address_name;
+                    setEndAddr(addr);  // ✅ 상태 업데이트
                     onChange?.({
-                      ...data,
+                      startAddress: data.startAddress,
+                      startLat: data.startLat,
+                      startLng: data.startLng,
                       endAddress: addr,
+                      endLat: data.endLat,
+                      endLng: data.endLng,
                       regionSido: sido,
                       regionSigungu: sigungu,
+                      startLatitude: data.startLat,
+                      startLongitude: data.startLng,
+                      endLatitude: data.endLat,
+                      endLongitude: data.endLng,
                     });
                   }
                 });
               } else {
                 onChange?.({
-                  ...data,
+                  startAddress: data.startAddress,
+                  startLat: data.startLat,
+                  startLng: data.startLng,
+                  endAddress: data.endAddress,
+                  endLat: data.endLat,
+                  endLng: data.endLng,
                   regionSido: sido,
                   regionSigungu: sigungu,
+                  startLatitude: data.startLat,
+                  startLongitude: data.startLng,
+                  endLatitude: data.endLat,
+                  endLongitude: data.endLng,
                 });
               }
             }}

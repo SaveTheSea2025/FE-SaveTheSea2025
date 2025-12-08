@@ -2,6 +2,7 @@
 /* eslint-disable prefer-const */
 import Header from "../components/common/Header";
 import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../context/AuthContext";
 
 // icons
 import filterIcon from "../assets/stats/filterIcon.png";
@@ -12,7 +13,6 @@ import activityIcon from "../assets/stats/activityIcon.png";
 import personIcon from "../assets/stats/personIcon.png";
 import weightIcon from "../assets/stats/weightIcon.png";
 import volumeIcon from "../assets/stats/volumeIcon.png";
-
 import {
   LineChart,
   Line,
@@ -55,6 +55,8 @@ interface RegionStats {
 }
 
 export default function StatsPage() {
+  const { user } = useAuth(); // ✅ 실제 로그인 정보
+
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
@@ -73,12 +75,7 @@ export default function StatsPage() {
     today.toISOString().split("T")[0]
   );
   const [location, setLocation] = useState<string>("전체");
-  // 💡 뷰 모드 추가
   const [viewMode, setViewMode] = useState<"personal" | "organization">("personal");
-
-  // ✅ 사용자 정보 (로그인 후 토큰에서 가져올 정보)
-  const [userId, setUserId] = useState<number | null>(null);
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
 
   // ✅ 조회된 날짜 상태 (조회 버튼 클릭 시에만 업데이트)
   const [displayStartDate, setDisplayStartDate] = useState<string>(
@@ -91,91 +88,58 @@ export default function StatsPage() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
 
-  // ✅ API 데이터 상태 (더미 데이터 제거 및 초기화)
+  // ✅ API 데이터 상태 (더미 데이터 제거)
   const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([]);
   const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
   const [regionData, setRegionData] = useState<RegionStats[]>([]);
-  // ❌ 사용하지 않는/정리해야 할 상태 제거: setActivityType, setOrganization, setSearchText, setOrgOpen, setActivityTypeOpen
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  // ✅ 컴포넌트 마운트 시 초기 월별 데이터 구조 생성
+  // ✅ 로그인 정보 디버그
+  console.log("🔍 StatsPage 로그인 정보:", user);
+  console.log("📊 userId:", user?.userId);
+  console.log("📊 organizationId:", (user as any)?.organizationId);
+
+  // ✅ 컴포넌트 마운트 시 초기 데이터 불러오기
   useEffect(() => {
-    generateMonthlyDataStructure();
-    fetchUserInfo(); // 사용자 정보 가져오기
+    if (user) {
+      setDisplayStartDate(startDate);
+      setDisplayEndDate(endDate);
+      fetchAllData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   // ✅ 드롭다운 바깥 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // 모든 드롭다운 닫기
       if (downloadRef.current && !downloadRef.current.contains(event.target as Node)) {
         setDownloadOpen(false);
       }
-      // 날짜, 장소 등 다른 드롭다운도 여기서 처리할 수 있습니다.
-      // (현재는 datePickerOpen, locationOpen이 이 useEffect 외부에 의존성을 가질 수 있어 경고 발생 가능)
     };
 
-    if (downloadOpen || datePickerOpen || locationOpen) {
+    if (downloadOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [downloadOpen, datePickerOpen, locationOpen]);
-
-
-  // ✅ 사용자 정보 가져오기 (로그인 토큰으로부터)
-  const fetchUserInfo = async () => {
-    try {
-      const token = localStorage.getItem("accessToken");
-
-      if (!token) {
-        console.warn("로그인이 필요합니다.");
-        return;
-      }
-
-      const response = await fetch(`${BASE_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const result = await response.json();
-
-      if (result.code === 0) {
-        const userData = result.data;
-        setUserId(userData.userId);
-
-        // 단체 회원이면 organizationId도 설정
-        // (organizationId는 API 응답 타입에 포함되어 있어야 함)
-        if (userData.organizationId) {
-          setOrganizationId(userData.organizationId);
-        }
-        // 사용자가 단체 소속인 경우 기본 뷰 모드를 'organization'으로 설정 (선택 사항)
-        // if (userData.memberType === 'GROUP') { setViewMode('organization'); }
-
-
-        console.log("✅ 사용자 정보 로드:", userData);
-      }
-    } catch (error) {
-      console.error("❌ 사용자 정보 로드 실패:", error);
-    }
-  };
+  }, [downloadOpen]);
 
   // ✅ 장소 옵션
   const locationOptions = ["전체", "동해", "서해", "남해", "제주"];
 
   // ✅ 데이터 불러오기
   const fetchAllData = async () => {
-    // BASE_URL이 없으면 API 호출하지 않음
     if (!BASE_URL) {
-      console.warn(
-        "BASE_URL이 설정되지 않았습니다. API 호출을 건너뜁니다."
-      );
+      console.warn("BASE_URL이 설정되지 않았습니다.");
+      return;
+    }
+
+    if (!user) {
+      console.warn("로그인 정보가 없습니다.");
       return;
     }
 
@@ -188,10 +152,10 @@ export default function StatsPage() {
       });
 
       // viewMode에 따라 userId 또는 organizationId 추가
-      if (viewMode === "personal" && userId) {
-        params.append("userId", userId.toString());
-      } else if (viewMode === "organization" && organizationId) {
-        params.append("organizationId", organizationId.toString());
+      if (viewMode === "personal" && user.userId) {
+        params.append("userId", user.userId.toString());
+      } else if (viewMode === "organization" && (user as any).organizationId) {
+        params.append("organizationId", (user as any).organizationId.toString());
       }
 
       console.log("API 호출 시작:", `${BASE_URL}/api/statistics/*?${params}`);
@@ -220,12 +184,11 @@ export default function StatsPage() {
           setMonthlyData(monthlyResult.data);
           console.log("✅ 월별 수거량 로드 완료");
         } else {
-          // API 데이터가 없으면 선택한 기간에 맞는 빈 구조 생성
-          generateMonthlyDataStructure();
+          setMonthlyData([]);
         }
       } catch (err) {
         console.error("❌ 월별 수거량 API 실패:", err);
-        generateMonthlyDataStructure();
+        setMonthlyData([]);
       }
 
       // 3. 폐기물 비율
@@ -262,67 +225,11 @@ export default function StatsPage() {
     }
   };
 
-  // ✅ 초기 로드 시 및 뷰 모드/사용자 ID 변경 시 데이터 불러오기
-  useEffect(() => {
-    // 초기 표시 날짜 설정
-    setDisplayStartDate(startDate);
-    setDisplayEndDate(endDate);
-
-    // userId나 organizationId가 유효할 때만 데이터 로드를 시도합니다.
-    if (viewMode === 'personal' && userId !== null) {
-      fetchAllData();
-    } else if (viewMode === 'organization' && organizationId !== null) {
-      fetchAllData();
-    } else if (userId === null && organizationId === null) {
-      // 사용자 정보가 로드되지 않았거나, 전역 모드일 경우 (현재는 해당 필터 없음)
-      // 일단 fetchAllData를 호출하여 전체 데이터를 로드합니다.
-      fetchAllData();
-    }
-    // 💡 의존성 배열에 viewMode, userId, organizationId 추가
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, userId, organizationId]);
-
   // ✅ 조회 버튼 클릭 핸들러
   const handleSearch = () => {
-    // 표시 날짜 업데이트
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-
-    // 모든 API 데이터 다시 불러오기
     fetchAllData();
-  };
-
-  // ✅ 선택한 기간에 맞는 월별 데이터 생성 함수
-  const generateMonthlyDataStructure = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const months: MonthlyWeight[] = [];
-
-    // 시작 월부터 종료 월까지 반복
-    const current = new Date(start.getFullYear(), start.getMonth(), 1);
-    const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
-
-    while (current <= endMonth) {
-      const year = current.getFullYear();
-      const month = current.getMonth() + 1;
-
-      // 월 표시 형식: "12월" 또는 "2024-12월" (년도가 다른 경우)
-      const monthLabel =
-        start.getFullYear() === end.getFullYear()
-          ? `${month}월`
-          : `${year}-${month}월`;
-
-      // 💡 더미 데이터 생성 로직 대신 0으로 초기화
-      months.push({
-        month: monthLabel,
-        totalWeight: 0,
-      });
-
-      // 다음 달로 이동
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    setMonthlyData(months);
   };
 
   // ✅ 폐기물 한글 변환
@@ -350,6 +257,24 @@ export default function StatsPage() {
     "#95b8d1",
     "#7fa3c3",
   ];
+
+  // ✅ 로그인하지 않은 경우
+  if (!user) {
+    return (
+      <div className="w-full bg-[#e5edf2] min-h-screen">
+        <Header forceScrolled />
+        <div className="max-w-[1200px] mx-auto pt-48 pb-20 px-8 text-center">
+          <p className="text-xl text-gray-600 mb-4">로그인이 필요합니다.</p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="bg-[#0369A1] text-white px-6 py-3 rounded-lg"
+          >
+            로그인 페이지로 이동
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-[#e5edf2] min-h-screen">
@@ -573,6 +498,7 @@ export default function StatsPage() {
                     backgroundColor: "white",
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
+                    padding: "8px 12px",
                   }}
                   labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
                 />
@@ -699,7 +625,6 @@ export default function StatsPage() {
           <div className="w-full h-72">
             <ResponsiveContainer>
               {regionMode === "count" ? (
-                // 활동 횟수별 - 단일 막대 그래프
                 <BarChart data={regionData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="region" />
@@ -722,7 +647,6 @@ export default function StatsPage() {
                   />
                 </BarChart>
               ) : (
-                // 수거량별 - kg와 L 두 개의 막대 그래프
                 <BarChart data={regionData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="region" />

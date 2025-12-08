@@ -11,7 +11,6 @@ interface DualMapSelectorProps {
     endAddress: string;
     endLat: number;
     endLng: number;
-
     // WritePage에서 필요한 필드 추가
     startLatitude: number;
     startLongitude: number;
@@ -50,6 +49,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     return 2 * R * Math.asin(Math.sqrt(h));
   };
 
+  // ✅ updateAddress 함수 수정 - startLatitude/endLatitude 추가
   const updateAddress = (lat: number, lng: number, type: "start" | "end") => {
     const kakao = (window as any).kakao;
     if (!geocoderRef.current) return;
@@ -58,51 +58,39 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
         const addr = result[0].address.address_name;
 
-        // 종료 마커의 현재 위치/주소 가져오기
-        const currentEndPos = endMarkerRef.current?.getPosition();
-        const currentEndLat = currentEndPos?.getLat() ?? 0;
-        const currentEndLng = currentEndPos?.getLng() ?? 0;
-        const currentEndAddr = endAddress;
-
-        // 시작 마커의 현재 위치/주소 가져오기
-        const currentStartPos = startMarkerRef.current?.getPosition();
-        const currentStartLat = currentStartPos?.getLat() ?? 0;
-        const currentStartLng = currentStartPos?.getLng() ?? 0;
-        const currentStartAddr = startAddress;
-
         if (type === "start") {
           setStartAddress(addr);
+          const endLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
+          const endLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
+
           onChange?.({
             startAddress: addr,
             startLat: lat,
             startLng: lng,
-            //WritePage 필드 추가 (시작 지점)
-            startLatitude: lat,
-            startLongitude: lng,
-
-            endAddress: currentEndAddr,
-            endLat: currentEndLat,
-            endLng: currentEndLng,
-            //WritePage 필드 추가 (종료 지점)
-            endLatitude: currentEndLat,
-            endLongitude: currentEndLng,
+            startLatitude: lat,      // ✅ 추가
+            startLongitude: lng,     // ✅ 추가
+            endAddress,
+            endLat,
+            endLng,
+            endLatitude: endLat,     // ✅ 추가
+            endLongitude: endLng,    // ✅ 추가
           });
         } else {
           setEndAddress(addr);
-          onChange?.({
-            startAddress: currentStartAddr,
-            startLat: currentStartLat,
-            startLng: currentStartLng,
-            // WritePage 필드 추가 (시작 지점)
-            startLatitude: currentStartLat,
-            startLongitude: currentStartLng,
+          const startLat = startMarkerRef.current?.getPosition()?.getLat() ?? 0;
+          const startLng = startMarkerRef.current?.getPosition()?.getLng() ?? 0;
 
+          onChange?.({
+            startAddress,
+            startLat,
+            startLng,
+            startLatitude: startLat,  // ✅ 추가
+            startLongitude: startLng, // ✅ 추가
             endAddress: addr,
             endLat: lat,
             endLng: lng,
-            // WritePage 필드 추가 (종료 지점)
-            endLatitude: lat,
-            endLongitude: lng,
+            endLatitude: lat,         // ✅ 추가
+            endLongitude: lng,        // ✅ 추가
           });
         }
       }
@@ -176,32 +164,27 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
       });
 
       kakao.maps.event.addListener(startMarker, "dragend", () => {
-        const pos = startMarker.getPosition();
+        const sPos = startMarker.getPosition();
         startMarker.setImage(startImage);
+        map.panTo(sPos); // ✅ 출발지 드래그 시 지도 이동
 
-        //sPos 대신 pos를 사용
-        map.panTo(pos);
-
-        updateAddress(pos.getLat(), pos.getLng(), "start");
+        updateAddress(sPos.getLat(), sPos.getLng(), "start");
 
         const ePos = endMarker.getPosition();
         const distance = getDistanceMeters(
-          pos.getLat(),
-          pos.getLng(),
+          sPos.getLat(),
+          sPos.getLng(),
           ePos.getLat(),
           ePos.getLng()
         );
 
-        // 5km 이상이면 도착 마커를 출발지 옆으로 이동
+        // 🔥 5km 이상이면 도착 마커를 출발지 옆으로 이동
         if (distance > FOLLOW_THRESHOLD_M) {
-          const newEndLat = pos.getLat() - OFFSET_LAT;
-          const newEndLng = pos.getLng() + OFFSET_LNG;
+          const newEndLat = sPos.getLat() - OFFSET_LAT;
+          const newEndLng = sPos.getLng() + OFFSET_LNG;
           const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
 
           endMarker.setPosition(newEndPos);
-          map.panTo(newEndPos);
-
-          //updateAddress 호출 시 kakao 인자 제거
           updateAddress(newEndLat, newEndLng, "end");
         }
       });
@@ -213,13 +196,11 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
       kakao.maps.event.addListener(endMarker, "dragend", () => {
         const pos = endMarker.getPosition();
         endMarker.setImage(endImage);
-        map.panTo(pos);
+        map.panTo(pos); // ✅ 도착지 드래그 시 지도 이동
 
-        // updateAddress 호출 시 kakao 인자 제거
         updateAddress(pos.getLat(), pos.getLng(), "end");
       });
 
-      // initMap 내부의 sPos 정의
       const sPos = startMarker.getPosition();
       updateAddress(sPos.getLat(), sPos.getLng(), "start");
 
@@ -230,9 +211,10 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     initMap();
   }, [regionCenter]);
 
+  // ✅ 장소 검색 함수 수정
   const handlePlaceSearch = async (type: "start" | "end") => {
-    const address = type === "start" ? startAddress : endAddress;
-    if (!address.trim()) return alert("검색어를 입력해주세요!");
+    const searchQuery = type === "start" ? startAddress : endAddress; // ✅ keyword → searchQuery
+    if (!searchQuery.trim()) return alert("검색어를 입력해주세요!");
 
     await loadKakaoCustom();
     const kakao = (window as any).kakao;
@@ -241,8 +223,7 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     const ps = new kakao.maps.services.Places();
     const map = mapInstance.current;
 
-    // keyword 대신 address 변수 사용
-    ps.keywordSearch(address, (data: any[], status: string) => {
+    ps.keywordSearch(searchQuery, (data: any[], status: string) => { // ✅ 수정
       if (status === kakao.maps.services.Status.OK && data[0]) {
         const { y, x } = data[0];
         const baseLat = parseFloat(y);
