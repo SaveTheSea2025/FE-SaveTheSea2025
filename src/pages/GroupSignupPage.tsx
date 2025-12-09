@@ -1,4 +1,4 @@
-// src/pages/GroupSignupPage.tsx (최종 수정)
+// src/pages/GroupSignupPage.tsx
 
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";

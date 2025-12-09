@@ -2,6 +2,8 @@
 import { useEffect, useRef } from "react";
 import { loadKakao } from "../../../lib/loadKakao";
 
+import pinIcon from "@/assets/pin.png";
+
 interface Props {
   center: { lat: number; lng: number };
   onCenterChange?: (pos: { lat: number; lng: number }) => void;
@@ -25,7 +27,7 @@ const CenterMap: React.FC<Props> = ({ center, onCenterChange }) => {
       pin.style.left = "50%";
       pin.style.width = "24px";
       pin.style.height = "24px";
-      pin.style.background = "url('/src/assets/pin.png') no-repeat center";
+      pin.style.background = `url(${pinIcon}) no-repeat center`;
       pin.style.backgroundSize = "contain";
       pin.style.transform = "translate(-50%, -100%)";
       pin.style.zIndex = "10";

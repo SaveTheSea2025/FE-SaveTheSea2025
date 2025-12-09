@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
-import starOutline from "/src/assets/write/star-outline.png";
-import starFilled from "/src/assets/write/star-filled.png";
+
+import starOutline from "@/assets/write/star-outline.png";
+import starFilled from "@/assets/write/star-filled.png";
 
 interface PhotoUploadSectionProps {
   onChange?: (files: File[]) => void;
@@ -91,7 +92,9 @@ const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionPr
             } border border-dashed rounded-md py-8 md:py-10 px-4 md:px-6 text-center text-gray-500 mb-4 transition-colors`}
         >
           {images.length === 0 ? (
-            <p className="text-xs md:text-sm">버튼을 클릭하거나, 이미지를 마우스로 끌어와 업로드하세요.</p>
+            <p className="text-xs md:text-sm">
+              버튼을 클릭하거나, 이미지를 마우스로 끌어와 업로드하세요.
+            </p>
           ) : (
             <div className="flex flex-wrap justify-start gap-3 md:gap-4">
               {images.map((img, index) => (

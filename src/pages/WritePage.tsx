@@ -4,22 +4,22 @@ import { useState, useEffect } from "react";
 import Header from "../components/common/Header";
 import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
-import bluecheck from "/src/assets/write/bluecheck.png";
+import bluecheck from "../assets/stats/bluecheck.png";
 import PhotoUploadSection from "../components/write/PhotoUploadSection";
+import backgroundimage2 from "@/assets/write/backgroundimage2.png";
 import LocationSection from "../components/write/LocationSection";
 import axios from "axios";
 
+
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const { user } = useAuth(); // ✅ 실제 로그인 정보
+  const { user } = useAuth();
 
-  // ✅ 로그인 정보에서 자동 설정 (실제 API 데이터 사용)
   const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
   const groupName = user?.memberType === "GROUP"
     ? (user as any)?.organizationName || user?.userName || ""
     : user?.userName || "";
 
-  // 🔍 디버그 로그
   console.log("🔍 실제 로그인 정보:", user);
   console.log("📊 groupType:", groupType);
   console.log("📊 groupName:", groupName);
@@ -192,7 +192,7 @@ const WritePage = () => {
 
       <div
         className="w-full h-[200px] md:h-[300px] bg-cover bg-center"
-        style={{ backgroundImage: "url('/src/assets/backgroundimage2.png')" }}
+        style={{ backgroundImage: `url(${backgroundimage2})` }}
       ></div>
 
       <main className="mt-8 md:mt-20 max-w-5xl mx-auto bg-white px-4 md:px-10 pb-10 relative z-10">
