@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/api/auth.ts (최종 수정본)
-
+// src/api/auth.ts
 /**
  * =========================================================
  * Auth API Client
@@ -12,6 +11,7 @@ export interface User {
     userId: number;
     email: string;
     userName: string;
+
     memberType: 'PERSONAL' | 'GROUP';
     region: string;
     profileUrl: string | null;
@@ -28,7 +28,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
  * 공통 Fetch Wrapper (제네릭 적용)
- * ✅ AccessToken 자동 삽입 로직 포함
+ * AccessToken 자동 삽입 로직 포함
  * @param url 요청 URL
  * @param options fetch 옵션
  * @returns Promise<ApiResponse<T>>
@@ -36,7 +36,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 async function request<T>(url: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const isFormData = options.body instanceof FormData;
 
-    // ✅ 토큰을 가져와 모든 요청에 Authorization 헤더 자동 추가
+    // 토큰을 가져와 모든 요청에 Authorization 헤더 자동 추가
     const token = localStorage.getItem("accessToken");
 
     // Content-Type 기본 헤더 설정
@@ -52,8 +52,8 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<ApiRe
     const res = await fetch(`${BASE_URL}${url}`, {
         ...options,
         headers: {
-            ...defaultHeaders, // ✅ 기본 헤더 (Content-Type, Authorization) 먼저 적용
-            ...(options.headers || {}), // ✅ options에서 전달된 헤더로 덮어쓰거나 병합
+            ...defaultHeaders, // 기본 헤더 (Content-Type, Authorization) 먼저 적용
+            ...(options.headers || {}), // options에서 전달된 헤더로 덮어쓰거나 병합
         },
         credentials: "include", // refreshToken 쿠키 포함
     });
@@ -101,7 +101,6 @@ export function verifyEmailCode(email: string, code: string): Promise<ApiRespons
  * POST /api/auth/login
  * 응답 데이터에 User 정보 또는 accessToken이 포함
  */
-// src/api/auth.ts (login 함수 수정)
 
 export function login(email: string, password: string, memberType: string): Promise<ApiResponse<User | { accessToken?: string }> | ApiResponse<unknown>> {
     return request(`/api/auth/login`, {
@@ -112,7 +111,6 @@ export function login(email: string, password: string, memberType: string): Prom
             memberType
         }),
     }).then((response) => {
-        // ✅ 오류 해결: response.data가 객체이고, 'accessToken' 키가 있는지 확인
         if (
             response.code === 0 &&
             response.data &&
@@ -131,13 +129,11 @@ export function login(email: string, password: string, memberType: string): Prom
 /**
  * 내 정보 조회
  * GET /api/auth/me
- * ✅ request 함수에서 토큰을 자동 삽입하므로, 수동 삽입 로직 제거
+ * request 함수에서 토큰을 자동 삽입하므로, 수동 삽입 로직 제거
  */
 export function getMyInfo(): Promise<ApiResponse<User>> {
-    // ❌ const token = localStorage.getItem("accessToken"); (제거)
     return request(`/api/auth/me`, {
         method: "GET",
-        // ❌ headers: { Authorization: `Bearer ${token}` } (제거)
     });
 }
 
@@ -152,7 +148,7 @@ export function getMyInfo(): Promise<ApiResponse<User>> {
 export async function signup(data: any, photos?: File[]): Promise<ApiResponse> {
     const formData = new FormData();
 
-    // JSON 파트 (변경 없음)
+    // JSON 파트
     formData.append(
         "data",
         new Blob([JSON.stringify(data)], { type: "application/json" })
@@ -161,7 +157,6 @@ export async function signup(data: any, photos?: File[]): Promise<ApiResponse> {
     // 파일 파트: 회원가입 API가 'profileImage' 키를 기대하므로 변경
     if (photos?.length) {
         photos.forEach((file) => {
-            // 🔴 여기가 핵심: 'photos' -> 'profileImage'로 키 변경
             formData.append("profileImage", file);
         });
     }

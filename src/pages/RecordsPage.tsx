@@ -7,6 +7,8 @@ import RecordDetailPanel from "../components/record/RecordDetailPanel";
 import FilterModal from "../components/record/FilterModal";
 import { SlidersHorizontal } from "lucide-react";
 
+import markerImg from "@/assets/record/marker.png";
+
 declare global {
   interface Window {
     kakao: any;
@@ -240,7 +242,7 @@ const RecordsPage: React.FC = () => {
       <div style="position: relative; width: 60px; height: 70px;">
         <!-- 기본 마커 -->
         <img 
-          src="/src/assets/record/marker.png"
+          src="${markerImg}"
           style="width: 60px; height: 70px; display: block;"
           alt="marker"
         />
@@ -284,7 +286,7 @@ const RecordsPage: React.FC = () => {
           markers.push(overlay);
         } else {
           // ✅ 썸네일이 없는 경우 기본 marker.png만 사용
-          const imageSrc = "/src/assets/record/marker.png";
+          const imageSrc = markerImg;
           const imageSize = new kakao.maps.Size(52, 52);
           const imageOption = { offset: new kakao.maps.Point(26, 52) };
           const markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);

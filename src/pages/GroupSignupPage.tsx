@@ -25,14 +25,15 @@ const GroupSignupPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [groupName, setGroupName] = useState("");
-  const [, setLeaderName] = useState("");
+  // ✅ 대표자 이름 상태 복구
+  const [leaderName, setLeaderName] = useState("");
   const [region, setRegion] = useState("");
 
   // -------------------------
   // 이미지 업로드 (변수명 통일: profileFile 사용)
   // -------------------------
-  const [profileImage, setProfileImage] = useState<string | null>(null); // 이전: logoPreview
-  const [profileFile, setProfileFile] = useState<File | null>(null);     // 이전: logoFile
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileFile, setProfileFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // -------------------------
@@ -147,7 +148,7 @@ const GroupSignupPage: React.FC = () => {
   };
 
   // -------------------------
-  // 회원가입 제출 (API 호출 방식 수정)
+  // 회원가입 제출 
   // -------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,15 +158,23 @@ const GroupSignupPage: React.FC = () => {
       return;
     }
 
+    // ✅ 대표자명 필수 검증 추가
+    if (!leaderName.trim()) {
+      alert("대표자 이름을 입력해주세요.");
+      return;
+    }
+
+    // ✅ API 명세에 맞춰 데이터 구성: userName=그룹명, representativeName=대표자명
     const data = {
       email,
       password,
-      userName: groupName, // group 이름을 userName으로
+      userName: groupName,
+      representativeName: leaderName, // ✅ 대표자명 추가 (API 명세에 따름)
       region: region.toUpperCase(),
       memberType: "GROUP",
     };
 
-    // ✅ profileFile이 null이 아니면 배열로 감싸서 전달합니다. (PersonalSignupPage와 동일)
+    // profileFile이 null이 아니면 배열로 감싸서 전달 (PersonalSignupPage와 동일)
     const res = await signup(data, profileFile ? [profileFile] : undefined);
 
     if (res.code === 0) {
@@ -269,7 +278,7 @@ const GroupSignupPage: React.FC = () => {
                   <input
                     type="text"
                     placeholder="인증번호 입력"
-                    className="flex-1 pl-3 pr-3 py-3 border border-gray-300 rounded-lg bg-gray-50"
+                    className="flex-1 pl-3 pr-3 py-3 border border-gray-300 bg-gray-50 rounded-lg"
                     onChange={(e) => setCode(e.target.value)}
                   />
                   <button
@@ -341,20 +350,16 @@ const GroupSignupPage: React.FC = () => {
 
             {/* 지역 */}
             <div>
-              <label className="text-gray-700 text-sm font-medium block mb-2">
-                주요 활동 지역*
-              </label>
+              <label className="text-gray-700 text-sm font-medium block mb-2">주요 활동 지역*</label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <select
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 bg-gray-50 rounded-lg"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
                   defaultValue=""
                   onChange={(e) => setRegion(e.target.value)}
                   required
                 >
-                  <option value="" disabled>
-                    지역 선택
-                  </option>
+                  <option value="" disabled>지역 선택</option>
                   <option value="EAST">동해</option>
                   <option value="WEST">서해</option>
                   <option value="SOUTH">남해</option>

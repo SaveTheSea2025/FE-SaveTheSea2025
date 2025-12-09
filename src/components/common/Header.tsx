@@ -4,6 +4,12 @@ import { useEffect, useState, useRef } from "react"; // useRef 추가
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
+import logoImage from "@/assets/header/logoimage.png";
+import headerProfile from "@/assets/header/headerprofile.png";
+import headerProfile2 from "@/assets/header/headerprofile2.png";
+import headerPen from "@/assets/header/headerpen.png";
+import headerPenWhite from "@/assets/header/headerpen-white.png";
+
 interface HeaderProps {
   forceScrolled?: boolean;
 }
@@ -108,7 +114,7 @@ function Header({ forceScrolled = false }: HeaderProps) {
         {/* 로고 및 타이틀 */}
         <Link to="/" className="flex items-center gap-2">
           <img
-            src="/src/assets/header/logoimage.png"
+            src={logoImage}
             alt="바다보다 로고"
             className="w-[45px] h-[45px] md:w-[57px] md:h-[57px] object-contain"
           />
@@ -143,7 +149,7 @@ function Header({ forceScrolled = false }: HeaderProps) {
           >
             <span>작성하기</span>
             <img
-              src={scrolled ? "/src/assets/header/headerpen-white.png" : "/src/assets/header/headerpen.png"}
+              src={scrolled ? headerPenWhite : headerPen}
               alt="작성 아이콘"
               className="w-[18px] h-[18px]"
             />
@@ -184,7 +190,7 @@ function Header({ forceScrolled = false }: HeaderProps) {
             >
               <span>로그인이 필요합니다</span>
               <img
-                src={scrolled ? "/src/assets/header/headerprofile2.png" : "/src/assets/header/headerprofile.png"}
+                src={scrolled ? headerProfile2 : headerProfile}
                 alt="프로필"
                 className="w-5 h-5"
               />

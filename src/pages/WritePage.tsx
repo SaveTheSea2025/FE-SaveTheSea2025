@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import Header from "../components/common/Header";
 import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
-import bluecheck from "/src/assets/write/bluecheck.png";
+import bluecheck from "../assets/write/bluecheck.png";
 import PhotoUploadSection from "../components/write/PhotoUploadSection";
+import backgroundimage2 from "@/assets/write/backgroundimage2.png";
 import LocationSection from "../components/write/LocationSection";
 import axios from "axios";
+
 
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -125,13 +127,8 @@ const WritePage = () => {
         }
       );
 
-      if (response.data.code === 0) {
-        alert("✅ 활동 기록이 성공적으로 저장되었습니다.");
-        // ✅ 저장 성공 시 RecordsPage로 이동
-        window.location.href = "/records";
-      } else {
-        alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
-      }
+      if (response.data.code === 0) alert("활동 기록이 성공적으로 저장되었습니다.");
+      else alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
     } catch (error: any) {
       console.error("❌ 서버 오류:", error);
       if (error.response) console.log("📨 서버 응답:", error.response.data);
@@ -160,7 +157,7 @@ const WritePage = () => {
 
       <div
         className="w-full h-[200px] md:h-[300px] bg-cover bg-center"
-        style={{ backgroundImage: "url('/src/assets/backgroundimage2.png')" }}
+        style={{ backgroundImage: `url(${backgroundimage2})` }}
       ></div>
 
       <main className="mt-8 md:mt-20 max-w-5xl mx-auto bg-white px-4 md:px-10 pb-10 relative z-10">
