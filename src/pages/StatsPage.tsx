@@ -72,7 +72,7 @@ export default function StatsPage() {
     today.toISOString().split("T")[0]
   );
   const [location, setLocation] = useState<string>("전체 지역");
-  const [viewMode, setViewMode] = useState<"personal" | "all">("personal"); // ✅ "all"로 변경
+  const [viewMode, setViewMode] = useState<"personal" | "all">("all"); // 기본값을 "all"로 변경
 
   const [displayStartDate, setDisplayStartDate] = useState<string>(
     oneYearAgo.toISOString().split("T")[0]
@@ -92,11 +92,14 @@ export default function StatsPage() {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    if (user) {
-      setDisplayStartDate(startDate);
-      setDisplayEndDate(endDate);
-      fetchAllData();
+    setDisplayStartDate(startDate);
+    setDisplayEndDate(endDate);
+    // 로그인 여부와 관계없이 데이터 로드
+    // 비로그인 시 자동으로 전체 데이터 조회
+    if (!user) {
+      setViewMode("all");
     }
+    fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -118,40 +121,77 @@ export default function StatsPage() {
 
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
+  // ✅ 백엔드 API와 완전히 일치하도록 수정
   const fetchAllData = async () => {
     if (!BASE_URL) {
       console.warn("BASE_URL이 설정되지 않았습니다.");
       return;
     }
 
-    if (!user) {
-      console.warn("로그인 정보가 없습니다.");
+    // 비로그인 시 전체 데이터만 조회 가능
+    if (!user && viewMode === "personal") {
+      console.warn("비로그인 상태에서는 전체 데이터만 조회 가능합니다.");
+      setViewMode("all");
       return;
     }
 
     try {
-      const params = new URLSearchParams({
-        startDate,
-        endDate,
-        location: location === "전체 지역" ? "" : location,
-      });
+      // ✅ 날짜를 년/월로 변환
+      const startYear = parseInt(startDate.split("-")[0]);
+      const startMonth = parseInt(startDate.split("-")[1]);
+      const endYear = parseInt(endDate.split("-")[0]);
+      const endMonth = parseInt(endDate.split("-")[1]);
 
-      // ✅ viewMode가 "personal"일 때만 userId 추가, "all"일 때는 추가 안 함
-      if (viewMode === "personal" && user.userId) {
-        params.append("userId", user.userId.toString());
+      // ✅ region 매핑
+      const regionParam = location === "전체 지역" ? "" : location;
+
+      // ✅ Authorization 헤더
+      const token = localStorage.getItem("accessToken");
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
-      console.log("API 호출 시작:", `${BASE_URL}/api/statistics/*?${params}`);
+      console.log("🔍 [API 호출 정보]");
+      console.log("startYear:", startYear, "startMonth:", startMonth);
+      console.log("endYear:", endYear, "endMonth:", endMonth);
+      console.log("region:", regionParam);
+      console.log("viewMode:", viewMode);
 
       // 1. 전체 통계
       try {
-        const summaryRes = await fetch(
-          `${BASE_URL}/api/statistics/summary?${params}`
-        );
+        const params = new URLSearchParams({
+          startYear: startYear.toString(),
+          startMonth: startMonth.toString(),
+          endYear: endYear.toString(),
+          endMonth: endMonth.toString(),
+        });
+        if (regionParam) params.append("region", regionParam);
+
+        const summaryUrl = viewMode === "personal"
+          ? `${BASE_URL}/api/statistics/my-summary?${params}`
+          : `${BASE_URL}/api/statistics/summary?${params}`;
+
+        console.log("📡 전체 통계 요청:", summaryUrl);
+
+        const summaryRes = await fetch(summaryUrl, { headers });
         const summaryData = await summaryRes.json();
+
+        console.log("📦 전체 통계 응답:", summaryData);
+
         if (summaryData.code === 0) {
-          setSummaryStats(summaryData.data);
-          console.log("✅ 전체 통계 로드 완료");
+          // ✅ 백엔드 응답 필드명 확인 및 매핑
+          const data = summaryData.data;
+          setSummaryStats({
+            activityCount: data.activityCount ?? 0,
+            // ✅ 실제 API 응답: totalParticipants (복수형)
+            totalMembers: data.totalParticipants ?? data.totalParticipant ?? 0,
+            totalWeight: data.totalWeight ?? 0,
+            totalVolume: data.totalVolume ?? 0,
+          });
+          console.log("✅ 전체 통계 로드 완료", data);
         }
       } catch (err) {
         console.error("❌ 전체 통계 API 실패:", err);
@@ -159,12 +199,34 @@ export default function StatsPage() {
 
       // 2. 월별 수거량
       try {
-        const monthlyRes = await fetch(
-          `${BASE_URL}/api/statistics/monthly-weight?${params}`
-        );
+        const params = new URLSearchParams({
+          startYear: startYear.toString(),
+          startMonth: startMonth.toString(),
+          endYear: endYear.toString(),
+          endMonth: endMonth.toString(),
+        });
+        if (regionParam) params.append("region", regionParam);
+
+        const monthlyUrl = viewMode === "personal"
+          ? `${BASE_URL}/api/statistics/my-monthly-change?${params}`
+          : `${BASE_URL}/api/statistics/monthly-change?${params}`;
+
+        console.log("📡 월별 수거량 요청:", monthlyUrl);
+
+        const monthlyRes = await fetch(monthlyUrl, { headers });
         const monthlyResult = await monthlyRes.json();
+
+        console.log("📦 월별 수거량 응답:", monthlyResult);
+
         if (monthlyResult.code === 0 && monthlyResult.data.length > 0) {
-          setMonthlyData(monthlyResult.data);
+          // ✅ 백엔드: { year, month, totalWeight, totalVolume }
+          // ✅ 프론트: { month: "2025-11", totalWeight }
+          const formatted = monthlyResult.data.map((item: any) => ({
+            month: `${item.year}-${String(item.month).padStart(2, "0")}`,
+            totalWeight: item.totalWeight,
+            totalVolume: item.totalVolume,
+          }));
+          setMonthlyData(formatted);
           console.log("✅ 월별 수거량 로드 완료");
         } else {
           setMonthlyData([]);
@@ -176,12 +238,34 @@ export default function StatsPage() {
 
       // 3. 폐기물 비율
       try {
-        const wasteRes = await fetch(
-          `${BASE_URL}/api/statistics/waste-type-ratio?${params}`
-        );
+        const params = new URLSearchParams({
+          startYear: startYear.toString(),
+          startMonth: startMonth.toString(),
+          endYear: endYear.toString(),
+          endMonth: endMonth.toString(),
+        });
+        if (regionParam) params.append("region", regionParam);
+
+        const wasteUrl = viewMode === "personal"
+          ? `${BASE_URL}/api/statistics/my-waste-type-ratio?${params}`
+          : `${BASE_URL}/api/statistics/waste-type-ratio?${params}`;
+
+        console.log("📡 폐기물 비율 요청:", wasteUrl);
+
+        const wasteRes = await fetch(wasteUrl, { headers });
         const wasteResult = await wasteRes.json();
+
+        console.log("📦 폐기물 비율 응답:", wasteResult);
+
         if (wasteResult.code === 0) {
-          setWasteRatio(wasteResult.data);
+          // ✅ 백엔드: { wasteType, weight, percentage }
+          // ✅ 프론트: { wasteType, weight, ratio }
+          const formatted = wasteResult.data.map((item: any) => ({
+            wasteType: item.wasteType,
+            weight: item.weight,
+            ratio: item.percentage,
+          }));
+          setWasteRatio(formatted);
           console.log("✅ 폐기물 비율 로드 완료");
         }
       } catch (err) {
@@ -189,17 +273,37 @@ export default function StatsPage() {
       }
 
       // 4. 지역별 통계
+      // ⚠️ 백엔드 확인 필요: 실제 엔드포인트가 /region인지 /region-activity인지 확인
       try {
-        const regionRes = await fetch(
-          `${BASE_URL}/api/statistics/region?${params}`
-        );
+        const params = new URLSearchParams({
+          startYear: startYear.toString(),
+          startMonth: startMonth.toString(),
+          endYear: endYear.toString(),
+          endMonth: endMonth.toString(),
+        });
+
+        // 백엔드 API 문서: /api/statistics/region (확인 필요)
+        const regionUrl = viewMode === "personal"
+          ? `${BASE_URL}/api/statistics/my-region-activity?${params}`
+          : `${BASE_URL}/api/statistics/region-activity?${params}`;
+
+        console.log("📡 지역별 통계 요청:", regionUrl);
+
+        const regionRes = await fetch(regionUrl, { headers });
         const regionResult = await regionRes.json();
+
+        console.log("📦 지역별 통계 응답:", regionResult);
+
         if (regionResult.code === 0) {
           setRegionData(regionResult.data);
           console.log("✅ 지역별 통계 로드 완료");
+        } else {
+          console.warn("⚠️ 지역별 통계 API 응답 코드:", regionResult.code);
+          setRegionData([]);
         }
       } catch (err) {
         console.error("❌ 지역별 통계 API 실패:", err);
+        setRegionData([]);
       }
 
       console.log("🎉 모든 API 호출 완료");
@@ -229,32 +333,18 @@ export default function StatsPage() {
   };
 
   const COLORS = [
-    "#004e89",
-    "#1a659e",
-    "#2a9d8f",
-    "#8ecae6",
-    "#b8d4e3",
-    "#a8c7db",
-    "#95b8d1",
-    "#7fa3c3",
+    "#004e89", // 가장 진한 파랑 (54% - 종이)
+    "#1a659e", // 진한 파랑 (26% - 플라스틱)
+    "#2e7ca8", // 중간 파랑 (5% - 통발)
+    "#4d91b5", // (5% - 박스)
+    "#6ba6c3", // (4% - 무표)
+    "#89bbd1", // (4% - 마대)
+    "#a7d0df", // (3% - 기타)
+    "#c5e5ed", // 가장 밝은 파랑 (1% - 금속)
+    "#e0f2f7", // 거의 하얀 파랑 (0% - 약품)
   ];
 
-  if (!user) {
-    return (
-      <div className="w-full bg-[#e5edf2] min-h-screen">
-        <Header forceScrolled />
-        <div className="max-w-[1200px] mx-auto pt-48 pb-20 px-8 text-center">
-          <p className="text-xl text-gray-600 mb-4">로그인이 필요합니다.</p>
-          <button
-            onClick={() => window.location.href = '/login'}
-            className="bg-[#0369A1] text-white px-6 py-3 rounded-lg"
-          >
-            로그인 페이지로 이동
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const [hoveredWasteType, setHoveredWasteType] = useState<string | null>(null);
 
   return (
     <div className="w-full bg-[#e5edf2] min-h-screen">
@@ -270,10 +360,16 @@ export default function StatsPage() {
               <img src={filterIcon} className="w-5 h-5" />
             </button>
 
-            {/* ✅ 내정보/전체 토글 스위치 */}
+            {/* 내정보/전체 토글 스위치 */}
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
-                onClick={() => setViewMode("personal")}
+                onClick={() => {
+                  if (!user) {
+                    alert("로그인이 필요한 기능입니다.");
+                    return;
+                  }
+                  setViewMode("personal");
+                }}
                 className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   viewMode === "personal"
                     ? "bg-[#0066aa] text-white shadow-md"
@@ -403,7 +499,7 @@ export default function StatsPage() {
                 setStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 setLocation("전체 지역");
-                setViewMode("personal");
+                setViewMode(user ? "personal" : "all"); // 로그인 상태에 따라 다르게 설정
                 
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
@@ -449,180 +545,238 @@ export default function StatsPage() {
         <div className="grid grid-cols-4 gap-6 mb-14">
           <SummaryCard
             title="활동 수"
-            value={`${summaryStats?.activityCount || 0}회`}
+            value={`${summaryStats?.activityCount ?? 0}회`}
             icon={activityIcon}
           />
           <SummaryCard
             title="총 참여자 수"
-            value={`${summaryStats?.totalMembers.toLocaleString() || 0}명`}
+            value={`${(summaryStats?.totalMembers ?? 0).toLocaleString()}명`}
             icon={personIcon}
           />
           <SummaryCard
             title="총 수거량"
-            value={`${summaryStats?.totalWeight.toLocaleString() || 0}kg`}
+            value={`${(summaryStats?.totalWeight ?? 0).toLocaleString()}kg`}
             icon={weightIcon}
           />
           <SummaryCard
             title="총 수거 부피"
-            value={`${summaryStats?.totalVolume.toLocaleString() || 0}L`}
+            value={`${(summaryStats?.totalVolume ?? 0).toLocaleString()}L`}
             icon={volumeIcon}
           />
         </div>
 
         {/* 🔹 월별 수거량 추이 */}
         <SectionBox title="월별 수거량 추이">
-          <div className="flex justify-end mb-4 gap-2">
-            <button
-              onClick={() => setUnit("kg")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "kg"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
-            >
-              kg
-            </button>
-            <button
-              onClick={() => setUnit("l")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "l"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
-            >
-              L
-            </button>
+          <div className="flex justify-end mb-4">
+            <div className="relative inline-flex bg-gray-200 rounded-full p-1">
+              <button
+                onClick={() => setUnit("kg")}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  unit === "kg"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
+              >
+                kg
+              </button>
+              <button
+                onClick={() => setUnit("l")}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  unit === "l"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
+              >
+                L
+              </button>
+            </div>
           </div>
 
-          <div className="w-full h-72">
-            <ResponsiveContainer>
-              <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#d9d9d9" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: any) => [value, unit === "kg" ? "전체(kg)" : "전체(L)"]}
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    padding: "8px 12px",
-                  }}
-                  labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="totalWeight"
-                  stroke="#0066aa"
-                  strokeWidth={3}
-                  dot={{ r: 5, fill: "#0066aa" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {monthlyData.length > 0 ? (
+            <div className="w-full h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d9d9d9" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip
+                    formatter={(value: any) => [value, unit === "kg" ? "무게(kg)" : "부피(L)"]}
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                    }}
+                    labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey={unit === "kg" ? "totalWeight" : "totalVolume"}
+                    stroke="#0066aa"
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: "#0066aa" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="w-full h-72 flex items-center justify-center text-gray-400">
+              <p>조회된 데이터가 없습니다.</p>
+            </div>
+          )}
         </SectionBox>
 
         {/* 🔹 폐기물 분류 비율 */}
         <SectionBox title="폐기물 분류 비율">
-          <div className="flex justify-between items-start gap-12">
-            <div className="w-[420px] h-[320px] flex-shrink-0">
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={wasteRatio.map((w) => ({
-                      name: wasteTypeMap[w.wasteType] || w.wasteType,
-                      value: w.ratio,
-                    }))}
-                    dataKey="value"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    innerRadius={65}
-                    stroke="#fff"
-                    strokeWidth={2}
-                    labelLine={false}
-                    label={({ name, value, cx, cy, midAngle, outerRadius }) => {
-                      const RADIAN = Math.PI / 180;
-                      const radius = outerRadius + 25;
-                      const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
-                      const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
-                      const safeValue = Number(value ?? 0).toFixed(0);
-                      
-                      return (
-                        <text
-                          x={x}
-                          y={y}
-                          fill="#0066aa"
-                          textAnchor={x > cx ? "start" : "end"}
-                          dominantBaseline="central"
-                          fontSize="13"
-                          fontWeight="500"
-                        >
-                          {`${name} ${safeValue}%`}
-                        </text>
-                      );
-                    }}
-                  >
-                    {wasteRatio.map((_, idx) => (
-                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+          {wasteRatio.length > 0 ? (
+            <div className="flex justify-center items-center gap-16">
+              {/* 도넛 차트 - 크기 확대 및 오른쪽 이동 */}
+              <div className="w-[480px] h-[380px] flex-shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[...wasteRatio]
+                        .sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
+                        .map((w) => ({
+                          name: wasteTypeMap[w.wasteType] || w.wasteType,
+                          value: w.ratio,
+                          wasteType: w.wasteType,
+                        }))}
+                      dataKey="value"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={130}
+                      innerRadius={80}
+                      stroke="#fff"
+                      strokeWidth={3}
+                      labelLine={false}
+                      label={(props) => {
+                        const { name, value, cx, cy, midAngle, outerRadius } = props;
+                        const ratio = Number(value ?? 0);
+                        
+                        // 3% 이하는 아무것도 렌더링하지 않음
+                        if (ratio <= 3) return null;
+                        
+                        const RADIAN = Math.PI / 180;
+                        const baseDistance = ratio < 10 ? 70 : 50;
+                        
+                        // 선의 시작점 (도넛 끝)
+                        const lineStartRadius = outerRadius + 5;
+                        const lineStartX = cx + lineStartRadius * Math.cos(-(midAngle ?? 0) * RADIAN);
+                        const lineStartY = cy + lineStartRadius * Math.sin(-(midAngle ?? 0) * RADIAN);
+                        
+                        // 선의 끝점 (텍스트 위치)
+                        const radius = outerRadius + baseDistance;
+                        const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
+                        const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
+                        
+                        const safeValue = ratio.toFixed(0);
+                        const fontSize = ratio < 10 ? 11 : 13;
+                        
+                        return (
+                          <g>
+                            {/* 선 그리기 */}
+                            <line
+                              x1={lineStartX}
+                              y1={lineStartY}
+                              x2={x}
+                              y2={y}
+                              stroke="#0066aa"
+                              strokeWidth={1.5}
+                            />
+                            {/* 텍스트 */}
+                            <text
+                              x={x}
+                              y={y}
+                              fill="#0066aa"
+                              textAnchor={x > cx ? "start" : "end"}
+                              dominantBaseline="central"
+                              fontSize={fontSize}
+                              fontWeight="600"
+                            >
+                              {`${name} ${safeValue}%`}
+                            </text>
+                          </g>
+                        );
+                      }}
+                    >
+                      {[...wasteRatio]
+                        .sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
+                        .map((item, idx) => (
+                          <Cell 
+                            key={idx} 
+                            fill={COLORS[idx % COLORS.length]}
+                            opacity={hoveredWasteType === null || hoveredWasteType === item.wasteType ? 1 : 0.3}
+                            style={{ transition: 'opacity 0.2s' }}
+                          />
+                        ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
 
-            <div className="flex-1 pt-4">
-              <div className="grid grid-cols-1 gap-3">
-                {wasteRatio.map((item, idx) => (
-                  <div
-                    key={item.wasteType}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
+              {/* 범례 - 호버 효과 추가 */}
+              <div className="flex-1 pt-4">
+                <div className="grid grid-cols-1 gap-3">
+                  {[...wasteRatio]
+                    .sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
+                    .map((item, idx) => (
                       <div
-                        className="w-4 h-4 rounded-sm flex-shrink-0"
-                        style={{ background: COLORS[idx % COLORS.length] }}
-                      ></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        {wasteTypeMap[item.wasteType] || item.wasteType}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <span className="text-sm font-semibold text-gray-900 w-20 text-right">
-                        {item.weight?.toLocaleString() || 0}kg
-                      </span>
-                      <span className="text-sm text-gray-500 w-12 text-right">
-                        {Number(item.ratio ?? 0).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                        key={item.wasteType}
+                        onMouseEnter={() => setHoveredWasteType(item.wasteType)}
+                        onMouseLeave={() => setHoveredWasteType(null)}
+                        className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <div
+                            className="w-4 h-4 rounded-sm flex-shrink-0"
+                            style={{ background: COLORS[idx % COLORS.length] }}
+                          ></div>
+                          <span className="text-sm font-medium text-gray-700">
+                            {wasteTypeMap[item.wasteType] || item.wasteType}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <span className="text-sm font-semibold text-gray-900 w-20 text-right">
+                            {item.weight?.toLocaleString() || 0}kg
+                          </span>
+                          <span className="text-sm text-gray-500 w-12 text-right">
+                            {Number(item.ratio ?? 0).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="w-full h-72 flex items-center justify-center text-gray-400">
+              <p>조회된 데이터가 없습니다.</p>
+            </div>
+          )}
         </SectionBox>
 
         {/* 🔹 지역별 활동 */}
         <SectionBox
           title="지역별 활동 현황"
           rightElement={
-            <div className="flex gap-2">
+            <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`px-4 py-1 rounded-md text-sm ${
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   regionMode === "count"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
                 }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`px-4 py-1 rounded-md text-sm ${
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   regionMode === "amount"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
                 }`}
               >
                 수거량별
@@ -630,62 +784,68 @@ export default function StatsPage() {
             </div>
           }
         >
-          <div className="w-full h-72">
-            <ResponsiveContainer>
-              {regionMode === "count" ? (
-                <BarChart data={regionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="region" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: any) => [`${value}회`, "활동 횟수"]}
-                    contentStyle={{
-                      backgroundColor: "white",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      padding: "8px 12px",
-                    }}
-                    labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
-                  />
-                  <Bar
-                    dataKey="activityCount"
-                    fill="#0066aa"
-                    barSize={65}
-                    radius={[6, 6, 0, 0]}
-                  />
-                </BarChart>
-              ) : (
-                <BarChart data={regionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="region" />
-                  <YAxis />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "white",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      padding: "8px 12px",
-                    }}
-                    labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
-                  />
-                  <Bar
-                    dataKey="totalWeight"
-                    fill="#0066aa"
-                    name="무게(kg)"
-                    barSize={50}
-                    radius={[6, 6, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="totalVolume"
-                    fill="#2a9d8f"
-                    name="부피(L)"
-                    barSize={50}
-                    radius={[6, 6, 0, 0]}
-                  />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
+          {regionData.length > 0 ? (
+            <div className="w-full h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                {regionMode === "count" ? (
+                  <BarChart data={regionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="region" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip
+                      formatter={(value: any) => [`${value}회`, "활동 횟수"]}
+                      contentStyle={{
+                        backgroundColor: "white",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                        padding: "8px 12px",
+                      }}
+                      labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
+                    />
+                    <Bar
+                      dataKey="activityCount"
+                      fill="#0066aa"
+                      barSize={65}
+                      radius={[6, 6, 0, 0]}
+                    />
+                  </BarChart>
+                ) : (
+                  <BarChart data={regionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="region" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "white",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                        padding: "8px 12px",
+                      }}
+                      labelStyle={{ fontWeight: "600", marginBottom: "4px" }}
+                    />
+                    <Bar
+                      dataKey="totalWeight"
+                      fill="#0066aa"
+                      name="무게(kg)"
+                      barSize={50}
+                      radius={[6, 6, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="totalVolume"
+                      fill="#2a9d8f"
+                      name="부피(L)"
+                      barSize={50}
+                      radius={[6, 6, 0, 0]}
+                    />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="w-full h-72 flex items-center justify-center text-gray-400">
+              <p>조회된 데이터가 없습니다.</p>
+            </div>
+          )}
         </SectionBox>
       </div>
     </div>
