@@ -11,20 +11,12 @@ import axios from "axios";
 
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const { user } = useAuth(); // ✅ 실제 로그인 정보
+  const { user } = useAuth();
 
-  // ✅ 로그인 정보에서 자동 설정 (실제 API 데이터 사용)
   const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
   const groupName = user?.memberType === "GROUP"
     ? (user as any)?.organizationName || user?.userName || ""
     : user?.userName || "";
-
-  // 🔍 디버그 로그
-  console.log("🔍 실제 로그인 정보:", user);
-  console.log("📊 groupType:", groupType);
-  console.log("📊 groupName:", groupName);
-  console.log("📊 단체 체크:", groupType === "단체");
-  console.log("📊 개인 체크:", groupType === "개인");
 
   const [description, setDescription] = useState("");
   const maxLength = 500;
@@ -68,48 +60,19 @@ const WritePage = () => {
       const memberCountInput = document.getElementById("volunteerCount") as HTMLInputElement | null;
       const memberCount = Number(memberCountInput?.value || 0);
 
-      // 🔍 디버깅 로그
-      console.log("=== 필수 항목 검증 시작 ===");
-      console.log("activityName:", activityName);
-      console.log("startDate:", startDate, "startTime:", startTime);
-      console.log("endDate:", endDate, "endTime:", endTime);
-      console.log("memberCount:", memberCount);
-      console.log("locationData:", locationData);
-      console.log("startAddress:", locationData?.startAddress);
-      console.log("endAddress:", locationData?.endAddress);
-
-      // groupName은 로그인 정보에서 자동 입력되므로 검증 불필요
-      if (!activityName.trim()) {
-        console.log("❌ activityName 누락");
-        missing.push("activityName");
-      }
-      if (!startDate || !startTime || !endDate || !endTime) {
-        console.log("❌ 날짜/시간 누락");
-        missing.push("dateTime");
-      }
-      if (memberCount <= 0) {
-        console.log("❌ memberCount 누락 또는 0");
-        missing.push("memberCount");
-      }
-      if (!locationData?.startAddress || !locationData?.endAddress) {
-        console.log("❌ 위치 정보 누락");
-        missing.push("location");
-      }
-
-      console.log("누락된 필드:", missing);
-      console.log("=== 검증 완료 ===");
+      if (!activityName.trim()) missing.push("activityName");
+      if (!startDate || !startTime || !endDate || !endTime) missing.push("dateTime");
+      if (memberCount <= 0) missing.push("memberCount");
+      if (!locationData?.startAddress || !locationData?.endAddress) missing.push("location");
 
       if (missing.length > 0) {
         setMissingFields(missing);
         const first = missing[0];
         const targetId =
-          first === "activityName"
-            ? "activityName-input"
-            : first === "dateTime"
-              ? "dateTime-row"
-              : first === "memberCount"
-                ? "memberCount-input"
-                : "location-section";
+          first === "activityName" ? "activityName-input"
+          : first === "dateTime" ? "dateTime-row"
+          : first === "memberCount" ? "memberCount-input"
+          : "location-section";
 
         const el = document.getElementById(targetId);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -162,8 +125,13 @@ const WritePage = () => {
         }
       );
 
-      if (response.data.code === 0) alert("✅ 활동 기록이 성공적으로 저장되었습니다.");
-      else alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
+      if (response.data.code === 0) {
+        alert("✅ 활동 기록이 성공적으로 저장되었습니다.");
+        // ✅ 저장 성공 시 RecordsPage로 이동
+        window.location.href = "/records";
+      } else {
+        alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
+      }
     } catch (error: any) {
       console.error("❌ 서버 오류:", error);
       if (error.response) console.log("📨 서버 응답:", error.response.data);
@@ -200,11 +168,10 @@ const WritePage = () => {
           봉사활동 기록하기
         </h2>
 
-        {/* ===================== 활동 정보 ===================== */}
         <section className="mb-10">
           <h3 className="text-base md:text-lg font-semibold mb-4">활동 정보</h3>
 
-          {/* 데스크톱: 테이블 형식 */}
+          {/* 데스크톱 버전 */}
           <div className="hidden md:block border border-gray-300 border-t-0 border-l-0 border-r-0">
             <div className="flex justify-end pr-4 py-2 text-sm text-gray-500">
               <span className="text-red-500">*</span> 표시는 필수 입력 항목입니다
@@ -219,40 +186,29 @@ const WritePage = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-start gap-4">
                       <div className="flex items-center gap-3 mt-[2px]">
-                        <label className="flex items-center gap-1">
-                          <input
-                            type="radio"
-                            name="group"
-                            checked={groupType === "단체"}
-                            readOnly
-                            className="w-4 h-4 pointer-events-none"
-                            style={{
-                              accentColor: "#0369A1",
-                              opacity: 1
-                            }}
-                          />
-                          <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
-                            단체
-                          </span>
+                        <label className="flex items-center gap-1.5 cursor-default">
+                          <div className="relative w-4 h-4">
+                            <input type="radio" name="group" checked={groupType === "단체"} readOnly className="sr-only" />
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              groupType === "단체" ? "border-[#0369A1]" : "border-gray-300"
+                            }`}>
+                              {groupType === "단체" && <div className="w-2 h-2 rounded-full bg-[#0369A1]"></div>}
+                            </div>
+                          </div>
+                          <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>단체</span>
                         </label>
-                        <label className="flex items-center gap-1">
-                          <input
-                            type="radio"
-                            name="group"
-                            checked={groupType === "개인"}
-                            readOnly
-                            className="w-4 h-4 pointer-events-none"
-                            style={{
-                              accentColor: "#0369A1",
-                              opacity: 1
-                            }}
-                          />
-                          <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
-                            개인
-                          </span>
+                        <label className="flex items-center gap-1.5 cursor-default">
+                          <div className="relative w-4 h-4">
+                            <input type="radio" name="group" checked={groupType === "개인"} readOnly className="sr-only" />
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              groupType === "개인" ? "border-[#0369A1]" : "border-gray-300"
+                            }`}>
+                              {groupType === "개인" && <div className="w-2 h-2 rounded-full bg-[#0369A1]"></div>}
+                            </div>
+                          </div>
+                          <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>개인</span>
                         </label>
                       </div>
-
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <input
@@ -281,8 +237,9 @@ const WritePage = () => {
                       placeholder="봉사활동 명을 입력해주세요."
                       value={activityName}
                       onChange={(e) => setActivityName(e.target.value)}
-                      className={`w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${missingFields.includes("activityName") ? "border-red-500" : ""
-                        }`}
+                      className={`w-full border border-gray-200 bg-gray-50 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-400 ${
+                        missingFields.includes("activityName") ? "border-red-500" : ""
+                      }`}
                     />
                   </td>
                 </tr>
@@ -297,30 +254,34 @@ const WritePage = () => {
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
-                          }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${
+                          missingFields.includes("dateTime") ? "border-red-500" : ""
+                        }`}
                       />
                       <input
                         type="time"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
-                          }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${
+                          missingFields.includes("dateTime") ? "border-red-500" : ""
+                        }`}
                       />
                       <span className="text-gray-500 text-[20px] mx-1">~</span>
                       <input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
-                          }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-3 py-[7px] w-[180px] ${
+                          missingFields.includes("dateTime") ? "border-red-500" : ""
+                        }`}
                       />
                       <input
                         type="time"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
-                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${missingFields.includes("dateTime") ? "border-red-500" : ""
-                          }`}
+                        className={`border border-gray-200 bg-gray-50 rounded-md px-2 py-[7px] w-[120px] ${
+                          missingFields.includes("dateTime") ? "border-red-500" : ""
+                        }`}
                       />
                     </div>
                   </td>
@@ -335,18 +296,17 @@ const WritePage = () => {
                       <div className="flex items-center justify-center w-1/3 border-r border-gray-300 bg-white text-sm text-gray-800">
                         <span>{formatVolunteerTime(volunteerHours)}</span>
                       </div>
-
                       <div className="flex items-center justify-start w-1/3 bg-[#f5f6f8] border-r border-gray-300 px-6 py-3">
                         <label className="font-medium text-gray-800">
                           봉사활동 인원 <span className="text-red-500">*</span>
                         </label>
                       </div>
-
                       <div className="flex items-center justify-start w-1/3 bg-white px-6 py-3">
                         <div
                           id="memberCount-input"
-                          className={`flex items-center border rounded-md overflow-hidden ${missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
-                            }`}
+                          className={`flex items-center border rounded-md overflow-hidden ${
+                            missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
+                          }`}
                         >
                           <button
                             type="button"
@@ -397,10 +357,9 @@ const WritePage = () => {
                       onChange={(e) => setDescription(e.target.value)}
                       className="w-full border border-gray-200 bg-gray-50 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400"
                     ></textarea>
-                    <div
-                      className={`text-right text-xs mt-1 ${description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
-                        }`}
-                    >
+                    <div className={`text-right text-xs mt-1 ${
+                      description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
+                    }`}>
                       {description.length}/{maxLength}자
                     </div>
                   </td>
@@ -409,49 +368,38 @@ const WritePage = () => {
             </table>
           </div>
 
-          {/* 모바일: 카드 형식 */}
+          {/* 모바일 버전 */}
           <div className="md:hidden space-y-4">
             <p className="text-xs text-gray-500 text-right mb-2">
               <span className="text-red-500">*</span> 표시는 필수 입력 항목입니다
             </p>
 
-            {/* 구분 */}
             <div className="border-t border-b border-gray-200 py-4">
               <label className="block text-sm font-semibold mb-3">
                 구분 <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-4 mb-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="group"
-                    checked={groupType === "단체"}
-                    readOnly
-                    className="w-4 h-4 pointer-events-none"
-                    style={{
-                      accentColor: "#0369A1",
-                      opacity: 1
-                    }}
-                  />
-                  <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
-                    단체
-                  </span>
+                <label className="flex items-center gap-2 text-sm cursor-default">
+                  <div className="relative w-4 h-4">
+                    <input type="radio" name="group" checked={groupType === "단체"} readOnly className="sr-only" />
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      groupType === "단체" ? "border-[#0369A1]" : "border-gray-300"
+                    }`}>
+                      {groupType === "단체" && <div className="w-2 h-2 rounded-full bg-[#0369A1]"></div>}
+                    </div>
+                  </div>
+                  <span className={groupType === "단체" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>단체</span>
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="group"
-                    checked={groupType === "개인"}
-                    readOnly
-                    className="w-4 h-4 pointer-events-none"
-                    style={{
-                      accentColor: "#0369A1",
-                      opacity: 1
-                    }}
-                  />
-                  <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>
-                    개인
-                  </span>
+                <label className="flex items-center gap-2 text-sm cursor-default">
+                  <div className="relative w-4 h-4">
+                    <input type="radio" name="group" checked={groupType === "개인"} readOnly className="sr-only" />
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      groupType === "개인" ? "border-[#0369A1]" : "border-gray-300"
+                    }`}>
+                      {groupType === "개인" && <div className="w-2 h-2 rounded-full bg-[#0369A1]"></div>}
+                    </div>
+                  </div>
+                  <span className={groupType === "개인" ? "font-semibold text-[#0369A1]" : "text-gray-400"}>개인</span>
                 </label>
               </div>
               <div className="flex items-center gap-2">
@@ -467,7 +415,6 @@ const WritePage = () => {
               <p className="text-xs text-gray-400 mt-2">로그인 정보에서 자동 입력됨</p>
             </div>
 
-            {/* 봉사활동명 */}
             <div className="border-b border-gray-200 py-4">
               <label className="block text-sm font-semibold mb-3">
                 봉사활동 명 <span className="text-red-500">*</span>
@@ -478,12 +425,12 @@ const WritePage = () => {
                 placeholder="봉사활동 명을 입력해주세요."
                 value={activityName}
                 onChange={(e) => setActivityName(e.target.value)}
-                className={`w-full border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("activityName") ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full border bg-white rounded px-3 py-2.5 text-sm ${
+                  missingFields.includes("activityName") ? "border-red-500" : "border-gray-300"
+                }`}
               />
             </div>
 
-            {/* 활동 일자 */}
             <div id="dateTime-row" className="border-b border-gray-200 py-4">
               <label className="block text-sm font-semibold mb-3">
                 활동 일자 <span className="text-red-500">*</span>
@@ -494,15 +441,17 @@ const WritePage = () => {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${
+                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                   <input
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${
+                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                 </div>
                 <div className="flex items-center justify-center py-1">
@@ -513,21 +462,22 @@ const WritePage = () => {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`flex-1 border bg-white rounded px-3 py-2.5 text-sm ${
+                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`w-28 border bg-white rounded px-2 py-2.5 text-sm ${
+                      missingFields.includes("dateTime") ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                 </div>
               </div>
             </div>
 
-            {/* 봉사활동 시간 */}
             <div className="border-b border-gray-200 py-4">
               <label className="block text-sm font-semibold mb-3">봉사활동 시간</label>
               <div className="bg-gray-50 border border-gray-300 rounded px-4 py-3 text-center text-gray-700 text-sm">
@@ -535,7 +485,6 @@ const WritePage = () => {
               </div>
             </div>
 
-            {/* 봉사활동 인원 */}
             <div className="border-b border-gray-200 py-4">
               <label className="block text-sm font-semibold mb-3">
                 봉사활동 인원 <span className="text-red-500">*</span>
@@ -543,8 +492,9 @@ const WritePage = () => {
               <div className="flex items-center justify-between">
                 <div
                   id="memberCount-input"
-                  className={`flex items-center border rounded-lg overflow-hidden ${missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
-                    }`}
+                  className={`flex items-center border rounded-lg overflow-hidden ${
+                    missingFields.includes("memberCount") ? "border-red-500" : "border-gray-300"
+                  }`}
                 >
                   <button
                     type="button"
@@ -580,7 +530,6 @@ const WritePage = () => {
               </div>
             </div>
 
-            {/* 활동 동기 및 설명 */}
             <div className="border-b border-gray-200 py-4">
               <label className="block text-sm font-semibold mb-3">활동 동기 및 설명</label>
               <textarea
@@ -591,32 +540,27 @@ const WritePage = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full border border-gray-300 bg-white rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-400"
               ></textarea>
-              <div
-                className={`text-right text-xs mt-1 ${description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
-                  }`}
-              >
+              <div className={`text-right text-xs mt-1 ${
+                description.length >= maxLength ? "text-red-500 font-semibold" : "text-gray-500"
+              }`}>
                 {description.length}/{maxLength}자
               </div>
             </div>
           </div>
         </section>
 
-        {/* ===================== 활동 사진 첨부 ===================== */}
         <div className="mt-12 md:mt-20">
           <PhotoUploadSection onChange={setPhotoFiles} onFavoriteChange={setThumbnailIndex} />
         </div>
 
-        {/* ===================== 활동 위치 ===================== */}
         <div className="mt-12 md:mt-20 mb-12 md:mb-20">
           <section id="location-section">
             <LocationSection onChange={setLocationData} />
           </section>
         </div>
 
-        {/* ===================== 폐기물 ===================== */}
         <WasteSection onChange={setWasteList} />
 
-        {/* ===================== 특이사항 ===================== */}
         <section className="mb-16 md:mb-25 mt-12 md:mt-20">
           <h3 className="text-base md:text-lg font-semibold mb-4">느낀점 & 특이사항</h3>
           <div className="border border-gray-300 border-l-0 border-r-0 bg-white p-4">
@@ -629,7 +573,6 @@ const WritePage = () => {
           </div>
         </section>
 
-        {/* 작성 완료 버튼 */}
         <div className="text-center mb-12 md:mb-20">
           <button
             className="bg-[#0369A1] hover:bg-[#025985] text-white font-semibold px-8 md:px-12 py-3 rounded-md w-full md:w-auto text-sm md:text-base"
