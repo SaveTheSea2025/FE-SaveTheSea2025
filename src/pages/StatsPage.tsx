@@ -1,16 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Header from "../components/common/Header";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 
 // icons
-import filterIcon from "../assets/stats/filterIcon.png";
-import downloadIcon from "../assets/stats/downloadIcon.png";
-import pdfIcon from "../assets/stats/pdfIcon.png";
-import excelIcon from "../assets/stats/excelIcon.png";
-import activityIcon from "../assets/stats/activityIcon.png";
-import personIcon from "../assets/stats/personIcon.png";
-import weightIcon from "../assets/stats/weightIcon.png";
-import volumeIcon from "../assets/stats/volumeIcon.png";
+import filterIcon from "../assets/stats/filterIcon.webp";
+import downloadIcon from "../assets/stats/downloadIcon.webp";
+import pdfIcon from "../assets/stats/pdfIcon.webp";
+import excelIcon from "../assets/stats/excelIcon.webp";
+import activityIcon from "../assets/stats/activityIcon.webp";
+import personIcon from "../assets/stats/personIcon.webp";
+import weightIcon from "../assets/stats/weightIcon.webp";
+import volumeIcon from "../assets/stats/volumeIcon.webp";
 
 import {
   LineChart,
@@ -55,7 +56,7 @@ interface RegionStats {
 
 export default function StatsPage() {
   const { user } = useAuth();
-  
+
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
@@ -274,21 +275,19 @@ export default function StatsPage() {
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => setViewMode("personal")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  viewMode === "personal"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "personal"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 내정보
               </button>
               <button
                 onClick={() => setViewMode("all")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  viewMode === "all"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "all"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 전체
               </button>
@@ -369,15 +368,13 @@ export default function StatsPage() {
                         setLocation(loc);
                         setLocationOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        location === loc
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                        idx === locationOptions.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${location === loc
+                        ? "bg-blue-50 text-[#0066aa] font-medium"
+                        : ""
+                        } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === locationOptions.length - 1
                           ? "rounded-b-xl"
                           : ""
-                      }`}
+                        }`}
                     >
                       {loc}
                     </div>
@@ -399,15 +396,15 @@ export default function StatsPage() {
               onClick={() => {
                 const today = new Date();
                 const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-                
+
                 setStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 setLocation("전체 지역");
                 setViewMode("personal");
-                
+
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
-                
+
                 fetchAllData();
               }}
               className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
@@ -474,21 +471,19 @@ export default function StatsPage() {
           <div className="flex justify-end mb-4 gap-2">
             <button
               onClick={() => setUnit("kg")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "kg"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
+              className={`px-4 py-1 rounded-full text-sm ${unit === "kg"
+                ? "bg-[#0066aa] text-white"
+                : "bg-gray-200 text-gray-600"
+                }`}
             >
               kg
             </button>
             <button
               onClick={() => setUnit("l")}
-              className={`px-4 py-1 rounded-full text-sm ${
-                unit === "l"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
+              className={`px-4 py-1 rounded-full text-sm ${unit === "l"
+                ? "bg-[#0066aa] text-white"
+                : "bg-gray-200 text-gray-600"
+                }`}
             >
               L
             </button>
@@ -547,7 +542,7 @@ export default function StatsPage() {
                       const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
                       const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
                       const safeValue = Number(value ?? 0).toFixed(0);
-                      
+
                       return (
                         <text
                           x={x}
@@ -609,21 +604,19 @@ export default function StatsPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`px-4 py-1 rounded-md text-sm ${
-                  regionMode === "count"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+                className={`px-4 py-1 rounded-md text-sm ${regionMode === "count"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+                  }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`px-4 py-1 rounded-md text-sm ${
-                  regionMode === "amount"
-                    ? "bg-[#0066aa] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+                className={`px-4 py-1 rounded-md text-sm ${regionMode === "amount"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+                  }`}
               >
                 수거량별
               </button>

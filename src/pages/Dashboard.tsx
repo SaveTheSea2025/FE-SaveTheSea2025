@@ -8,19 +8,19 @@ import { Autoplay } from "swiper/modules";
 import "swiper/css";
 
 // 메인 배경
-import backgroundImage from "@/assets/main/backgroundimage.png";
+import backgroundImage from "@/assets/main/backgroundimage.webp";
 
 // 섹션2 아이콘
-import cleanupIcon from "@/assets/main/mainpage-cleanup.png";
+import cleanupIcon from "@/assets/main/mainpage-cleanup.webp";
 
 // 섹션3 카드 아이콘들
-import trashIcon from "@/assets/main/mainpage-trashcan.png";
-import peopleIcon from "@/assets/main/mainpage-people.png";
-import arrowIcon from "@/assets/main/mainpage-arrow.png";
+import trashIcon from "@/assets/main/mainpage-trashcan.webp";
+import peopleIcon from "@/assets/main/mainpage-people.webp";
+import arrowIcon from "@/assets/main/mainpage-arrow.webp";
 
 // footer 아이콘
-import youtubeIcon from "@/assets/main/mainpage-youtube.png";
-import earthIcon from "@/assets/main/mainpage-earth.png";
+import youtubeIcon from "@/assets/main/mainpage-youtube.webp";
+import earthIcon from "@/assets/main/mainpage-earth.webp";
 
 // ✅ ActivityRecord 타입 정의
 interface ActivityRecord {

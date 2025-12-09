@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
-import starOutline from "@/assets/write/star-outline.png";
-import starFilled from "@/assets/write/star-filled.png";
+import starOutline from "@/assets/write/star-outline.webp";
+import starFilled from "@/assets/write/star-filled.webp";
 
 interface PhotoUploadSectionProps {
   onChange?: (files: File[]) => void;
