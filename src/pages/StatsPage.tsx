@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable prefer-const */
 import Header from "../components/common/Header";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -13,6 +11,7 @@ import activityIcon from "../assets/stats/activityIcon.png";
 import personIcon from "../assets/stats/personIcon.png";
 import weightIcon from "../assets/stats/weightIcon.png";
 import volumeIcon from "../assets/stats/volumeIcon.png";
+
 import {
   LineChart,
   Line,
@@ -55,16 +54,14 @@ interface RegionStats {
 }
 
 export default function StatsPage() {
-  const { user } = useAuth(); // ✅ 실제 로그인 정보
-
+  const { user } = useAuth();
+  
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
 
-  // ✅ 드롭다운 ref (바깥 클릭 감지용)
   const downloadRef = useRef<HTMLDivElement>(null);
 
-  // ✅ 필터 상태 - 오늘부터 1년 전까지 기본값
   const today = new Date();
   const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
 
@@ -74,10 +71,9 @@ export default function StatsPage() {
   const [endDate, setEndDate] = useState<string>(
     today.toISOString().split("T")[0]
   );
-  const [location, setLocation] = useState<string>("전체");
-  const [viewMode, setViewMode] = useState<"personal" | "organization">("personal");
+  const [location, setLocation] = useState<string>("전체 지역");
+  const [viewMode, setViewMode] = useState<"personal" | "all">("personal"); // ✅ "all"로 변경
 
-  // ✅ 조회된 날짜 상태 (조회 버튼 클릭 시에만 업데이트)
   const [displayStartDate, setDisplayStartDate] = useState<string>(
     oneYearAgo.toISOString().split("T")[0]
   );
@@ -88,7 +84,6 @@ export default function StatsPage() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
 
-  // ✅ API 데이터 상태 (더미 데이터 제거)
   const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyWeight[]>([]);
   const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
@@ -96,12 +91,6 @@ export default function StatsPage() {
 
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  // ✅ 로그인 정보 디버그
-  console.log("🔍 StatsPage 로그인 정보:", user);
-  console.log("📊 userId:", user?.userId);
-  console.log("📊 organizationId:", (user as any)?.organizationId);
-
-  // ✅ 컴포넌트 마운트 시 초기 데이터 불러오기
   useEffect(() => {
     if (user) {
       setDisplayStartDate(startDate);
@@ -111,7 +100,6 @@ export default function StatsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // ✅ 드롭다운 바깥 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (downloadRef.current && !downloadRef.current.contains(event.target as Node)) {
@@ -128,10 +116,8 @@ export default function StatsPage() {
     };
   }, [downloadOpen]);
 
-  // ✅ 장소 옵션
-  const locationOptions = ["전체", "동해", "서해", "남해", "제주"];
+  const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
-  // ✅ 데이터 불러오기
   const fetchAllData = async () => {
     if (!BASE_URL) {
       console.warn("BASE_URL이 설정되지 않았습니다.");
@@ -144,18 +130,15 @@ export default function StatsPage() {
     }
 
     try {
-      // 필터 파라미터 구성
       const params = new URLSearchParams({
         startDate,
         endDate,
-        location: location === "전체" ? "" : location,
+        location: location === "전체 지역" ? "" : location,
       });
 
-      // viewMode에 따라 userId 또는 organizationId 추가
+      // ✅ viewMode가 "personal"일 때만 userId 추가, "all"일 때는 추가 안 함
       if (viewMode === "personal" && user.userId) {
         params.append("userId", user.userId.toString());
-      } else if (viewMode === "organization" && (user as any).organizationId) {
-        params.append("organizationId", (user as any).organizationId.toString());
       }
 
       console.log("API 호출 시작:", `${BASE_URL}/api/statistics/*?${params}`);
@@ -225,14 +208,12 @@ export default function StatsPage() {
     }
   };
 
-  // ✅ 조회 버튼 클릭 핸들러
   const handleSearch = () => {
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
     fetchAllData();
   };
 
-  // ✅ 폐기물 한글 변환
   const wasteTypeMap: Record<string, string> = {
     PLASTIC: "플라스틱",
     GLASS: "유리",
@@ -258,7 +239,6 @@ export default function StatsPage() {
     "#7fa3c3",
   ];
 
-  // ✅ 로그인하지 않은 경우
   if (!user) {
     return (
       <div className="w-full bg-[#e5edf2] min-h-screen">
@@ -289,6 +269,32 @@ export default function StatsPage() {
             <button className="w-9 h-9 bg-[#0077A7] rounded-full flex items-center justify-center shadow-sm">
               <img src={filterIcon} className="w-5 h-5" />
             </button>
+
+            {/* ✅ 내정보/전체 토글 스위치 */}
+            <div className="relative inline-flex bg-gray-200 rounded-full p-1">
+              <button
+                onClick={() => setViewMode("personal")}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  viewMode === "personal"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
+              >
+                내정보
+              </button>
+              <button
+                onClick={() => setViewMode("all")}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  viewMode === "all"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
+              >
+                전체
+              </button>
+            </div>
+
+            <div className="w-px h-6 bg-gray-300"></div>
 
             {/* 기간 선택 */}
             <div className="relative">
@@ -339,8 +345,6 @@ export default function StatsPage() {
               )}
             </div>
 
-            <div className="w-px h-6 bg-gray-300"></div>
-
             {/* 장소 선택 */}
             <div className="relative">
               <button
@@ -365,13 +369,15 @@ export default function StatsPage() {
                         setLocation(loc);
                         setLocationOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${location === loc
-                        ? "bg-blue-50 text-[#0066aa] font-medium"
-                        : ""
-                        } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === locationOptions.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                        location === loc
+                          ? "bg-blue-50 text-[#0066aa] font-medium"
+                          : ""
+                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
+                        idx === locationOptions.length - 1
                           ? "rounded-b-xl"
                           : ""
-                        }`}
+                      }`}
                     >
                       {loc}
                     </div>
@@ -380,33 +386,33 @@ export default function StatsPage() {
               )}
             </div>
 
-            {/* 내 정보 / 단체 버튼 */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode("personal")}
-                className={`px-4 py-2 rounded-xl text-sm transition-all ${viewMode === "personal"
-                  ? "bg-[#0066aa] text-white shadow-sm"
-                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
-                  }`}
-              >
-                내 정보
-              </button>
-              <button
-                onClick={() => setViewMode("organization")}
-                className={`px-4 py-2 rounded-xl text-sm transition-all ${viewMode === "organization"
-                  ? "bg-[#0066aa] text-white shadow-sm"
-                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
-                  }`}
-              >
-                단체
-              </button>
-            </div>
-
+            {/* 조회 버튼 */}
             <button
               onClick={handleSearch}
               className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-md hover:bg-[#004d7a] hover:shadow-lg hover:scale-105 active:bg-[#002845] active:scale-95 active:shadow-inner transition-all duration-150 font-semibold cursor-pointer"
             >
               조회
+            </button>
+
+            {/* 초기화 버튼 */}
+            <button
+              onClick={() => {
+                const today = new Date();
+                const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+                
+                setStartDate(oneYearAgo.toISOString().split("T")[0]);
+                setEndDate(today.toISOString().split("T")[0]);
+                setLocation("전체 지역");
+                setViewMode("personal");
+                
+                setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
+                setDisplayEndDate(today.toISOString().split("T")[0]);
+                
+                fetchAllData();
+              }}
+              className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
+            >
+              초기화
             </button>
           </div>
 
@@ -468,19 +474,21 @@ export default function StatsPage() {
           <div className="flex justify-end mb-4 gap-2">
             <button
               onClick={() => setUnit("kg")}
-              className={`px-4 py-1 rounded-full text-sm ${unit === "kg"
-                ? "bg-[#0066aa] text-white"
-                : "bg-gray-200 text-gray-600"
-                }`}
+              className={`px-4 py-1 rounded-full text-sm ${
+                unit === "kg"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+              }`}
             >
               kg
             </button>
             <button
               onClick={() => setUnit("l")}
-              className={`px-4 py-1 rounded-full text-sm ${unit === "l"
-                ? "bg-[#0066aa] text-white"
-                : "bg-gray-200 text-gray-600"
-                }`}
+              className={`px-4 py-1 rounded-full text-sm ${
+                unit === "l"
+                  ? "bg-[#0066aa] text-white"
+                  : "bg-gray-200 text-gray-600"
+              }`}
             >
               L
             </button>
@@ -517,7 +525,6 @@ export default function StatsPage() {
         {/* 🔹 폐기물 분류 비율 */}
         <SectionBox title="폐기물 분류 비율">
           <div className="flex justify-between items-start gap-12">
-            {/* 왼쪽: 도넛 차트 */}
             <div className="w-[420px] h-[320px] flex-shrink-0">
               <ResponsiveContainer>
                 <PieChart>
@@ -540,7 +547,7 @@ export default function StatsPage() {
                       const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
                       const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
                       const safeValue = Number(value ?? 0).toFixed(0);
-
+                      
                       return (
                         <text
                           x={x}
@@ -564,7 +571,6 @@ export default function StatsPage() {
               </ResponsiveContainer>
             </div>
 
-            {/* 오른쪽: 범례 */}
             <div className="flex-1 pt-4">
               <div className="grid grid-cols-1 gap-3">
                 {wasteRatio.map((item, idx) => (
@@ -603,19 +609,21 @@ export default function StatsPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`px-4 py-1 rounded-md text-sm ${regionMode === "count"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-                  }`}
+                className={`px-4 py-1 rounded-md text-sm ${
+                  regionMode === "count"
+                    ? "bg-[#0066aa] text-white"
+                    : "bg-gray-200 text-gray-600"
+                }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`px-4 py-1 rounded-md text-sm ${regionMode === "amount"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
-                  }`}
+                className={`px-4 py-1 rounded-md text-sm ${
+                  regionMode === "amount"
+                    ? "bg-[#0066aa] text-white"
+                    : "bg-gray-200 text-gray-600"
+                }`}
               >
                 수거량별
               </button>
