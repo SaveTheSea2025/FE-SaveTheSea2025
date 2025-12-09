@@ -3,34 +3,44 @@ options:
 
 availableSecrets:
   secretManager:
+    # Secret Manager에서 환경 변수를 가져옵니다.
     - versionName: projects/$PROJECT_ID/secrets/VITE_KAKAO_MAP_KEY/versions/latest
       env: VITE_KAKAO_MAP_KEY
     - versionName: projects/$PROJECT_ID/secrets/VITE_MOF_KEY/versions/latest
       env: VITE_MOF_KEY
 
 substitutions:
+  # 사용자 정의 변수만 남겨둡니다.
   _VITE_API_BASE_URL: "https://api.savethesea.site"
 
 steps:
+  # 1. Docker 이미지 빌드
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
         "build",
         "-t", "gcr.io/$PROJECT_ID/savethesea-fe",
-
+        
+        # Build Arguments 전달:
+        # 일반 치환 변수 ($): _VITE_API_BASE_URL
         "--build-arg", "VITE_API_BASE_URL=$_VITE_API_BASE_URL",
-        "--build-arg", "VITE_KAKAO_MAP_KEY=$VITE_KAKAO_MAP_KEY",
-        "--build-arg", "VITE_MOF_KEY=$VITE_MOF_KEY",
+        
+        # Secret Manager 변수 ($$): Cloud Build가 먼저 치환하지 않도록 $$ 사용
+        "--build-arg", "VITE_KAKAO_MAP_KEY=$$VITE_KAKAO_MAP_KEY",
+        "--build-arg", "VITE_MOF_KEY=$$VITE_MOF_KEY",
 
         "."
       ]
+    # 이 단계에서 Secret 환경 변수를 사용할 수 있도록 지정
     secretEnv:
       - VITE_KAKAO_MAP_KEY
       - VITE_MOF_KEY
 
+  # 2. Docker 이미지 GCR/Artifact Registry에 푸시
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/savethesea-fe"]
 
+  # 3. Cloud Run에 배포
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
