@@ -14,24 +14,20 @@ substitutions:
   _VITE_API_BASE_URL: "https://api.savethesea.site"
 
 steps:
-  # 1. Docker 이미지 빌드
+  # 1. Docker 이미지 빌드 (Bash 쉘을 사용하여 변수 치환 강제 적용)
+  #    - entrypoint: "bash"를 사용하여 쉘 환경에서 명령어를 실행합니다.
+  #    - $$ 변수명 형식을 사용하여 Cloud Build 치환을 피하고, Bash가 실제 시크릿 값을 채우도록 합니다.
   - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
     args:
-      [
-        "build",
-        "-t", "gcr.io/$PROJECT_ID/savethesea-fe",
-        
-        # Build Arguments 전달:
-        # 일반 치환 변수 ($): _VITE_API_BASE_URL
-        "--build-arg", "VITE_API_BASE_URL=$_VITE_API_BASE_URL",
-        
-        # Secret Manager 변수 ($$): Cloud Build가 먼저 치환하지 않도록 $$ 사용
-        "--build-arg", "VITE_KAKAO_MAP_KEY=$$VITE_KAKAO_MAP_KEY",
-        "--build-arg", "VITE_MOF_KEY=$$VITE_MOF_KEY",
-
-        "."
-      ]
-    # 이 단계에서 Secret 환경 변수를 사용할 수 있도록 지정
+      - "-c"
+      - |
+        docker build \
+        -t gcr.io/$PROJECT_ID/savethesea-fe \
+        --build-arg VITE_API_BASE_URL=$_VITE_API_BASE_URL \
+        --build-arg VITE_KAKAO_MAP_KEY=$$VITE_KAKAO_MAP_KEY \
+        --build-arg VITE_MOF_KEY=$$VITE_MOF_KEY \
+        .
     secretEnv:
       - VITE_KAKAO_MAP_KEY
       - VITE_MOF_KEY
