@@ -1,0 +1,50 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _VITE_API_BASE_URL: "https://api.savethesea.site"
+  _VITE_KAKAO_MAP_KEY: "YOUR_KAKAO_MAP_KEY"
+  _VITE_MOF_KEY: "YOUR_MOF_KEY"
+
+steps:
+  # 1. Docker 이미지 빌드 (여기에서 build args 전달)
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/savethesea-fe",
+        "--build-arg",
+        "VITE_API_BASE_URL=${_VITE_API_BASE_URL}",
+        "--build-arg",
+        "VITE_KAKAO_MAP_KEY=${_VITE_KAKAO_MAP_KEY}",
+        "--build-arg",
+        "VITE_MOF_KEY=${_VITE_MOF_KEY}",
+        "."
+      ]
+
+  # 2. Docker 이미지 push
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/savethesea-fe"]
+
+  # 3. Cloud Run에 배포
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      [
+        "run",
+        "deploy",
+        "savethesea-fe",
+        "--image",
+        "gcr.io/$PROJECT_ID/savethesea-fe",
+        "--region",
+        "europe-west1",
+        "--platform",
+        "managed",
+        "--allow-unauthenticated",
+        "--port",
+        "8080"
+      ]
+
+images:
+  - "gcr.io/$PROJECT_ID/savethesea-fe"
