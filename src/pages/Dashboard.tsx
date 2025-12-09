@@ -7,6 +7,21 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
 
+// 메인 배경
+import backgroundImage from "@/assets/main/backgroundimage.png";
+
+// 섹션2 아이콘
+import cleanupIcon from "@/assets/main/mainpage-cleanup.png";
+
+// 섹션3 카드 아이콘들
+import trashIcon from "@/assets/main/mainpage-trashcan.png";
+import peopleIcon from "@/assets/main/mainpage-people.png";
+import arrowIcon from "@/assets/main/mainpage-arrow.png";
+
+// footer 아이콘
+import youtubeIcon from "@/assets/main/mainpage-youtube.png";
+import earthIcon from "@/assets/main/mainpage-earth.png";
+
 // ✅ ActivityRecord 타입 정의
 interface ActivityRecord {
   id: number;
@@ -67,7 +82,7 @@ function Dashboard() {
         <div
           className="snap-start h-screen md:h-auto relative text-white flex flex-col"
           style={{
-            backgroundImage: "url('/src/assets/main/backgroundimage.png')",
+            backgroundImage: `url(${backgroundImage})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -180,7 +195,7 @@ function Dashboard() {
             <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-32 mt-6 md:mt-10 relative">
               {/* 아이콘 이미지 */}
               <img
-                src="/src/assets/main/mainpage-cleanup.png"
+                src={cleanupIcon}
                 alt="cleanup"
                 className="w-[100px] h-[100px] md:w-[260px] md:h-[260px]"
               />
@@ -269,11 +284,11 @@ function Dashboard() {
                   </h3>
                   <div className="flex items-center gap-3 text-[10px] text-[#0C4A6E]">
                     <div className="flex items-center gap-1">
-                      <img src="/src/assets/main/mainpage-trashcan.png" alt="trash" className="w-3 h-3" />
+                      <img src={trashIcon} alt="trash" className="w-3 h-3" />
                       <span>{activity.totalWeight}kg</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <img src="/src/assets/main/mainpage-people.png" alt="people" className="w-3 h-3" />
+                      <img src={peopleIcon} alt="people" className="w-3 h-3" />
                       <span>{activity.memberCount}명</span>
                     </div>
                   </div>
@@ -318,7 +333,7 @@ function Dashboard() {
                         <div className="flex items-center gap-5">
                           <div className="flex items-center gap-2">
                             <img
-                              src="/src/assets/main/mainpage-trashcan.png"
+                              src={trashIcon}
                               alt="trash"
                               className="w-4 h-4"
                             />
@@ -327,7 +342,7 @@ function Dashboard() {
 
                           <div className="flex items-center gap-2">
                             <img
-                              src="/src/assets/main/mainpage-people.png"
+                              src={peopleIcon}
                               alt="people"
                               className="w-4 h-4"
                             />
@@ -336,7 +351,7 @@ function Dashboard() {
                         </div>
 
                         <img
-                          src="/src/assets/main/mainpage-arrow.png"
+                          src={arrowIcon}
                           alt="arrow"
                           className="w-5 h-5"
                         />
@@ -394,7 +409,7 @@ function Dashboard() {
                 rel="noopener noreferrer"
               >
                 <img
-                  src="/src/assets/main/mainpage-youtube.png"
+                  src={youtubeIcon}
                   alt="YouTube"
                   className="w-6 h-6 hover:opacity-80 transition-opacity"
                 />
@@ -406,7 +421,7 @@ function Dashboard() {
                 rel="noopener noreferrer"
               >
                 <img
-                  src="/src/assets/main/mainpage-earth.png"
+                  src={earthIcon}
                   alt="Website"
                   className="w-6 h-6 hover:opacity-80 transition-opacity"
                 />
