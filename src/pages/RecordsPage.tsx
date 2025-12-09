@@ -242,7 +242,7 @@ const RecordsPage: React.FC = () => {
       <div style="position: relative; width: 60px; height: 70px;">
         <!-- 기본 마커 -->
         <img 
-          src=src={markerImg}
+          src={markerImg}
           style="width: 60px; height: 70px; display: block;"
           alt="marker"
         />

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Header from "../components/common/Header";
 import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
-import bluecheck from "../assets/stats/bluecheck.png";
+import bluecheck from "../assets/write/bluecheck.png";
 import PhotoUploadSection from "../components/write/PhotoUploadSection";
 import backgroundimage2 from "@/assets/write/backgroundimage2.png";
 import LocationSection from "../components/write/LocationSection";
