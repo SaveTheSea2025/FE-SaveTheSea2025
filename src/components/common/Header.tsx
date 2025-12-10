@@ -4,11 +4,11 @@ import { useEffect, useState, useRef } from "react"; // useRef 추가
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-import logoImage from "@/assets/header/logoimage.png";
-import headerProfile from "@/assets/header/headerprofile.png";
-import headerProfile2 from "@/assets/header/headerprofile2.png";
-import headerPen from "@/assets/header/headerpen.png";
-import headerPenWhite from "@/assets/header/headerpen-white.png";
+import logoImage from "@/assets/header/logoimage.webp";
+import headerProfile from "@/assets/header/headerprofile.webp";
+import headerProfile2 from "@/assets/header/headerprofile2.webp";
+import headerPen from "@/assets/header/headerpen.webp";
+import headerPenWhite from "@/assets/header/headerpen-white.webp";
 
 interface HeaderProps {
   forceScrolled?: boolean;
@@ -100,7 +100,7 @@ function Header({ forceScrolled = false }: HeaderProps) {
       return user.profileUrl;
     }
     // 기본 이미지 (스크롤 상태에 따라 다름)
-    return scrolled ? "/src/assets/header/headerprofile2.png" : "/src/assets/header/headerprofile.png";
+    return scrolled ? headerProfile2 : headerProfile;
   }
 
   return (
