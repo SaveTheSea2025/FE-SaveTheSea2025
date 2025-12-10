@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { loadKakao } from "../../../lib/loadKakao";
 
-import pinIcon from "@/assets/pin.png";
+import pinIcon from "@/assets/pin.webp";
 
 interface Props {
   center: { lat: number; lng: number };

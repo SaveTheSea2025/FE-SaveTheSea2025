@@ -5,8 +5,8 @@ import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'; // 💡 [추가] 페이지 이동을 위한 useNavigate
 import Header from '../components/common/Header';
 
-import dolphinIcon from "@/assets/auth/dolphin-icon.png";
-import otterIcon from "@/assets/auth/otter-icon.png";
+import dolphinIcon from "@/assets/auth/dolphin-icon.webp";
+import otterIcon from "@/assets/auth/otter-icon.webp";
 
 const ICON_PATHS = {
     DOLPHIN: dolphinIcon,
