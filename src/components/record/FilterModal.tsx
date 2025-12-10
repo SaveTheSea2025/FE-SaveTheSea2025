@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 interface FilterModalProps {
     onClose: () => void;
@@ -7,74 +7,40 @@ interface FilterModalProps {
 }
 
 const FilterModal: React.FC<FilterModalProps> = ({ onClose, onApply }) => {
-    const [periodType, setPeriodType] = useState("분기");
-    const [selectedQuarter, setSelectedQuarter] = useState("1분기");
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
+    // ✅ 날짜 도우미 함수 (오늘, 3개월 전)
+    const getToday = () => new Date().toISOString().split("T")[0];
+    const getThreeMonthsAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 3);
+        return d.toISOString().split("T")[0];
+    };
 
-    const [groupType, setGroupType] = useState("단체");
-    const [groupName, setGroupName] = useState("");
+    // ✅ 상태 관리
+    // 1. 기간 (기본값: 오늘 ~ 3개월 전)
+    const [startDate, setStartDate] = useState(getThreeMonthsAgo());
+    const [endDate, setEndDate] = useState(getToday());
 
-    const [province, setProvince] = useState("");
-    const [city, setCity] = useState("");
-    const [beach, setBeach] = useState("");
+    // 2. 유저명 검색 (타입 + 키워드)
+    const [userType, setUserType] = useState("ALL"); // ALL | PERSONAL | GROUP
+    const [username, setUsername] = useState("");
 
-    const [beachData, setBeachData] = useState<any[]>([]);
-    const SERVICE_KEY = import.meta.env.VITE_MOF_KEY;
-
-    /* ✅ 해양수산부 해수욕장 API 불러오기 */
-    useEffect(() => {
-        const fetchBeaches = async () => {
-            try {
-                const url = `https://api.odcloud.kr/api/15056087/v1/uddi:3bcca607-8b03-4760-b1df-abc5d4ef2a36?page=1&perPage=2000&serviceKey=${SERVICE_KEY}`;
-                const res = await fetch(url);
-                const json = await res.json();
-
-                if (!json.data) throw new Error("데이터 없음 또는 인증 오류");
-                setBeachData(json.data);
-                console.log("✅ 해수욕장 데이터:", json.data.slice(0, 5));
-            } catch (err) {
-                console.error("🌊 해수욕장 API 로드 실패:", err);
-            }
-        };
-        fetchBeaches();
-    }, [SERVICE_KEY]);
-
-    /* ✅ 필터링 로직: 시도 → 시군구 → 해변 */
-    const provinces = Array.from(
-        new Set(beachData.map((b) => b["지자체"]))
-    ).filter(Boolean);
-
-    const cities = province
-        ? Array.from(
-            new Set(
-                beachData
-                    .filter((b) => b["지자체"] === province)
-                    .map((b) => b["관리청"])
-            )
-        ).filter(Boolean)
-        : [];
-
-    const beaches = city
-        ? beachData.filter(
-            (b) => b["지자체"] === province && b["관리청"] === city
-        )
-        : province
-            ? beachData.filter((b) => b["지자체"] === province)
-            : [];
+    // 3. 활동명 검색 (타입 + 키워드)
+    const [activityType, setActivityType] = useState("ALL"); // ALL | PERSONAL | GROUP
+    const [activityName, setActivityName] = useState("");
 
     /* ✅ 필터 적용 */
     const handleApply = () => {
         const filters = {
-            periodType,
-            selectedQuarter,
             startDate,
             endDate,
-            groupType,
-            groupName,
-            province,
-            city,
-            beach,
+
+            // 유저 검색 조건
+            userType: userType === "ALL" ? null : userType, // 백엔드 처리에 맞게 null 또는 값 전달
+            username,
+
+            // 활동명 검색 조건
+            activityType: activityType === "ALL" ? null : activityType,
+            activityName,
         };
         onApply(filters);
         onClose();
@@ -82,170 +48,115 @@ const FilterModal: React.FC<FilterModalProps> = ({ onClose, onApply }) => {
 
     /* ✅ 필터 초기화 */
     const handleReset = () => {
-        setPeriodType("분기");
-        setSelectedQuarter("1분기");
-        setStartDate("");
-        setEndDate("");
-        setGroupType("단체");
-        setGroupName("");
-        setProvince("");
-        setCity("");
-        setBeach("");
+        setStartDate(getThreeMonthsAgo());
+        setEndDate(getToday());
+
+        setUserType("ALL");
+        setUsername("");
+
+        setActivityType("ALL");
+        setActivityName("");
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-[520px] max-h-[90vh] overflow-y-auto p-8">
+            <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-h-[90vh] overflow-y-auto p-8">
                 {/* 제목 */}
-                <h2 className="text-center text-xl font-semibold text-[#114C79] mb-6">
-                    필터
+                <h2 className="text-center text-xl font-bold text-[#114C79] mb-8">
+                    상세 필터
                 </h2>
 
-                {/* ✅ 기간 */}
-                <div className="mb-6">
-                    <p className="font-semibold text-[#114C79] mb-2 text-sm">기간</p>
-                    <div className="flex items-center gap-3">
-                        <select
-                            value={periodType}
-                            onChange={(e) => setPeriodType(e.target.value)}
-                            className="bg-gray-100 px-3 py-2 rounded-lg text-sm w-[120px] focus:outline-none"
-                        >
-                            <option value="분기">분기</option>
-                            <option value="직접입력">직접입력</option>
-                        </select>
-
-                        <span className="text-gray-400">|</span>
-
-                        {periodType === "분기" ? (
-                            <select
-                                value={selectedQuarter}
-                                onChange={(e) => setSelectedQuarter(e.target.value)}
-                                className="bg-gray-100 px-3 py-2 rounded-lg text-sm w-[160px]"
-                            >
-                                <option>1분기</option>
-                                <option>2분기</option>
-                                <option>3분기</option>
-                                <option>4분기</option>
-                            </select>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="bg-gray-100 px-3 py-2 rounded-lg text-sm w-[140px]"
-                                />
-                                <span className="text-gray-500">~</span>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="bg-gray-100 px-3 py-2 rounded-lg text-sm w-[140px]"
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <hr className="my-4" />
-
-                {/* ✅ 활동명 */}
-                <div className="mb-6">
-                    <p className="font-semibold text-[#114C79] mb-2 text-sm">활동명</p>
-                    <div className="flex gap-2 items-center">
-                        <select
-                            value={groupType}
-                            onChange={(e) => setGroupType(e.target.value)}
-                            className="bg-gray-100 px-3 py-2 rounded-lg text-sm"
-                        >
-                            <option>단체</option>
-                            <option>개인</option>
-                        </select>
+                {/* 1. 기간 설정 */}
+                <div className="mb-8">
+                    <p className="font-semibold text-[#114C79] mb-3 text-sm">활동 기간</p>
+                    <div className="flex items-center gap-2">
                         <input
-                            type="text"
-                            value={groupName}
-                            onChange={(e) => setGroupName(e.target.value)}
-                            placeholder="단체명을 입력해주세요"
-                            className="bg-gray-100 px-3 py-2 rounded-lg text-sm flex-1"
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="bg-gray-50 border border-gray-200 px-3 py-2.5 rounded-lg text-sm w-full focus:outline-none focus:border-sky-500 transition"
+                        />
+                        <span className="text-gray-400">~</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="bg-gray-50 border border-gray-200 px-3 py-2.5 rounded-lg text-sm w-full focus:outline-none focus:border-sky-500 transition"
                         />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 ml-1">
-                        * 띄어쓰기 없이 입력해주세요.
-                    </p>
                 </div>
 
-                <hr className="my-4" />
+                <hr className="border-gray-100 mb-8" />
 
-                {/* ✅ 위치 */}
-                <div>
-                    <p className="font-semibold text-[#114C79] mb-2 text-sm">위치</p>
-                    <div className="flex flex-col gap-2">
-                        <select
-                            value={province}
-                            onChange={(e) => {
-                                setProvince(e.target.value);
-                                setCity("");
-                                setBeach("");
-                            }}
-                            className="bg-gray-100 px-3 py-2 rounded-lg text-sm"
-                        >
-                            <option value="">시/도 선택</option>
-                            {provinces.map((p) => (
-                                <option key={p}>{p}</option>
-                            ))}
-                        </select>
+                {/* 2. 검색 조건 */}
+                <div className="space-y-6">
 
-                        {province && (
+                    {/* 유저명 검색 */}
+                    <div>
+                        <p className="font-semibold text-[#114C79] mb-2 text-sm">작성자(유저명) 검색</p>
+                        <div className="flex gap-2">
                             <select
-                                value={city}
-                                onChange={(e) => {
-                                    setCity(e.target.value);
-                                    setBeach("");
-                                }}
-                                className="bg-gray-100 px-3 py-2 rounded-lg text-sm"
+                                value={userType}
+                                onChange={(e) => setUserType(e.target.value)}
+                                className="bg-gray-50 border border-gray-200 px-3 py-2.5 rounded-lg text-sm w-[100px] focus:outline-none focus:border-sky-500 cursor-pointer"
                             >
-                                <option value="">시/군/구 선택</option>
-                                {cities.map((c) => (
-                                    <option key={c}>{c}</option>
-                                ))}
+                                <option value="ALL">전체</option>
+                                <option value="PERSONAL">개인</option>
+                                <option value="GROUP">단체</option>
                             </select>
-                        )}
-
-                        {(province || city) && (
-                            <select
-                                value={beach}
-                                onChange={(e) => setBeach(e.target.value)}
-                                className="bg-gray-100 px-3 py-2 rounded-lg text-sm"
-                            >
-                                <option value="">해수욕장 선택</option>
-                                {beaches.map((b, idx) => (
-                                    <option key={idx}>
-                                        {b["해수욕장명"] || b["해수욕장"] || `(${b["관리청"]})`}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="유저명을 입력하세요"
+                                className="flex-1 bg-gray-50 border border-gray-200 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-sky-500 transition"
+                            />
+                        </div>
                     </div>
+
+                    {/* 활동명 검색 */}
+                    <div>
+                        <p className="font-semibold text-[#114C79] mb-2 text-sm">활동명 검색</p>
+                        <div className="flex gap-2">
+                            <select
+                                value={activityType}
+                                onChange={(e) => setActivityType(e.target.value)}
+                                className="bg-gray-50 border border-gray-200 px-3 py-2.5 rounded-lg text-sm w-[100px] focus:outline-none focus:border-sky-500 cursor-pointer"
+                            >
+                                <option value="ALL">전체</option>
+                                <option value="PERSONAL">개인</option>
+                                <option value="GROUP">단체</option>
+                            </select>
+                            <input
+                                type="text"
+                                value={activityName}
+                                onChange={(e) => setActivityName(e.target.value)}
+                                placeholder="활동 제목을 입력하세요"
+                                className="flex-1 bg-gray-50 border border-gray-200 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-sky-500 transition"
+                            />
+                        </div>
+                    </div>
+
                 </div>
 
-                {/* ✅ 버튼 영역 */}
-                <div className="flex justify-between items-center mt-8">
+                {/* 하단 버튼 영역 */}
+                <div className="flex justify-between items-center mt-10 pt-4 border-t border-gray-100">
                     <button
                         onClick={handleReset}
-                        className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition text-sm"
+                        className="px-4 py-2 text-gray-500 text-sm hover:text-gray-800 transition flex items-center gap-1"
                     >
-                        필터 초기화
+                        ↺ 초기화
                     </button>
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            className="px-5 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                            className="px-6 py-2.5 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition text-sm font-medium"
                         >
                             취소
                         </button>
                         <button
                             onClick={handleApply}
-                            className="px-5 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition"
+                            className="px-6 py-2.5 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition text-sm font-medium shadow-md shadow-sky-200"
                         >
                             적용하기
                         </button>

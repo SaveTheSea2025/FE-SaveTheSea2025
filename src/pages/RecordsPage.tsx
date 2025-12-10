@@ -5,20 +5,25 @@ import Header from "../components/common/Header";
 import RecordCard from "../components/record/RecordCard";
 import RecordDetailPanel from "../components/record/RecordDetailPanel";
 import FilterModal from "../components/record/FilterModal";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, RotateCcw } from "lucide-react"; // 아이콘 추가
 
 import markerImg from "@/assets/record/marker.webp";
 
+// Kakao Maps API 타입을 위한 전역 선언
 declare global {
   interface Window {
     kakao: any;
   }
 }
 
+// API 응답 데이터 타입 정의
 type CleanupItem = {
   id: number;
-  name: string;
-  groups: boolean;
+  thumbnail: string;
+  memberType: "PERSONAL" | "GROUP";
+  username: string;
+  profileUrl: string;
+  activityName: string;
   startDate: string;
   endDate: string;
   totalActivityTime: string;
@@ -28,43 +33,71 @@ type CleanupItem = {
   endAddress: string;
   startLatitude: number;
   startLongitude: number;
-  endLatitude: number;
-  endLongitude: number;
   memberCount: number;
   totalWeight: number;
-  thumbnail: string;
 };
 
 const RecordsPage: React.FC = () => {
+  // 지도와 클러스터러 인스턴스를 저장할 ref
   const mapRef = useRef<any>(null);
-  const kakaoKey = import.meta.env.VITE_KAKAO_MAP_KEY;
-  const BASE_URL =
-    import.meta.env.VITE_API_BASE_URL;
+  const clustererRef = useRef<any>(null);
 
-  const [data, setData] = useState<CleanupItem[]>([]);
+  // 환경 변수 로드
+  const kakaoKey = import.meta.env.VITE_KAKAO_MAP_KEY;
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+  // 데이터 상태 관리
+  const [data, setData] = useState<CleanupItem[]>([]); // API로 불러온 전체 데이터
+  const [visibleData, setVisibleData] = useState<CleanupItem[]>([]); // 현재 지도 화면에 보이는 데이터
+
+  // UI 상태 관리
   const [loading, setLoading] = useState(true);
   const [, setError] = useState<string | null>(null);
-  const [activeRegion, setActiveRegion] = useState<string>("");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<CleanupItem | null>(null);
-  const [visibleData, setVisibleData] = useState<CleanupItem[]>([]);
-  const [filters, setFilters] = useState<any>(null);
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 10;
+  const [activeRegion, setActiveRegion] = useState<string>(""); // 선택된 지역 필터
+  const [isFilterOpen, setIsFilterOpen] = useState(false); // 필터 모달 열림 여부
+  const [filters, setFilters] = useState<any>(null); // 적용된 필터 객체
+  const [selectedRecord, setSelectedRecord] = useState<CleanupItem | null>(null); // 상세 보기 선택된 기록
+
+  // 페이지네이션 상태
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   /* ==================================
-   * 🧭 백엔드 데이터 호출
+   * 1. 백엔드 데이터 호출 (페이지네이션)
    * ================================== */
   useEffect(() => {
     const fetchRecords = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${BASE_URL}/api/activity-records?page=0&size=50`);
+
+        // 토큰 헤더 설정
+        const token = localStorage.getItem("accessToken");
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        // 데이터 요청
+        const res = await fetch(`${BASE_URL}/api/activity-records?page=${page}&size=50`, {
+          method: "GET",
+          headers: headers,
+        });
+
         if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
         const json = await res.json();
+
         const list = json.data?.content || [];
+        const pageInfo = json.data?.page;
+
         setData(list);
-        setVisibleData(list);
+        setVisibleData(list); // 초기 로드 시 전체 리스트 표시
+
+        if (pageInfo) {
+          setTotalPages(pageInfo.totalPages);
+        }
+
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -72,19 +105,21 @@ const RecordsPage: React.FC = () => {
       }
     };
     fetchRecords();
-  }, [BASE_URL]);
+  }, [BASE_URL, page]);
 
   /* ==================================
-   * 🗺️ Kakao 지도 초기화 및 표시
+   * 2. Kakao 지도 초기화 및 마커/히트맵 설정
    * ================================== */
   useEffect(() => {
     if (loading || data.length === 0) return;
 
+    // 카카오 맵 SDK 스크립트 로드
     const loadKakaoSDK = () =>
       new Promise<void>((resolve) => {
         if (window.kakao && window.kakao.maps) return resolve();
         const existing = document.getElementById("kakao-map-sdk");
         if (existing) return existing.addEventListener("load", () => resolve());
+
         const script = document.createElement("script");
         script.id = "kakao-map-sdk";
         script.async = true;
@@ -98,44 +133,28 @@ const RecordsPage: React.FC = () => {
       const container = document.getElementById("map");
       if (!container) return;
 
+      // 지도 객체 생성 (한 번만)
       if (!mapRef.current) {
         mapRef.current = new kakao.maps.Map(container, {
-          center: new kakao.maps.LatLng(36.5, 127.8),
+          center: new kakao.maps.LatLng(36.5, 127.8), // 대한민국 중심 좌표
           level: 13,
         });
       }
       const map = mapRef.current;
 
-      // ✅ 해역별 중심 좌표 설정
-      const regionCenters: Record<string, { lat: number; lng: number }> = {
-        동해: { lat: 37.228374233713296, lng: 129.15228325008 },
-        서해: { lat: 36.61012468699194, lng: 126.47965910025837 },
-        남해: { lat: 35.06632512126167, lng: 127.94904530228371 },
-        제주: { lat: 33.361359074387686, lng: 126.53282883048968 },
-      };
-
-      if (activeRegion && regionCenters[activeRegion]) {
-        const { lat, lng } = regionCenters[activeRegion];
-        map.panTo(new kakao.maps.LatLng(lat, lng));
-        map.setLevel(9);
-      }
-
-      /* ==================================
-       * 🔥 히트맵
-       * ================================== */
-
-      // ✅ 히트맵용 커스텀 오버레이 클래스 정의
+      // ------------------------------------------------
+      // 🔥 히트맵 (HeatCircle) 구현부 - 전체 코드 포함
+      // ------------------------------------------------
       function HeatCircle(this: any, bounds: any, color: string, opacity: number) {
         this.bounds = bounds;
         this.baseOpacity = opacity;
-
         const node = (this.node = document.createElement("div"));
         node.style.position = "absolute";
-        node.style.background = color;          // 🔹 히트 색상 (기본: 빨간색)
+        node.style.background = color;
         node.style.borderRadius = "50%";
         node.style.pointerEvents = "none";
-        node.style.filter = "blur(10px)";       // 🔹 퍼짐 정도 (blur 값이 높을수록 부드럽게 확산됨)
-        node.style.mixBlendMode = "multiply";   // 🔹 색 겹침 방식 (multiply = 투명하게 겹침)
+        node.style.filter = "blur(10px)";
+        node.style.mixBlendMode = "multiply";
       }
 
       HeatCircle.prototype = new kakao.maps.AbstractOverlay();
@@ -151,285 +170,275 @@ const RecordsPage: React.FC = () => {
         const width = ne.x - sw.x;
         const height = sw.y - ne.y;
         const map = this.getMap();
-        const zoom = map.getLevel();
+        const level = map.getLevel();
 
-        // ✅ 확대/축소 시 크기와 투명도, 퍼짐 정도를 조정
-        let scaleFactor = 1.0;   // 🔹 히트맵 크기 비율
-        let opacityAdjust = 1.0; // 🔹 확대 시 투명도 조정
-        let blurPx = 10;         // 🔹 기본 블러 (히트 확산 범위)
+        // 줌 레벨에 따른 크기/투명도 조정
+        let scaleFactor = 1.0;
+        let opacityAdjust = 1.0;
+        let blurPx = 10;
 
-        // 🔧 줌 레벨에 따른 히트맵 반응 설정
-        if (zoom >= 13) {
-          scaleFactor = 1.6;
-          opacityAdjust = 0.5;
-          blurPx = 30;
-        } else if (zoom >= 11) {
-          scaleFactor = 1.25;
-          opacityAdjust = 0.35;
-          blurPx = 30;
-        } else if (zoom >= 9) {
-          scaleFactor = 0.9;
-          opacityAdjust = 0.2;
-          blurPx = 30;
-        } else if (zoom >= 7) {
-          scaleFactor = 0.65;
-          opacityAdjust = 0.1;
-          blurPx = 30;
-        } else if (zoom >= 5) {
-          scaleFactor = 0.45;
-          opacityAdjust = 0.04;
-          blurPx = 10;
-        } else {
-          scaleFactor = 0.45;
-          opacityAdjust = 0.04;
-          blurPx = 10;
-        }
+        if (level <= 5) { scaleFactor = 0.02; opacityAdjust = 0.2; blurPx = 4; }
+        else if (level <= 8) { scaleFactor = 0.06; opacityAdjust = 0.3; blurPx = 10; }
+        else if (level <= 11) { scaleFactor = 0.15; opacityAdjust = 0.5; blurPx = 15; }
+        else { scaleFactor = 1.2; opacityAdjust = 0.7; blurPx = 15; }
 
-        // ✅ DOM 스타일 적용
         this.node.style.left = `${sw.x}px`;
         this.node.style.top = `${ne.y}px`;
         this.node.style.width = `${width * scaleFactor}px`;
         this.node.style.height = `${height * scaleFactor}px`;
+
+        const diffX = (width - (width * scaleFactor)) / 2;
+        const diffY = (height - (height * scaleFactor)) / 2;
+        this.node.style.transform = `translate(${diffX}px, ${diffY}px)`;
+
         this.node.style.opacity = (this.baseOpacity * opacityAdjust).toString();
-        this.node.style.filter = `blur(${blurPx}px)`; // 🔹 blurPx 커질수록 부드럽게 확산
+        this.node.style.filter = `blur(${blurPx}px)`;
       };
 
-      HeatCircle.prototype.onRemove = function () {
-        this.node.parentNode?.removeChild(this.node);
-      };
-
-      /* ==================================
-       * ✅ 히트맵 실제 생성 부분
-       * ================================== */
-
-      // 🔸 각 지점의 totalWeight 값에 따라 색상·투명도·크기 조절
+      // 히트맵 데이터 그리기
       const maxW = Math.max(...data.map((d) => d.totalWeight || 0)) || 1;
-
       data.forEach((p) => {
         const ratio = (p.totalWeight || 0) / maxW;
-
-        // 🔹 히트맵 투명도 (값이 커질수록 강하게 표시)
-        const opacity = 0.42 + ratio * 0.45; // 예: 최소 0.42, 최대 0.87
-
-        // 🔹 히트맵 크기 (값이 클수록 넓게 표시)
-        const size = 0.08 * (1 + ratio); // 예: 0.08 ~ 0.16 정도
-
-        // 🔹 히트맵 색상
-        const color = "rgb(255, 60, 40)"; // 기본 빨간색 계열
-
+        const opacity = 0.42 + ratio * 0.45;
+        const size = 0.08 * (1 + ratio);
+        const color = "rgb(255, 60, 40)";
         const sw = new kakao.maps.LatLng(p.startLatitude - size, p.startLongitude - size);
         const ne = new kakao.maps.LatLng(p.startLatitude + size, p.startLongitude + size);
-
         const bounds = new kakao.maps.LatLngBounds(sw, ne);
-
         const overlay = new (HeatCircle as any)(bounds, color, opacity);
         overlay.setMap(map);
       });
 
-      /* ==================================
-       * 📍 마커 클러스터러 기반 표시 (활동별 썸네일 적용)
-       * ================================== */
-
-      // ✅ 마커를 표시할 배열 생성
-      const markers: any[] = [];
-
-      data.forEach((d) => {
-        const markerPosition = new kakao.maps.LatLng(d.startLatitude, d.startLongitude);
-
-        // 대표 썸네일이 있는 경우 CustomOverlay 사용
-        if (d.thumbnail) {
-          const content = `
-      <div style="position: relative; width: 60px; height: 70px;">
-        <!-- 기본 마커 -->
-        <img 
-          src="${markerImg}"
-          style="width: 60px; height: 70px; display: block;"
-          alt="marker"
-        />
-
-        <!-- 대표 이미지 (원형) -->
-        <div style="
-          position: absolute;
-          top: 2px;
-          left: 8px;
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          overflow: hidden;
-          box-shadow: 0 0 5px rgba(0,0,0,0.3);
-          border: 2px solid white;
-        ">
-          <img 
-            src="${d.thumbnail}" 
-            style="width: 100%; height: 100%; object-fit: cover;"
-            alt="thumbnail"
-          />
-        </div>
-      </div>
-    `;
-
-          const overlay = new kakao.maps.CustomOverlay({
-            position: markerPosition,
-            content: content,
-            yAnchor: 1.0,
-          });
-
-          overlay.setMap(map);
-
-          // ✅ 클릭 시 상세정보 열기
-          kakao.maps.event.addListener(overlay, "click", () => {
-            map.panTo(markerPosition);
-            if (map.getLevel() > 9) map.setLevel(9, { animate: true });
-            setTimeout(() => setSelectedRecord(d), 400);
-          });
-
-          markers.push(overlay);
-        } else {
-          // ✅ 썸네일이 없는 경우 기본 marker만 사용
-          const imageSrc = markerImg;
-          const imageSize = new kakao.maps.Size(52, 52);
-          const imageOption = { offset: new kakao.maps.Point(26, 52) };
-          const markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
-
-          const marker = new kakao.maps.Marker({
-            position: markerPosition,
-            image: markerImage,
-          });
-
-          kakao.maps.event.addListener(marker, "click", () => {
-            map.panTo(markerPosition);
-            if (map.getLevel() > 9) map.setLevel(9, { animate: true });
-            setTimeout(() => setSelectedRecord(d), 400);
-          });
-
-          markers.push(marker);
-        }
-      });
-
-      // ✅ 클러스터러 생성
-      const clusterer = new kakao.maps.MarkerClusterer({
-        map: map,
-        averageCenter: true,
-        minLevel: 7,
-        disableClickZoom: false,
-        calculator: [5, 10, 20],
-        styles: [
-          {
-            width: "48px",
-            height: "48px",
+      // ------------------------------------------------
+      // 📍 마커 클러스터러 및 마커 생성
+      // ------------------------------------------------
+      if (!clustererRef.current) {
+        clustererRef.current = new kakao.maps.MarkerClusterer({
+          map: map,
+          averageCenter: true,
+          minLevel: 7,
+          disableClickZoom: false,
+          calculator: [5, 10, 20],
+          styles: [{
+            width: "48px", height: "48px",
             background: "rgba(23, 125, 203, 0.9)",
             borderRadius: "50%",
             color: "#fff",
-            textAlign: "center",
-            lineHeight: "48px",
-            fontWeight: "bold",
-            fontSize: "15px",
+            textAlign: "center", lineHeight: "48px",
+            fontWeight: "bold", fontSize: "15px",
             border: "2px solid #fff",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-          },
-        ],
+            boxShadow: "0 2px 6px rgba(0,0,0,0.25)"
+          }],
+        });
+      }
+      const clusterer = clustererRef.current;
+      clusterer.clear();
+
+      const markers: any[] = [];
+      data.forEach((d) => {
+        const markerPosition = new kakao.maps.LatLng(d.startLatitude, d.startLongitude);
+        let markerOrOverlay: any;
+
+        if (d.thumbnail) {
+          // 썸네일 커스텀 오버레이
+          const content = `
+            <div style="position: relative; width: 60px; height: 70px;">
+              <img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
+              <div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
+                <img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
+              </div>
+            </div>`;
+          markerOrOverlay = new kakao.maps.CustomOverlay({
+            position: markerPosition, content: content, yAnchor: 1.0
+          });
+          // 커스텀 오버레이는 클러스터러가 관리하므로 setMap(null)
+          markerOrOverlay.setMap(null);
+        } else {
+          // 기본 마커
+          const imageSize = new kakao.maps.Size(52, 52);
+          const imageOption = { offset: new kakao.maps.Point(26, 52) };
+          const markerImage = new kakao.maps.MarkerImage(markerImg, imageSize, imageOption);
+          markerOrOverlay = new kakao.maps.Marker({
+            position: markerPosition, image: markerImage
+          });
+
+          // ✅ 지도 마커 클릭 시 동작 (확대 + 상세패널 열기)
+          kakao.maps.event.addListener(markerOrOverlay, "click", () => {
+            map.panTo(markerPosition);
+            map.setLevel(5, { animate: true }); // 레벨 5로 확대
+            setTimeout(() => setSelectedRecord(d), 300); // 패널 열기
+          });
+        }
+        markers.push(markerOrOverlay);
       });
 
-      // ✅ 마커 등록
       clusterer.addMarkers(markers);
 
-      // ✅ 클러스터 클릭 시 지도 확대
+      // 클러스터 클릭 시 확대
       kakao.maps.event.addListener(clusterer, "clusterclick", (cluster: any) => {
         const level = map.getLevel() - 2;
         map.setLevel(level, { anchor: cluster.getCenter() });
       });
 
-      // ✅ 지도 이동 후 보이는 데이터만 표시
-      kakao.maps.event.addListener(map, "idle", () => {
-        const bounds = map.getBounds();
+      // ------------------------------------------------
+      // 🔄 지도 이동 종료 시(idle) 보이는 데이터 업데이트
+      // ------------------------------------------------
+      kakao.maps.event.removeListener(map, "idle", updateVisibleData);
+      kakao.maps.event.addListener(map, "idle", updateVisibleData);
 
-        // 🔹 보이는 영역에 해당하는 데이터 필터링
+      function updateVisibleData() {
+        const bounds = map.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+
         const visible = data.filter(
           (d) =>
-            d.startLatitude >= bounds.getSouthWest().getLat()
-            && d.startLatitude <= bounds.getNorthEast().getLat()
-            && d.startLongitude >= bounds.getSouthWest().getLng()
-            && d.startLongitude <= bounds.getNorthEast().getLng()
-
+            d.startLatitude >= sw.getLat() &&
+            d.startLatitude <= ne.getLat() &&
+            d.startLongitude >= sw.getLng() &&
+            d.startLongitude <= ne.getLng()
         );
-
-        // 🔹 필터링된 데이터만 오른쪽 카드 리스트에 표시
         setVisibleData(visible);
-        setPage(1); // 페이지 초기화
-      });
-
+      }
     };
 
-    // ✅ SDK 로드 후 지도 초기화 실행
     loadKakaoSDK().then(() => {
       window.kakao.maps.load(initMap);
     });
-  }, [kakaoKey, data, loading, activeRegion]);
+  }, [kakaoKey, data, loading]);
 
   /* ==================================
-   * 🌊 해역 필터 + 필터모달 조건 반영
+   * 3. 지역 필터 & 지도 이동 로직
    * ================================== */
-  const regionMap: Record<string, string> = {
-    강릉: "동해", 속초: "동해", 포항: "동해",
-    여수: "남해", 통영: "남해", 부산: "남해",
-    인천: "서해", 태안: "서해", 군산: "서해", 보령: "서해",
-    제주: "제주",
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const { kakao } = window;
+    const map = mapRef.current;
+
+    const regionCenters: Record<string, { lat: number; lng: number, level: number }> = {
+      동해: { lat: 36.9, lng: 129.5, level: 11 },
+      서해: { lat: 36.9, lng: 126.0, level: 11 },
+      남해: { lat: 34.5, lng: 128.2, level: 11 },
+      제주: { lat: 33.38, lng: 126.55, level: 10 },
+    };
+
+    if (activeRegion && regionCenters[activeRegion]) {
+      // 선택된 지역으로 이동
+      const { lat, lng, level } = regionCenters[activeRegion];
+      map.panTo(new kakao.maps.LatLng(lat, lng));
+      setTimeout(() => {
+        map.setLevel(level, { animate: true });
+      }, 300);
+    } else {
+      // 지역 선택 해제 시 전체 지도로 복귀
+      map.panTo(new kakao.maps.LatLng(36.5, 127.8));
+      setTimeout(() => {
+        map.setLevel(13, { animate: true });
+      }, 300);
+    }
+  }, [activeRegion]);
+
+  // 지역 버튼 토글 (누른 거 또 누르면 취소)
+  const handleRegionClick = (region: string) => {
+    if (activeRegion === region) {
+      setActiveRegion(""); // 취소 (전체보기)
+    } else {
+      setActiveRegion(region); // 지역 선택
+    }
   };
 
-  let filteredData =
-    activeRegion === ""
-      ? visibleData
-      : visibleData.filter((d) => {
-        const coast =
-          Object.entries(regionMap).find(([key]) =>
-            d.regionSigungu.includes(key) || d.regionSido.includes(key)
-          )?.[1] ?? "";
-        return coast === activeRegion;
-      });
+  /* ==================================
+   * 4. 지도 컨트롤 핸들러
+   * ================================== */
+  // 카드 클릭 시 지도 이동 및 확대
+  const handleCardClick = (record: CleanupItem) => {
+    setSelectedRecord(record);
+    if (mapRef.current && window.kakao) {
+      const map = mapRef.current;
+      const moveLatLon = new window.kakao.maps.LatLng(record.startLatitude, record.startLongitude);
+      map.panTo(moveLatLon);
+      setTimeout(() => {
+        map.setLevel(5, { animate: true }); // 상세 보기 레벨
+      }, 300);
+    }
+  };
+
+  // ✅ [추가됨] 전체보기 버튼 (지도를 초기 상태로 되돌림)
+  const handleResetMap = () => {
+    setActiveRegion(""); // 지역 해제 -> useEffect가 감지하여 전체 지도로 이동
+    setSelectedRecord(null); // 패널 닫기
+  };
+
+  /* ==================================
+   * 5. 데이터 필터링 로직
+   * ================================== */
+  let filteredData = visibleData;
 
   if (filters) {
     filteredData = filteredData.filter((d) => {
-      if (filters.groupType && d.groups !== (filters.groupType === "단체")) return false;
-      if (filters.groupName && !d.name.includes(filters.groupName)) return false;
-      if (filters.province && !d.regionSido.includes(filters.province)) return false;
-      if (filters.city && !d.regionSigungu.includes(filters.city)) return false;
-
-      if (filters.periodType === "직접입력" && filters.startDate && filters.endDate) {
+      // 기간 필터
+      if (filters.startDate && filters.endDate) {
         const start = new Date(filters.startDate);
+        start.setHours(0, 0, 0, 0);
         const end = new Date(filters.endDate);
-        const activityDate = new Date(d.startDate);
-        if (activityDate < start || activityDate > end) return false;
+        end.setHours(23, 59, 59, 999);
+        const recordDate = new Date(d.startDate);
+        if (recordDate < start || recordDate > end) return false;
       }
 
-      if (filters.periodType === "분기") {
-        const month = new Date(d.startDate).getMonth() + 1;
-        const quarterRanges: Record<string, [number, number]> = {
-          "1분기": [1, 3],
-          "2분기": [4, 6],
-          "3분기": [7, 9],
-          "4분기": [10, 12],
-        };
-        const [min, max] = quarterRanges[filters.selectedQuarter] || [1, 12];
-        if (month < min || month > max) return false;
+      // 유저 필터
+      if (filters.userType && filters.userType !== "ALL") {
+        if (d.memberType !== filters.userType) return false;
+      }
+      if (filters.username) {
+        if (!d.username.includes(filters.username)) return false;
+      }
+
+      // 활동 필터
+      if (filters.activityType && filters.activityType !== "ALL") {
+        if (d.memberType !== filters.activityType) return false;
+      }
+      if (filters.activityName) {
+        if (!d.activityName.includes(filters.activityName)) return false;
       }
 
       return true;
     });
   }
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const startIndex = (page - 1) * itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+  // 분 단위 시간을 "시간 분"으로 포맷
+  const formatMinutes = (value: string) => {
+    if (value.includes("시간") || value.includes("분")) return value;
+    const minutes = parseInt(value, 10);
+    if (isNaN(minutes)) return value;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}시간 ${m}분`;
+    if (h > 0) return `${h}시간`;
+    return `${m}분`;
+  };
 
-  /* ==================================
-   * 🧩 렌더링
-   * ================================== */
   return (
     <div className="flex flex-col w-full h-screen bg-gray-50 relative">
       <Header forceScrolled />
-      <div className="flex flex-1 pt-[64px]">
+      <div className="flex flex-1 pt-[64px] relative">
+
+        {/* ✅ 지도 영역 */}
         <div id="map" className="flex-1" style={{ height: "calc(100vh - 60px)" }} />
+
+        {/* ✅ [추가됨] 왼쪽 하단 '전체보기' 버튼 (지도 위에 띄움) */}
+        <button
+          onClick={handleResetMap}
+          className="absolute bottom-6 left-6 z-30 flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 hover:shadow-xl transition-all active:scale-95"
+        >
+          <RotateCcw size={16} className="text-gray-500" />
+          전체보기
+        </button>
+
+        {/* ✅ 오른쪽 사이드바 */}
         <div className="w-[400px] bg-white flex flex-col border-l border-gray-200 relative z-40 h-[calc(100vh-60px)]">
+
+          {/* 1. 상단 필터 및 지역 버튼 */}
           <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-[#FDFDFB] mt-3">
             <button
               onClick={() => {
@@ -443,13 +452,12 @@ const RecordsPage: React.FC = () => {
             </button>
 
             <div className="w-px h-5 bg-gray-300" />
+
             <div className="flex gap-2">
               {["동해", "서해", "남해", "제주"].map((region) => (
                 <button
                   key={region}
-                  onClick={() =>
-                    setActiveRegion((prev) => (prev === region ? "" : region))
-                  }
+                  onClick={() => handleRegionClick(region)}
                   className={`px-3 py-[6px] rounded-full text-sm font-medium border transition ${activeRegion === region
                     ? "bg-sky-600 text-white border-sky-600"
                     : "bg-white text-sky-800 border-gray-300 hover:bg-sky-50"
@@ -461,6 +469,7 @@ const RecordsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* 2. 검색 결과 카운트 */}
           <div className="px-4 py-2 border-b border-gray-100 bg-[#FAFAF9] text-sm text-gray-600 flex items-center justify-between">
             <span>
               총 <b className="text-sky-700">{filteredData.length}</b>건의 활동이 검색되었습니다.
@@ -470,6 +479,7 @@ const RecordsPage: React.FC = () => {
             )}
           </div>
 
+          {/* 3. 필터 모달 */}
           {isFilterOpen && (
             <FilterModal
               onClose={() => setIsFilterOpen(false)}
@@ -481,49 +491,51 @@ const RecordsPage: React.FC = () => {
             />
           )}
 
-          {/* ✅ 카드 리스트 */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
-            {paginatedData.map((d) => (
+          {/* 4. 카드 리스트 (스크롤 영역) */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-16 relative">
+            {filteredData.map((d) => (
               <RecordCard
                 key={d.id}
-                onClick={() => setSelectedRecord(d)}
-                title={d.name}
-                date={`${d.startDate.split("T")[0]} / ${d.totalActivityTime}`}
+                onClick={() => handleCardClick(d)} // 카드 클릭 시 지도 이동
+                username={d.username}
+                profileUrl={d.profileUrl}
+                activityName={d.activityName}
+                date={`${d.startDate.split("T")[0]} / ${formatMinutes(d.totalActivityTime)}`}
                 location={`${d.regionSido} ${d.regionSigungu}`}
                 people={d.memberCount}
                 weight={d.totalWeight.toString()}
-                mainImage={d.thumbnail}
-                logoImage={d.thumbnail}
+                thumbnail={d.thumbnail}
               />
             ))}
+          </div>
 
-            {filters && (
+          {/* 5. 필터 초기화 버튼 (고정 위치) */}
+          {filters && (
+            <div className="absolute bottom-[60px] left-0 w-full flex justify-center z-10 pointer-events-none">
               <button
                 onClick={() => setFilters(null)}
-                className="absolute left-1/2 -translate-x-1/2 bottom-3
-                 px-4 py-1.5 rounded-full text-sm font-medium
-                 bg-white/70 text-gray-700 border border-gray-300
-                 backdrop-blur-sm shadow-sm hover:bg-white/90 transition-all z-10"
+                className="pointer-events-auto px-4 py-1.5 rounded-full text-sm font-medium bg-white/90 text-gray-700 border border-gray-300 backdrop-blur-sm shadow-md hover:bg-white transition-all"
               >
                 필터 초기화
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
+          {/* 6. 페이지네이션 */}
           <div className="flex justify-center items-center gap-3 py-3 border-t border-gray-200 bg-white relative z-20">
             <button
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1}
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
               className="px-3 py-1 rounded-md border text-sm disabled:opacity-40"
             >
               이전
             </button>
             <span className="text-sm text-gray-600">
-              {page} / {totalPages}
+              {page + 1} / {totalPages || 1}
             </span>
             <button
-              onClick={() => setPage(page + 1)}
-              disabled={page === totalPages}
+              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+              disabled={page >= totalPages - 1}
               className="px-3 py-1 rounded-md border text-sm disabled:opacity-40"
             >
               다음
@@ -532,6 +544,7 @@ const RecordsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* 7. 상세 정보 패널 (모달 오버레이 아님, 별도 컴포넌트로 관리) */}
       {selectedRecord && (
         <div
           className="fixed inset-0 z-30 bg-black/10"
@@ -547,6 +560,7 @@ const RecordsPage: React.FC = () => {
         </div>
       )}
 
+      {/* 8. 로딩 스피너 */}
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
