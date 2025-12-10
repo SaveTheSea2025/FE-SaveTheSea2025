@@ -364,8 +364,14 @@ export default function StatsPage() {
             {/* 내정보/전체 토글 스위치 */}
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
-                onClick={() => setViewMode("personal")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "personal"
+                onClick={() => {
+                  if (!user) {
+                    alert("로그인이 필요한 기능입니다.");
+                    return;
+                  }
+                  setViewMode("mine");
+                }}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "mine"
                   ? "bg-[#0066aa] text-white shadow-md"
                   : "text-gray-600"
                   }`}
@@ -490,7 +496,7 @@ export default function StatsPage() {
                 setStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 setLocation("전체 지역");
-                setViewMode("personal");
+                setViewMode(user ? "mine" : "all"); // 로그인 상태에 따라 다르게 설정
 
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
@@ -558,25 +564,27 @@ export default function StatsPage() {
 
         {/* 🔹 월별 수거량 추이 */}
         <SectionBox title="월별 수거량 추이">
-          <div className="flex justify-end mb-4 gap-2">
-            <button
-              onClick={() => setUnit("kg")}
-              className={`px-4 py-1 rounded-full text-sm ${unit === "kg"
-                ? "bg-[#0066aa] text-white"
-                : "bg-gray-200 text-gray-600"
-                }`}
-            >
-              kg
-            </button>
-            <button
-              onClick={() => setUnit("l")}
-              className={`px-4 py-1 rounded-full text-sm ${unit === "l"
-                ? "bg-[#0066aa] text-white"
-                : "bg-gray-200 text-gray-600"
-                }`}
-            >
-              L
-            </button>
+          <div className="flex justify-end mb-4">
+            <div className="relative inline-flex bg-gray-200 rounded-full p-1">
+              <button
+                onClick={() => setUnit("kg")}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${unit === "kg"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
+              >
+                kg
+              </button>
+              <button
+                onClick={() => setUnit("l")}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${unit === "l"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
+              >
+                L
+              </button>
+            </div>
           </div>
 
           {monthlyData.length > 0 ? (
@@ -615,52 +623,92 @@ export default function StatsPage() {
 
         {/* 🔹 폐기물 분류 비율 */}
         <SectionBox title="폐기물 분류 비율">
-          <div className="flex justify-between items-start gap-12">
-            <div className="w-[420px] h-[320px] flex-shrink-0">
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={wasteRatio.map((w) => ({
-                      name: wasteTypeMap[w.wasteType] || w.wasteType,
-                      value: w.ratio,
-                    }))}
-                    dataKey="value"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    innerRadius={65}
-                    stroke="#fff"
-                    strokeWidth={2}
-                    labelLine={false}
-                    label={({ name, value, cx, cy, midAngle, outerRadius }) => {
-                      const RADIAN = Math.PI / 180;
-                      const radius = outerRadius + 25;
-                      const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
-                      const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
-                      const safeValue = Number(value ?? 0).toFixed(0);
+          {wasteRatio.length > 0 ? (
+            <div className="flex justify-center items-center gap-16">
+              {/* 도넛 차트 - 크기 확대 및 오른쪽 이동 */}
+              <div className="w-[480px] h-[380px] flex-shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[...wasteRatio]
+                        .sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
+                        .map((w) => ({
+                          name: wasteTypeMap[w.wasteType] || w.wasteType,
+                          value: w.ratio,
+                          wasteType: w.wasteType,
+                        }))}
+                      dataKey="value"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={130}
+                      innerRadius={80}
+                      stroke="#fff"
+                      strokeWidth={3}
+                      labelLine={false}
+                      label={(props) => {
+                        const { name, value, cx, cy, midAngle, outerRadius } = props;
+                        const ratio = Number(value ?? 0);
 
-                      return (
-                        <text
-                          x={x}
-                          y={y}
-                          fill="#0066aa"
-                          textAnchor={x > cx ? "start" : "end"}
-                          dominantBaseline="central"
-                          fontSize="13"
-                          fontWeight="500"
-                        >
-                          {`${name} ${safeValue}%`}
-                        </text>
-                      );
-                    }}
-                  >
-                    {wasteRatio.map((_, idx) => (
-                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+                        // 3% 이하는 아무것도 렌더링하지 않음
+                        if (ratio <= 3) return null;
+
+                        const RADIAN = Math.PI / 180;
+                        const baseDistance = ratio < 10 ? 70 : 50;
+
+                        // 선의 시작점 (도넛 끝)
+                        const lineStartRadius = outerRadius + 5;
+                        const lineStartX = cx + lineStartRadius * Math.cos(-(midAngle ?? 0) * RADIAN);
+                        const lineStartY = cy + lineStartRadius * Math.sin(-(midAngle ?? 0) * RADIAN);
+
+                        // 선의 끝점 (텍스트 위치)
+                        const radius = outerRadius + baseDistance;
+                        const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
+                        const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
+
+                        const safeValue = ratio.toFixed(0);
+                        const fontSize = ratio < 10 ? 11 : 13;
+
+                        return (
+                          <g>
+                            {/* 선 그리기 */}
+                            <line
+                              x1={lineStartX}
+                              y1={lineStartY}
+                              x2={x}
+                              y2={y}
+                              stroke="#0066aa"
+                              strokeWidth={1.5}
+                            />
+                            {/* 텍스트 */}
+                            <text
+                              x={x}
+                              y={y}
+                              fill="#0066aa"
+                              textAnchor={x > cx ? "start" : "end"}
+                              dominantBaseline="central"
+                              fontSize={fontSize}
+                              fontWeight="600"
+                            >
+                              {`${name} ${safeValue}%`}
+                            </text>
+                          </g>
+                        );
+                      }}
+                    >
+                      {[...wasteRatio]
+                        .sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
+                        .map((item, idx) => (
+                          <Cell
+                            key={idx}
+                            fill={COLORS[idx % COLORS.length]}
+                            opacity={hoveredWasteType === null || hoveredWasteType === item.wasteType ? 1 : 0.3}
+                            style={{ transition: 'opacity 0.2s' }}
+                          />
+                        ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
 
               {/* 범례 - 호버 효과 추가 */}
               <div className="flex-1 pt-4">
@@ -710,18 +758,18 @@ export default function StatsPage() {
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`px-4 py-1 rounded-md text-sm ${regionMode === "count"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${regionMode === "count"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
                   }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`px-4 py-1 rounded-md text-sm ${regionMode === "amount"
-                  ? "bg-[#0066aa] text-white"
-                  : "bg-gray-200 text-gray-600"
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${regionMode === "amount"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
                   }`}
               >
                 수거량별
