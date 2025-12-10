@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // ✅ 추가
 import Header from "../components/common/Header";
 import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
@@ -14,6 +15,7 @@ import axios from "axios";
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const { user } = useAuth();
+  const navigate = useNavigate(); // ✅ 추가
 
   const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
   const groupName = user?.memberType === "GROUP"
@@ -48,8 +50,9 @@ const WritePage = () => {
       const diffMs = end.getTime() - start.getTime();
 
       if (diffMs > 0) {
-        const diffHours = diffMs / (1000 * 60 * 60);
-        setVolunteerHours(Math.floor(diffHours * 10) / 10);
+        // 분 단위로 정확하게 계산
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        setVolunteerHours(diffMinutes);
       } else {
         setVolunteerHours(0);
       }
@@ -127,8 +130,13 @@ const WritePage = () => {
         }
       );
 
-      if (response.data.code === 0) alert("활동 기록이 성공적으로 저장되었습니다.");
-      else alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
+      if (response.data.code === 0) {
+        alert("활동 기록이 성공적으로 저장되었습니다.");
+        // ✅ 성공 시 함께한 기록 페이지로 이동
+        navigate("/records");
+      } else {
+        alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
+      }
     } catch (error: any) {
       console.error("❌ 서버 오류:", error);
       if (error.response) console.log("📨 서버 응답:", error.response.data);
@@ -138,9 +146,9 @@ const WritePage = () => {
     }
   };
 
-  const formatVolunteerTime = (time: number) => {
-    const h = Math.floor(time);
-    const m = Math.round((time - h) * 60);
+  const formatVolunteerTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
     return `${h}시간 ${m}분`;
   };
 
