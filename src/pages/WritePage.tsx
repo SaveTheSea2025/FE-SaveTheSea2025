@@ -50,8 +50,9 @@ const WritePage = () => {
       const diffMs = end.getTime() - start.getTime();
 
       if (diffMs > 0) {
-        const diffHours = diffMs / (1000 * 60 * 60);
-        setVolunteerHours(Math.floor(diffHours * 10) / 10);
+        // 분 단위로 정확하게 계산
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        setVolunteerHours(diffMinutes);
       } else {
         setVolunteerHours(0);
       }
@@ -145,9 +146,9 @@ const WritePage = () => {
     }
   };
 
-  const formatVolunteerTime = (time: number) => {
-    const h = Math.floor(time);
-    const m = Math.round((time - h) * 60);
+  const formatVolunteerTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
     return `${h}시간 ${m}분`;
   };
 

@@ -72,7 +72,7 @@ export default function StatsPage() {
     today.toISOString().split("T")[0]
   );
   const [location, setLocation] = useState<string>("전체 지역");
-  const [viewMode, setViewMode] = useState<"personal" | "all">("all"); // 기본값을 "all"로 변경
+  const [viewMode, setViewMode] = useState<"mine" | "all">("all"); // 기본값을 "all"로 변경
 
   const [displayStartDate, setDisplayStartDate] = useState<string>(
     oneYearAgo.toISOString().split("T")[0]
@@ -129,7 +129,7 @@ export default function StatsPage() {
     }
 
     // 비로그인 시 전체 데이터만 조회 가능
-    if (!user && viewMode === "personal") {
+    if (!user && viewMode === "mine") {
       console.warn("비로그인 상태에서는 전체 데이터만 조회 가능합니다.");
       setViewMode("all");
       return;
@@ -170,7 +170,7 @@ export default function StatsPage() {
         });
         if (regionParam) params.append("region", regionParam);
 
-        const summaryUrl = viewMode === "personal"
+        const summaryUrl = viewMode === "mine"
           ? `${BASE_URL}/api/statistics/my-summary?${params}`
           : `${BASE_URL}/api/statistics/summary?${params}`;
 
@@ -207,7 +207,7 @@ export default function StatsPage() {
         });
         if (regionParam) params.append("region", regionParam);
 
-        const monthlyUrl = viewMode === "personal"
+        const monthlyUrl = viewMode === "mine"
           ? `${BASE_URL}/api/statistics/my-monthly-change?${params}`
           : `${BASE_URL}/api/statistics/monthly-change?${params}`;
 
@@ -246,7 +246,7 @@ export default function StatsPage() {
         });
         if (regionParam) params.append("region", regionParam);
 
-        const wasteUrl = viewMode === "personal"
+        const wasteUrl = viewMode === "mine"
           ? `${BASE_URL}/api/statistics/my-waste-type-ratio?${params}`
           : `${BASE_URL}/api/statistics/waste-type-ratio?${params}`;
 
@@ -283,7 +283,7 @@ export default function StatsPage() {
         });
 
         // 백엔드 API 문서: /api/statistics/region (확인 필요)
-        const regionUrl = viewMode === "personal"
+        const regionUrl = viewMode === "mine"
           ? `${BASE_URL}/api/statistics/my-region-activity?${params}`
           : `${BASE_URL}/api/statistics/region-activity?${params}`;
 
@@ -368,10 +368,10 @@ export default function StatsPage() {
                     alert("로그인이 필요한 기능입니다.");
                     return;
                   }
-                  setViewMode("personal");
+                  setViewMode("mine");
                 }}
                 className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  viewMode === "personal"
+                  viewMode === "mine"
                     ? "bg-[#0066aa] text-white shadow-md"
                     : "text-gray-600"
                 }`}
@@ -499,7 +499,7 @@ export default function StatsPage() {
                 setStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 setLocation("전체 지역");
-                setViewMode(user ? "personal" : "all"); // 로그인 상태에 따라 다르게 설정
+                setViewMode(user ? "mine" : "all"); // 로그인 상태에 따라 다르게 설정
                 
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
