@@ -5,7 +5,7 @@ import Header from "../components/common/Header";
 import RecordCard from "../components/record/RecordCard";
 import RecordDetailPanel from "../components/record/RecordDetailPanel";
 import FilterModal from "../components/record/FilterModal";
-import { SlidersHorizontal, RotateCcw } from "lucide-react"; // 아이콘 추가
+import { SlidersHorizontal, RotateCcw } from "lucide-react";
 
 import markerImg from "@/assets/record/marker.webp";
 
@@ -143,7 +143,7 @@ const RecordsPage: React.FC = () => {
       const map = mapRef.current;
 
       // ------------------------------------------------
-      // 🔥 히트맵 (HeatCircle) 구현부 - 전체 코드 포함
+      // 히트맵 (HeatCircle) 구현부
       // ------------------------------------------------
       function HeatCircle(this: any, bounds: any, color: string, opacity: number) {
         this.bounds = bounds;
@@ -210,7 +210,7 @@ const RecordsPage: React.FC = () => {
       });
 
       // ------------------------------------------------
-      // 📍 마커 클러스터러 및 마커 생성
+      // 마커 클러스터러 및 마커 생성
       // ------------------------------------------------
       if (!clustererRef.current) {
         clustererRef.current = new kakao.maps.MarkerClusterer({
@@ -242,33 +242,85 @@ const RecordsPage: React.FC = () => {
         if (d.thumbnail) {
           // 썸네일 커스텀 오버레이
           const content = `
-            <div style="position: relative; width: 60px; height: 70px;">
+            <div style="position: relative; width: 60px; height: 70px; cursor: pointer;">
               <img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
               <div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
                 <img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
               </div>
             </div>`;
           markerOrOverlay = new kakao.maps.CustomOverlay({
-            position: markerPosition, content: content, yAnchor: 1.0
+            position: markerPosition,
+            content: content,
+            yAnchor: 1.0,
+            clickable: true // 클릭 가능하도록 설정
           });
           // 커스텀 오버레이는 클러스터러가 관리하므로 setMap(null)
           markerOrOverlay.setMap(null);
+
+          // 커스텀 오버레이의 경우 DOM 요소에 직접 이벤트를 걸어야 할 수도 있으나,
+          // Kakao Maps CustomOverlay는 content 내부 클릭 처리가 필요할 수 있음.
+          // 여기서는 content div를 클릭했을 때 상위로 전파되도록 하거나, 
+          // 아래와 같이 오버레이 자체 생성 시 DOM 조작을 통해 이벤트를 연결하는 방식이 안전함.
+          // 다만 Kakao Clusterer와 함께 쓸 때 커스텀 오버레이 이벤트가 복잡할 수 있어,
+          // 아래 로직(기본 마커와 동일한 처리)을 시도하되, DOM에 직접 바인딩이 필요할 수 있음.
+
+          // 일단 단순화를 위해 기본 로직 유지하되, 마커 생성 시 이벤트 바인딩 로직을 공통화
         } else {
           // 기본 마커
           const imageSize = new kakao.maps.Size(52, 52);
           const imageOption = { offset: new kakao.maps.Point(26, 52) };
           const markerImage = new kakao.maps.MarkerImage(markerImg, imageSize, imageOption);
           markerOrOverlay = new kakao.maps.Marker({
-            position: markerPosition, image: markerImage
-          });
-
-          // ✅ 지도 마커 클릭 시 동작 (확대 + 상세패널 열기)
-          kakao.maps.event.addListener(markerOrOverlay, "click", () => {
-            map.panTo(markerPosition);
-            map.setLevel(5, { animate: true }); // 레벨 5로 확대
-            setTimeout(() => setSelectedRecord(d), 300); // 패널 열기
+            position: markerPosition, image: markerImage, clickable: true
           });
         }
+
+        // 공통 클릭 이벤트 리스너 추가 (썸네일이 있든 없든)
+        // 커스텀 오버레이는 지도 객체가 아니어서 addListener가 안 먹힐 수 있으므로 분기 처리
+        if (d.thumbnail) {
+          // 커스텀 오버레이는 생성 시 content 문자열이므로, 생성된 후 내부 엘리먼트를 찾기 어려움.
+          // 대신 document string에 onclick을 심거나, 생성 후 처리해야 함.
+          // 하지만 Clusterer를 쓰면 마커로 변환되어 관리되므로, 아래 방식 사용 권장:
+          // CustomOverlay 대신 Marker를 쓰고 마커 이미지를 커스텀하거나 해야 하는데,
+          // 현재 구조상 오버레이 content에 직접 이벤트를 거는게 가장 확실함.
+          // 그러나 React 내부에서 string으로 주입된 HTML의 이벤트 핸들링은 어려우므로,
+          // 여기서는 Kakao CustomOverlay의 content를 HTMLElement로 생성하여 이벤트를 부착함.
+
+          const div = document.createElement('div');
+          div.style.position = 'relative';
+          div.style.width = '60px';
+          div.style.height = '70px';
+          div.style.cursor = 'pointer';
+          div.innerHTML = `
+              <img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
+              <div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
+                <img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
+              </div>
+            `;
+
+          div.addEventListener('click', () => {
+            map.panTo(markerPosition);
+            map.setLevel(5, { animate: true });
+            setTimeout(() => setSelectedRecord(d), 300);
+          });
+
+          markerOrOverlay = new kakao.maps.CustomOverlay({
+            position: markerPosition,
+            content: div,
+            yAnchor: 1.0,
+            clickable: true
+          });
+          markerOrOverlay.setMap(null); // 클러스터러에 추가하기 위해 맵에서는 제거
+
+        } else {
+          // 일반 마커의 경우 Kakao 이벤트 리스너 사용
+          kakao.maps.event.addListener(markerOrOverlay, "click", () => {
+            map.panTo(markerPosition);
+            map.setLevel(5, { animate: true });
+            setTimeout(() => setSelectedRecord(d), 300);
+          });
+        }
+
         markers.push(markerOrOverlay);
       });
 
@@ -281,7 +333,7 @@ const RecordsPage: React.FC = () => {
       });
 
       // ------------------------------------------------
-      // 🔄 지도 이동 종료 시(idle) 보이는 데이터 업데이트
+      // 지도 이동 종료 시(idle) 보이는 데이터 업데이트
       // ------------------------------------------------
       kakao.maps.event.removeListener(map, "idle", updateVisibleData);
       kakao.maps.event.addListener(map, "idle", updateVisibleData);
@@ -330,11 +382,9 @@ const RecordsPage: React.FC = () => {
         map.setLevel(level, { animate: true });
       }, 300);
     } else {
-      // 지역 선택 해제 시 전체 지도로 복귀
-      map.panTo(new kakao.maps.LatLng(36.5, 127.8));
-      setTimeout(() => {
-        map.setLevel(13, { animate: true });
-      }, 300);
+      // useEffect에 의한 리셋 로직은 activeRegion이 변경될 때만 작동함.
+      // 따라서 전체보기 버튼 로직은 별도 핸들러에서 강제로 수행하도록 변경함.
+      // 여기서는 초기 렌더링이나 activeRegion을 빈 값으로 명시적 변경했을 때만 동작.
     }
   }, [activeRegion]);
 
@@ -363,10 +413,24 @@ const RecordsPage: React.FC = () => {
     }
   };
 
-  // ✅ [추가됨] 전체보기 버튼 (지도를 초기 상태로 되돌림)
+  // 전체보기 버튼 (지도를 초기 상태로 되돌리고 필터도 해제)
   const handleResetMap = () => {
-    setActiveRegion(""); // 지역 해제 -> useEffect가 감지하여 전체 지도로 이동
-    setSelectedRecord(null); // 패널 닫기
+    // 1. 상태 초기화
+    setActiveRegion("");
+    setSelectedRecord(null);
+    setFilters(null);
+
+    // 2. 강제 지도 리셋
+    // activeRegion 상태가 이미 ""인 상태에서 지도를 확대한 후 다시 전체보기를 누르면
+    // useEffect가 트리거되지 않으므로 여기서 직접 지도를 원복시킵니다.
+    if (mapRef.current && window.kakao) {
+      const map = mapRef.current;
+      const defaultCenter = new window.kakao.maps.LatLng(36.5, 127.8);
+      map.panTo(defaultCenter);
+      setTimeout(() => {
+        map.setLevel(13, { animate: true });
+      }, 300);
+    }
   };
 
   /* ==================================
@@ -423,10 +487,10 @@ const RecordsPage: React.FC = () => {
       <Header forceScrolled />
       <div className="flex flex-1 pt-[64px] relative">
 
-        {/* ✅ 지도 영역 */}
+        {/* 지도 영역 */}
         <div id="map" className="flex-1" style={{ height: "calc(100vh - 60px)" }} />
 
-        {/* ✅ [추가됨] 왼쪽 하단 '전체보기' 버튼 (지도 위에 띄움) */}
+        {/* 왼쪽 하단 '전체보기' 버튼 (지도 위에 띄움) */}
         <button
           onClick={handleResetMap}
           className="absolute bottom-6 left-6 z-30 flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 hover:shadow-xl transition-all active:scale-95"
@@ -435,7 +499,7 @@ const RecordsPage: React.FC = () => {
           전체보기
         </button>
 
-        {/* ✅ 오른쪽 사이드바 */}
+        {/* 오른쪽 사이드바 */}
         <div className="w-[400px] bg-white flex flex-col border-l border-gray-200 relative z-40 h-[calc(100vh-60px)]">
 
           {/* 1. 상단 필터 및 지역 버튼 */}
