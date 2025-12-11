@@ -144,7 +144,7 @@ export default function StatsPage() {
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // 공통 파라미터 객체 (Axios params 옵션용)
+      // 공통 파라미터 생성 (instance params 옵션 사용)
       const commonParams = {
         startYear,
         startMonth,
@@ -161,6 +161,7 @@ export default function StatsPage() {
 
         console.log("전체 통계 요청:", summaryUrl);
 
+        // instance 사용 및 params 객체 전달
         const summaryRes = await instance.get(summaryUrl, { params: commonParams });
         const summaryData = summaryRes.data;
 
@@ -303,7 +304,7 @@ export default function StatsPage() {
       setDownloadOpen(false);
     } catch (error: any) {
       console.error("엑셀 다운로드 실패:", error);
-      alert("엑셀 다운로드에 실패했습니다.");
+      alert("엑셀 다운로드에 실패했습니다. (서버 OPTIONS 허용 설정 확인 필요)");
     }
   };
 
