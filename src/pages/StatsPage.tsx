@@ -2,7 +2,6 @@
 import Header from "../components/common/Header";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import axios from "axios";
 
 // icons
 import filterIcon from "../assets/stats/filterIcon.webp";
@@ -13,6 +12,7 @@ import activityIcon from "../assets/stats/activityIcon.webp";
 import personIcon from "../assets/stats/personIcon.webp";
 import weightIcon from "../assets/stats/weightIcon.webp";
 import volumeIcon from "../assets/stats/volumeIcon.webp";
+import instance from "../api/axios";
 
 import {
   LineChart,
@@ -29,7 +29,7 @@ import {
   Bar,
 } from "recharts";
 
-// ✅ API 응답 타입 정의
+// API 응답 데이터 타입 정의
 interface SummaryStats {
   activityCount: number;
   totalMembers: number;
@@ -92,20 +92,20 @@ export default function StatsPage() {
   const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
   const [regionData, setRegionData] = useState<RegionStats[]>([]);
 
-  // ✅ [수정됨] viewMode가 변경될 때마다 fetchAllData가 실행되도록 의존성 배열에 추가
+  // viewMode가 변경될 때마다 fetchAllData가 실행되도록 의존성 배열에 추가
   useEffect(() => {
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
 
-    // 로그아웃 상태에서 'mine'으로 접근 시 'all'로 강제 전환
+    // 로그아웃 상태에서 mine으로 접근 시 all로 강제 전환
     if (!user && viewMode === "mine") {
       setViewMode("all");
-      return; // setViewMode가 다시 useEffect를 트리거하므로 여기서는 중단
+      return;
     }
 
     fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, viewMode]); // 🔥 viewMode 추가됨!
+  }, [user, viewMode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -126,10 +126,7 @@ export default function StatsPage() {
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
   const fetchAllData = async () => {
-    // ⚠️ BASE_URL 체크 제거 (Proxy 사용)
-
     if (!user && viewMode === "mine") {
-      // useEffect에서 처리하지만, 비동기 호출 시점 방어 코드
       return;
     }
 
@@ -141,15 +138,7 @@ export default function StatsPage() {
 
       const regionParam = location === "전체 지역" ? "전체" : location;
 
-      const token = localStorage.getItem("accessToken");
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      console.log("🔍 [API 호출 정보]");
+      console.log("[API 호출 정보]");
       console.log("startYear:", startYear, "startMonth:", startMonth);
       console.log("endYear:", endYear, "endMonth:", endMonth);
       console.log("region:", regionParam);
@@ -170,10 +159,11 @@ export default function StatsPage() {
           ? `/api/statistics/my-summary?${params}`
           : `/api/statistics/summary?${params}`;
 
-        console.log("📡 전체 통계 요청:", summaryUrl);
+        console.log("전체 통계 요청:", summaryUrl);
 
-        const summaryRes = await fetch(summaryUrl, { headers });
-        const summaryData = await summaryRes.json();
+        // instance 사용으로 변경
+        const summaryRes = await instance.get(summaryUrl);
+        const summaryData = summaryRes.data;
 
         if (summaryData.code === 0) {
           const data = summaryData.data;
@@ -185,7 +175,7 @@ export default function StatsPage() {
           });
         }
       } catch (err) {
-        console.error("❌ 전체 통계 API 실패:", err);
+        console.error("전체 통계 API 실패:", err);
       }
 
       // 2. 월별 수거량
@@ -194,10 +184,11 @@ export default function StatsPage() {
           ? `/api/statistics/my-monthly-change?${params}`
           : `/api/statistics/monthly-change?${params}`;
 
-        console.log("📡 월별 수거량 요청:", monthlyUrl);
+        console.log("월별 수거량 요청:", monthlyUrl);
 
-        const monthlyRes = await fetch(monthlyUrl, { headers });
-        const monthlyResult = await monthlyRes.json();
+        // instance 사용으로 변경
+        const monthlyRes = await instance.get(monthlyUrl);
+        const monthlyResult = monthlyRes.data;
 
         if (monthlyResult.code === 0 && monthlyResult.data.length > 0) {
           const formatted = monthlyResult.data.map((item: any) => ({
@@ -210,7 +201,7 @@ export default function StatsPage() {
           setMonthlyData([]);
         }
       } catch (err) {
-        console.error("❌ 월별 수거량 API 실패:", err);
+        console.error("월별 수거량 API 실패:", err);
         setMonthlyData([]);
       }
 
@@ -220,10 +211,11 @@ export default function StatsPage() {
           ? `/api/statistics/my-waste-type-ratio?${params}`
           : `/api/statistics/waste-type-ratio?${params}`;
 
-        console.log("📡 폐기물 비율 요청:", wasteUrl);
+        console.log("폐기물 비율 요청:", wasteUrl);
 
-        const wasteRes = await fetch(wasteUrl, { headers });
-        const wasteResult = await wasteRes.json();
+        // instance 사용으로 변경
+        const wasteRes = await instance.get(wasteUrl);
+        const wasteResult = wasteRes.data;
 
         if (wasteResult.code === 0) {
           const formatted = wasteResult.data.map((item: any) => ({
@@ -234,7 +226,7 @@ export default function StatsPage() {
           setWasteRatio(formatted);
         }
       } catch (err) {
-        console.error("❌ 폐기물 비율 API 실패:", err);
+        console.error("폐기물 비율 API 실패:", err);
       }
 
       // 4. 지역별 통계
@@ -243,10 +235,11 @@ export default function StatsPage() {
           ? `/api/statistics/my-region-activity?${params}`
           : `/api/statistics/region-activity?${params}`;
 
-        console.log("📡 지역별 통계 요청:", regionUrl);
+        console.log("지역별 통계 요청:", regionUrl);
 
-        const regionRes = await fetch(regionUrl, { headers });
-        const regionResult = await regionRes.json();
+        // instance 사용으로 변경
+        const regionRes = await instance.get(regionUrl);
+        const regionResult = regionRes.data;
 
         if (regionResult.code === 0) {
           setRegionData(regionResult.data);
@@ -254,7 +247,7 @@ export default function StatsPage() {
           setRegionData([]);
         }
       } catch (err) {
-        console.error("❌ 지역별 통계 API 실패:", err);
+        console.error("지역별 통계 API 실패:", err);
         setRegionData([]);
       }
 
@@ -269,10 +262,9 @@ export default function StatsPage() {
     fetchAllData();
   };
 
-  // 🔥 엑셀 다운로드 함수
+  // 엑셀 다운로드 함수
   const handleExcelDownload = async () => {
     try {
-      const token = localStorage.getItem("accessToken");
       const startYear = parseInt(startDate.split("-")[0]);
       const startMonth = parseInt(startDate.split("-")[1]);
       const endYear = parseInt(endDate.split("-")[0]);
@@ -289,13 +281,11 @@ export default function StatsPage() {
         region: regionParam,
       };
 
-      console.log("📊 엑셀 다운로드 요청:", params);
+      console.log("엑셀 다운로드 요청:", params);
 
-      const response = await axios.get(`/api/export/excel`, {
+      // instance 사용으로 변경
+      const response = await instance.get(`/api/export/excel`, {
         params,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         responseType: "blob",
       });
 
@@ -317,15 +307,14 @@ export default function StatsPage() {
       window.URL.revokeObjectURL(url);
       setDownloadOpen(false);
     } catch (error: any) {
-      console.error("❌ 엑셀 다운로드 실패:", error);
-      alert("엑셀 다운로드에 실패했습니다. (CORS 문제가 지속되면 vite.config.ts proxy 설정을 확인해주세요)");
+      console.error("엑셀 다운로드 실패:", error);
+      alert("엑셀 다운로드에 실패했습니다.");
     }
   };
 
-  // 🔥 PDF 다운로드 함수
+  // PDF 다운로드 함수
   const handlePdfDownload = async () => {
     try {
-      const token = localStorage.getItem("accessToken");
       const startYear = parseInt(startDate.split("-")[0]);
       const startMonth = parseInt(startDate.split("-")[1]);
       const endYear = parseInt(endDate.split("-")[0]);
@@ -342,13 +331,11 @@ export default function StatsPage() {
         region: regionParam,
       };
 
-      console.log("📄 PDF 다운로드 요청:", params);
+      console.log("PDF 다운로드 요청:", params);
 
-      const response = await axios.get(`/api/statistics/pdf/download`, {
+      // instance 사용으로 변경
+      const response = await instance.get(`/api/statistics/pdf/download`, {
         params,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         responseType: "blob",
       });
 
@@ -367,7 +354,7 @@ export default function StatsPage() {
       window.URL.revokeObjectURL(url);
       setDownloadOpen(false);
     } catch (error: any) {
-      console.error("❌ PDF 다운로드 실패:", error);
+      console.error("PDF 다운로드 실패:", error);
       alert("PDF 다운로드에 실패했습니다.");
     }
   };
@@ -547,10 +534,6 @@ export default function StatsPage() {
 
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
-
-                // viewMode 변경이 비동기라 여기서 fetchAllData 호출하면 이전 viewMode로 호출될 수 있음.
-                // 하지만 setViewMode가 useEffect를 트리거하므로 여기서 직접 호출할 필요 없음.
-                // 다만 날짜/지역 초기화 후 'all'로 돌아가는 로직은 useEffect가 처리함.
               }}
               className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
             >

@@ -6,6 +6,7 @@ import RecordCard from "../components/record/RecordCard";
 import RecordDetailPanel from "../components/record/RecordDetailPanel";
 import FilterModal from "../components/record/FilterModal";
 import { SlidersHorizontal, RotateCcw } from "lucide-react";
+import instance from "../api/axios";
 
 import markerImg from "@/assets/record/marker.webp";
 
@@ -44,7 +45,6 @@ const RecordsPage: React.FC = () => {
 
   // 환경 변수 로드
   const kakaoKey = import.meta.env.VITE_KAKAO_MAP_KEY;
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // 데이터 상태 관리
   const [data, setData] = useState<CleanupItem[]>([]); // API로 불러온 전체 데이터
@@ -70,23 +70,15 @@ const RecordsPage: React.FC = () => {
       try {
         setLoading(true);
 
-        // 토큰 헤더 설정
-        const token = localStorage.getItem("accessToken");
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-        };
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        // 데이터 요청
-        const res = await fetch(`${BASE_URL}/api/activity-records?page=${page}&size=50`, {
-          method: "GET",
-          headers: headers,
+        // instance 사용 (headers 자동 처리, BASE_URL 제거)
+        const res = await instance.get("/api/activity-records", {
+          params: {
+            page: page,
+            size: 50,
+          },
         });
 
-        if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
-        const json = await res.json();
+        const json = res.data;
 
         const list = json.data?.content || [];
         const pageInfo = json.data?.page;
@@ -105,7 +97,7 @@ const RecordsPage: React.FC = () => {
       }
     };
     fetchRecords();
-  }, [BASE_URL, page]);
+  }, [page]);
 
   /* ==================================
    * 2. Kakao 지도 초기화 및 마커/히트맵 설정
@@ -241,42 +233,8 @@ const RecordsPage: React.FC = () => {
 
         if (d.thumbnail) {
           // 썸네일 커스텀 오버레이
-          const content = `
-            <div style="position: relative; width: 60px; height: 70px; cursor: pointer;">
-              <img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
-              <div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
-                <img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
-              </div>
-            </div>`;
-          markerOrOverlay = new kakao.maps.CustomOverlay({
-            position: markerPosition,
-            content: content,
-            yAnchor: 1.0,
-            clickable: true // 클릭 가능하도록 설정
-          });
-          // 커스텀 오버레이는 클러스터러가 관리하므로 setMap(null)
-          markerOrOverlay.setMap(null);
-
-          // 커스텀 오버레이의 경우 DOM 요소에 직접 이벤트를 걸어야 할 수도 있으나,
-          // Kakao Maps CustomOverlay는 content 내부 클릭 처리가 필요할 수 있음.
-          // 여기서는 content div를 클릭했을 때 상위로 전파되도록 하거나, 
-          // 아래와 같이 오버레이 자체 생성 시 DOM 조작을 통해 이벤트를 연결하는 방식이 안전함.
-          // 다만 Kakao Clusterer와 함께 쓸 때 커스텀 오버레이 이벤트가 복잡할 수 있어,
-          // 아래 로직(기본 마커와 동일한 처리)을 시도하되, DOM에 직접 바인딩이 필요할 수 있음.
-
-          // 일단 단순화를 위해 기본 로직 유지하되, 마커 생성 시 이벤트 바인딩 로직을 공통화
-        } else {
-          // 기본 마커
-          const imageSize = new kakao.maps.Size(52, 52);
-          const imageOption = { offset: new kakao.maps.Point(26, 52) };
-          const markerImage = new kakao.maps.MarkerImage(markerImg, imageSize, imageOption);
-          markerOrOverlay = new kakao.maps.Marker({
-            position: markerPosition, image: markerImage, clickable: true
-          });
-        }
-
-
-        if (d.thumbnail) {
+          // React 내부에서 string으로 주입된 HTML의 이벤트 핸들링은 어려우므로,
+          // 여기서는 Kakao CustomOverlay의 content를 HTMLElement로 생성하여 이벤트를 부착함.
 
           const div = document.createElement('div');
           div.style.position = 'relative';
@@ -284,11 +242,11 @@ const RecordsPage: React.FC = () => {
           div.style.height = '70px';
           div.style.cursor = 'pointer';
           div.innerHTML = `
-              <img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
-              <div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
-                <img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
-              </div>
-            `;
+            <img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
+            <div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
+              <img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
+            </div>
+          `;
 
           div.addEventListener('click', () => {
             map.panTo(markerPosition);
@@ -305,18 +263,27 @@ const RecordsPage: React.FC = () => {
           markerOrOverlay.setMap(null);
 
         } else {
+          // 기본 마커
+          const imageSize = new kakao.maps.Size(52, 52);
+          const imageOption = { offset: new kakao.maps.Point(26, 52) };
+          const markerImage = new kakao.maps.MarkerImage(markerImg, imageSize, imageOption);
+          markerOrOverlay = new kakao.maps.Marker({
+            position: markerPosition, image: markerImage, clickable: true
+          });
+
+          // 지도 마커 클릭 시 동작 (확대 + 상세패널 열기)
           kakao.maps.event.addListener(markerOrOverlay, "click", () => {
             map.panTo(markerPosition);
-            map.setLevel(5, { animate: true });
-            setTimeout(() => setSelectedRecord(d), 300);
+            map.setLevel(5, { animate: true }); // 레벨 5로 확대
+            setTimeout(() => setSelectedRecord(d), 300); // 패널 열기
           });
         }
-
         markers.push(markerOrOverlay);
       });
 
       clusterer.addMarkers(markers);
 
+      // 클러스터 클릭 시 확대
       kakao.maps.event.addListener(clusterer, "clusterclick", (cluster: any) => {
         const level = map.getLevel() - 2;
         map.setLevel(level, { anchor: cluster.getCenter() });
@@ -372,9 +339,7 @@ const RecordsPage: React.FC = () => {
         map.setLevel(level, { animate: true });
       }, 300);
     } else {
-      // useEffect에 의한 리셋 로직은 activeRegion이 변경될 때만 작동함.
-      // 따라서 전체보기 버튼 로직은 별도 핸들러에서 강제로 수행하도록 변경함.
-      // 여기서는 초기 렌더링이나 activeRegion을 빈 값으로 명시적 변경했을 때만 동작.
+      // 지역 선택 해제 시 로직은 handleResetMap에서 처리됨
     }
   }, [activeRegion]);
 

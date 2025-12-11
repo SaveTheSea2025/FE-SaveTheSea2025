@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { CalendarDays, MapPin, Users, Trash2, Clock, Flag } from "lucide-react";
+import instance from "../../api/axios";
 
 declare global {
     interface Window {
@@ -9,17 +10,17 @@ declare global {
     }
 }
 
-// API 응답에 맞춰 타입 정의 (activeName 등 확인)
+// API 응답에 맞춰 타입 정의
 type DetailData = {
     id: number;
-    username: string; // 단체명 (예: 속초 청년봉사단)
-    activityName: string; // 활동명 (예: 속초 해변 정화활동)
+    username: string; // 단체명
+    activityName: string; // 활동명
     groups: boolean;
     memberCount: number;
     activityDescription: string;
     startDate: string;
     endDate: string;
-    totalActivityTime: string; // "4시간 0분" 형태의 문자열
+    totalActivityTime: string; // 4시간 0분 형태의 문자열
 
     startAddress: string;
     endAddress: string;
@@ -48,7 +49,7 @@ type Props = {
 };
 
 const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) => {
-    const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    // instance를 사용하므로 BASE_URL 변수 제거
 
     const [detail, setDetail] = useState<DetailData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -57,31 +58,17 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
     const [isReportOpen, setIsReportOpen] = useState(false);
     const [reason, setReason] = useState("");
 
-    // 1. 상세 정보 가져오기 (토큰 헤더 추가됨)
+    // 1. 상세 정보 가져오기 (instance 사용)
     useEffect(() => {
         const fetchDetail = async () => {
             try {
                 setLoading(true);
 
-                // 토큰 가져오기 및 헤더 설정
-                const token = localStorage.getItem("accessToken");
-                const headers: HeadersInit = {
-                    "Content-Type": "application/json",
-                };
-                if (token) {
-                    headers["Authorization"] = `Bearer ${token}`;
-                }
+                // instance는 인터셉터에서 토큰을 자동 처리하므로 헤더 설정 불필요
+                const res = await instance.get(`/api/activity-records/${recordId}`);
 
-                const res = await fetch(`${BASE_URL}/api/activity-records/${recordId}`, {
-                    method: "GET",
-                    headers: headers, // 헤더 포함 전송
-                });
-
-                if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
-                const json = await res.json();
-
-                // json.data 안에 실제 데이터가 있으므로 세팅
-                setDetail(json.data);
+                // axios response.data 구조에 따라 데이터 세팅
+                setDetail(res.data.data);
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -89,9 +76,9 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
             }
         };
         fetchDetail();
-    }, [BASE_URL, recordId]);
+    }, [recordId]);
 
-    // 2. 지도 로드 (기존 로직 유지)
+    // 2. 지도 로드
     useEffect(() => {
         if (!detail) return;
 
@@ -162,7 +149,7 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
         };
     }, [detail]);
 
-    // 3. 신고하기 로직 
+    // 3. 신고하기 로직 (instance 사용)
     const submitReport = async () => {
         if (!reason.trim()) {
             alert("신고 사유를 입력해주세요.");
@@ -170,20 +157,13 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
         }
 
         try {
-            const token = localStorage.getItem("accessToken");
-            const res = await fetch(`${BASE_URL}/api/report`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    recordId,
-                    reason,
-                }),
+            // instance 사용: 헤더 설정 및 JSON 변환 불필요
+            const res = await instance.post("/api/report", {
+                recordId,
+                reason,
             });
 
-            const json = await res.json();
+            const json = res.data;
 
             if (json.code === 0) {
                 alert("신고가 접수 되었습니다.");
@@ -260,12 +240,12 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                 />
 
                 <div className="p-6">
-                    {/* 단체명 (작게 표시) */}
+                    {/* 단체명 */}
                     <div className="text-sm text-sky-600 font-medium mb-1">
                         {detail.username}
                     </div>
 
-                    {/* 활동명 (메인 제목) */}
+                    {/* 활동명 */}
                     <h2 className="text-xl font-bold text-[#114C79] mb-3 leading-tight">
                         {detail.activityName}
                     </h2>
