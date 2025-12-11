@@ -144,25 +144,24 @@ export default function StatsPage() {
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // 공통 파라미터 생성
-      const params = new URLSearchParams({
-        startYear: startYear.toString(),
-        startMonth: startMonth.toString(),
-        endYear: endYear.toString(),
-        endMonth: endMonth.toString(),
+      // 공통 파라미터 객체 (Axios params 옵션용)
+      const commonParams = {
+        startYear,
+        startMonth,
+        endYear,
+        endMonth,
         region: regionParam,
-      });
+      };
 
       // 1. 전체 통계
       try {
         const summaryUrl = viewMode === "mine"
-          ? `/api/statistics/my-summary?${params}`
-          : `/api/statistics/summary?${params}`;
+          ? "/api/statistics/my-summary"
+          : "/api/statistics/summary";
 
         console.log("전체 통계 요청:", summaryUrl);
 
-        // instance 사용으로 변경
-        const summaryRes = await instance.get(summaryUrl);
+        const summaryRes = await instance.get(summaryUrl, { params: commonParams });
         const summaryData = summaryRes.data;
 
         if (summaryData.code === 0) {
@@ -181,13 +180,12 @@ export default function StatsPage() {
       // 2. 월별 수거량
       try {
         const monthlyUrl = viewMode === "mine"
-          ? `/api/statistics/my-monthly-change?${params}`
-          : `/api/statistics/monthly-change?${params}`;
+          ? "/api/statistics/my-monthly-change"
+          : "/api/statistics/monthly-change";
 
         console.log("월별 수거량 요청:", monthlyUrl);
 
-        // instance 사용으로 변경
-        const monthlyRes = await instance.get(monthlyUrl);
+        const monthlyRes = await instance.get(monthlyUrl, { params: commonParams });
         const monthlyResult = monthlyRes.data;
 
         if (monthlyResult.code === 0 && monthlyResult.data.length > 0) {
@@ -208,13 +206,12 @@ export default function StatsPage() {
       // 3. 폐기물 비율
       try {
         const wasteUrl = viewMode === "mine"
-          ? `/api/statistics/my-waste-type-ratio?${params}`
-          : `/api/statistics/waste-type-ratio?${params}`;
+          ? "/api/statistics/my-waste-type-ratio"
+          : "/api/statistics/waste-type-ratio";
 
         console.log("폐기물 비율 요청:", wasteUrl);
 
-        // instance 사용으로 변경
-        const wasteRes = await instance.get(wasteUrl);
+        const wasteRes = await instance.get(wasteUrl, { params: commonParams });
         const wasteResult = wasteRes.data;
 
         if (wasteResult.code === 0) {
@@ -232,13 +229,12 @@ export default function StatsPage() {
       // 4. 지역별 통계
       try {
         const regionUrl = viewMode === "mine"
-          ? `/api/statistics/my-region-activity?${params}`
-          : `/api/statistics/region-activity?${params}`;
+          ? "/api/statistics/my-region-activity"
+          : "/api/statistics/region-activity";
 
         console.log("지역별 통계 요청:", regionUrl);
 
-        // instance 사용으로 변경
-        const regionRes = await instance.get(regionUrl);
+        const regionRes = await instance.get(regionUrl, { params: commonParams });
         const regionResult = regionRes.data;
 
         if (regionResult.code === 0) {
@@ -283,8 +279,7 @@ export default function StatsPage() {
 
       console.log("엑셀 다운로드 요청:", params);
 
-      // instance 사용으로 변경
-      const response = await instance.get(`/api/export/excel`, {
+      const response = await instance.get("/api/export/excel", {
         params,
         responseType: "blob",
       });
@@ -333,8 +328,7 @@ export default function StatsPage() {
 
       console.log("PDF 다운로드 요청:", params);
 
-      // instance 사용으로 변경
-      const response = await instance.get(`/api/statistics/pdf/download`, {
+      const response = await instance.get("/api/statistics/pdf/download", {
         params,
         responseType: "blob",
       });
