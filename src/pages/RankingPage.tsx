@@ -1,13 +1,11 @@
 // RankingPage.tsx
 import Header from "../components/common/Header";
 import { useState, useEffect, useMemo } from "react";
-import axios from "axios";
 import RankTop3Card from "../components/ranking/RankTop3Card";
 import RankListItem from "../components/ranking/RankListItem";
 import AwardCard from "../components/ranking/AwardCard";
 import type { RankingData, StatItem } from "../types/ranking";
-
-axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
+import instance from "../api/axios";
 
 interface ApiResponse<T> {
   code: number;
@@ -78,7 +76,8 @@ const RankingPage = () => {
     setError(null);
 
     try {
-      const response = await axios.get<ApiResponse<RankingData>>(url, {
+      // instance 사용으로 변경
+      const response = await instance.get<ApiResponse<RankingData>>(url, {
         params: { year, month }
       });
 
@@ -91,14 +90,14 @@ const RankingPage = () => {
     }
   };
 
-  // 🔹 단체 API
+  // 단체 API
   const fetchGroupRanking = async () => {
     if (!groupRanking) {
       await callRankingAPI("/api/ranking/groups", setGroupRanking, setGroupLoading);
     }
   };
 
-  // 🔹 개인 API
+  // 개인 API
   const fetchPersonalRanking = async () => {
     if (!personalRanking) {
       await callRankingAPI("/api/ranking/users", setPersonalRanking, setPersonalLoading);

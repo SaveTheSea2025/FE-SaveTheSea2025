@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from "react";
-import axios from "axios";
+import instance from "../../api/axios";
 
 interface ExportButtonProps {
   viewMode: "mine" | "all";
@@ -21,7 +21,6 @@ const ExportButton = ({
 }: ExportButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // 외부 클릭 감지
   useEffect(() => {
@@ -43,8 +42,6 @@ const ExportButton = ({
   // 엑셀 다운로드
   const handleExcelDownload = async () => {
     try {
-      const token = localStorage.getItem("accessToken");
-      
       const params = {
         viewType: viewMode, // mine 또는 all
         startYear,
@@ -54,13 +51,11 @@ const ExportButton = ({
         region: region || undefined,
       };
 
-      console.log("📊 엑셀 다운로드 요청:", params);
+      console.log("엑셀 다운로드 요청:", params);
 
-      const response = await axios.get(`${BASE_URL}/api/export/excel`, {
+      // instance 사용 (headers 설정 제거)
+      const response = await instance.get("/api/export/excel", {
         params,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         responseType: "blob", // 파일 다운로드를 위해 blob 타입
       });
 
@@ -72,22 +67,22 @@ const ExportButton = ({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
+
       // 파일명 생성 (예: 통계데이터_2024-12_2025-12.xlsx)
       const fileName = `통계데이터_${startYear}-${String(startMonth).padStart(2, "0")}_${endYear}-${String(endMonth).padStart(2, "0")}.xlsx`;
       link.setAttribute("download", fileName);
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       // 정리
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      console.log("✅ 엑셀 다운로드 완료");
+      console.log("엑셀 다운로드 완료");
       setIsOpen(false);
     } catch (error: any) {
-      console.error("❌ 엑셀 다운로드 실패:", error);
+      console.error("엑셀 다운로드 실패:", error);
       if (error.response) {
         console.error("서버 응답:", error.response.data);
       }
@@ -98,8 +93,6 @@ const ExportButton = ({
   // PDF 다운로드
   const handlePdfDownload = async () => {
     try {
-      const token = localStorage.getItem("accessToken");
-      
       const params = {
         viewType: viewMode,
         startYear,
@@ -109,13 +102,11 @@ const ExportButton = ({
         region: region || undefined,
       };
 
-      console.log("📄 PDF 다운로드 요청:", params);
+      console.log("PDF 다운로드 요청:", params);
 
-      const response = await axios.get(`${BASE_URL}/api/export/pdf`, {
+      // instance 사용 (headers 설정 제거)
+      const response = await instance.get("/api/export/pdf", {
         params,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         responseType: "blob",
       });
 
@@ -123,20 +114,20 @@ const ExportButton = ({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
+
       const fileName = `통계보고서_${startYear}-${String(startMonth).padStart(2, "0")}_${endYear}-${String(endMonth).padStart(2, "0")}.pdf`;
       link.setAttribute("download", fileName);
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      console.log("✅ PDF 다운로드 완료");
+      console.log("PDF 다운로드 완료");
       setIsOpen(false);
     } catch (error: any) {
-      console.error("❌ PDF 다운로드 실패:", error);
+      console.error("PDF 다운로드 실패:", error);
       if (error.response) {
         console.error("서버 응답:", error.response.data);
       }
@@ -166,9 +157,8 @@ const ExportButton = ({
         </svg>
         <span className="text-sm font-medium text-gray-700">파일 다운</span>
         <svg
-          className={`w-4 h-4 text-gray-600 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`w-4 h-4 text-gray-600 transition-transform ${isOpen ? "rotate-180" : ""
+            }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
