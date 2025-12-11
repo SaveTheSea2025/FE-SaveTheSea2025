@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import Header from "../components/common/Header";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
 // icons
 import filterIcon from "../assets/stats/filterIcon.webp";
@@ -56,7 +56,7 @@ interface RegionStats {
 
 export default function StatsPage() {
   const { user } = useAuth();
-
+  
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
@@ -73,7 +73,7 @@ export default function StatsPage() {
     today.toISOString().split("T")[0]
   );
   const [location, setLocation] = useState<string>("전체 지역");
-  const [viewMode, setViewMode] = useState<"mine" | "all">("all"); // 기본값을 "all"로 변경
+  const [viewMode, setViewMode] = useState<"mine" | "all">("all");
 
   const [displayStartDate, setDisplayStartDate] = useState<string>(
     oneYearAgo.toISOString().split("T")[0]
@@ -95,8 +95,6 @@ export default function StatsPage() {
   useEffect(() => {
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-    // 로그인 여부와 관계없이 데이터 로드
-    // 비로그인 시 자동으로 전체 데이터 조회
     if (!user) {
       setViewMode("all");
     }
@@ -122,14 +120,12 @@ export default function StatsPage() {
 
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
-  // ✅ 백엔드 API와 완전히 일치하도록 수정
   const fetchAllData = async () => {
     if (!BASE_URL) {
       console.warn("BASE_URL이 설정되지 않았습니다.");
       return;
     }
 
-    // 비로그인 시 전체 데이터만 조회 가능
     if (!user && viewMode === "mine") {
       console.warn("비로그인 상태에서는 전체 데이터만 조회 가능합니다.");
       setViewMode("all");
@@ -137,16 +133,13 @@ export default function StatsPage() {
     }
 
     try {
-      // ✅ 날짜를 년/월로 변환
       const startYear = parseInt(startDate.split("-")[0]);
       const startMonth = parseInt(startDate.split("-")[1]);
       const endYear = parseInt(endDate.split("-")[0]);
       const endMonth = parseInt(endDate.split("-")[1]);
 
-      // ✅ region 매핑
       const regionParam = location === "전체 지역" ? "" : location;
 
-      // ✅ Authorization 헤더
       const token = localStorage.getItem("accessToken");
       const headers: HeadersInit = {
         "Content-Type": "application/json",
@@ -183,11 +176,9 @@ export default function StatsPage() {
         console.log("📦 전체 통계 응답:", summaryData);
 
         if (summaryData.code === 0) {
-          // ✅ 백엔드 응답 필드명 확인 및 매핑
           const data = summaryData.data;
           setSummaryStats({
             activityCount: data.activityCount ?? 0,
-            // ✅ 실제 API 응답: totalParticipants (복수형)
             totalMembers: data.totalParticipants ?? data.totalParticipant ?? 0,
             totalWeight: data.totalWeight ?? 0,
             totalVolume: data.totalVolume ?? 0,
@@ -220,8 +211,6 @@ export default function StatsPage() {
         console.log("📦 월별 수거량 응답:", monthlyResult);
 
         if (monthlyResult.code === 0 && monthlyResult.data.length > 0) {
-          // ✅ 백엔드: { year, month, totalWeight, totalVolume }
-          // ✅ 프론트: { month: "2025-11", totalWeight }
           const formatted = monthlyResult.data.map((item: any) => ({
             month: `${item.year}-${String(item.month).padStart(2, "0")}`,
             totalWeight: item.totalWeight,
@@ -259,8 +248,6 @@ export default function StatsPage() {
         console.log("📦 폐기물 비율 응답:", wasteResult);
 
         if (wasteResult.code === 0) {
-          // ✅ 백엔드: { wasteType, weight, percentage }
-          // ✅ 프론트: { wasteType, weight, ratio }
           const formatted = wasteResult.data.map((item: any) => ({
             wasteType: item.wasteType,
             weight: item.weight,
@@ -274,7 +261,6 @@ export default function StatsPage() {
       }
 
       // 4. 지역별 통계
-      // ⚠️ 백엔드 확인 필요: 실제 엔드포인트가 /region인지 /region-activity인지 확인
       try {
         const params = new URLSearchParams({
           startYear: startYear.toString(),
@@ -283,7 +269,6 @@ export default function StatsPage() {
           endMonth: endMonth.toString(),
         });
 
-        // 백엔드 API 문서: /api/statistics/region (확인 필요)
         const regionUrl = viewMode === "mine"
           ? `${BASE_URL}/api/statistics/my-region-activity?${params}`
           : `${BASE_URL}/api/statistics/region-activity?${params}`;
@@ -319,6 +304,117 @@ export default function StatsPage() {
     fetchAllData();
   };
 
+  // 🔥 엑셀 다운로드 함수
+  const handleExcelDownload = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const startYear = parseInt(startDate.split("-")[0]);
+      const startMonth = parseInt(startDate.split("-")[1]);
+      const endYear = parseInt(endDate.split("-")[0]);
+      const endMonth = parseInt(endDate.split("-")[1]);
+      const regionParam = location === "전체 지역" ? "" : location;
+      
+      const params = {
+        viewType: viewMode, // ✅ scope → viewType으로 수정
+        startYear,
+        startMonth,
+        endYear,
+        endMonth,
+        ...(regionParam && { region: regionParam }),
+      };
+
+      console.log("📊 엑셀 다운로드 요청:", params);
+
+      const response = await axios.get(`${BASE_URL}/api/export/excel`, { // ✅ 올바른 경로로 수정
+        params,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      const fileName = `통계데이터_${startYear}-${String(startMonth).padStart(2, "0")}_${endYear}-${String(endMonth).padStart(2, "0")}.xlsx`;
+      link.setAttribute("download", fileName);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      console.log("✅ 엑셀 다운로드 완료");
+      setDownloadOpen(false);
+    } catch (error: any) {
+      console.error("❌ 엑셀 다운로드 실패:", error);
+      if (error.response) {
+        console.error("서버 응답:", error.response.data);
+      }
+      alert("엑셀 다운로드에 실패했습니다.");
+    }
+  };
+
+  // 🔥 PDF 다운로드 함수
+  const handlePdfDownload = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const startYear = parseInt(startDate.split("-")[0]);
+      const startMonth = parseInt(startDate.split("-")[1]);
+      const endYear = parseInt(endDate.split("-")[0]);
+      const endMonth = parseInt(endDate.split("-")[1]);
+      const regionParam = location === "전체 지역" ? "" : location;
+      
+      const params = {
+        viewType: viewMode, // ✅ scope → viewType으로 수정
+        startYear,
+        startMonth,
+        endYear,
+        endMonth,
+        ...(regionParam && { region: regionParam }),
+      };
+
+      console.log("📄 PDF 다운로드 요청:", params);
+
+      const response = await axios.get(`${BASE_URL}/api/statistics/pdf/download`, { // ✅ PDF 경로 (확인 필요)
+        params,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      const fileName = `통계보고서_${startYear}-${String(startMonth).padStart(2, "0")}_${endYear}-${String(endMonth).padStart(2, "0")}.pdf`;
+      link.setAttribute("download", fileName);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      console.log("✅ PDF 다운로드 완료");
+      setDownloadOpen(false);
+    } catch (error: any) {
+      console.error("❌ PDF 다운로드 실패:", error);
+      if (error.response) {
+        console.error("서버 응답:", error.response.data);
+      }
+      alert("PDF 다운로드에 실패했습니다.");
+    }
+  };
+
   const wasteTypeMap: Record<string, string> = {
     PLASTIC: "플라스틱",
     GLASS: "유리",
@@ -334,15 +430,15 @@ export default function StatsPage() {
   };
 
   const COLORS = [
-    "#004e89", // 가장 진한 파랑 (54% - 종이)
-    "#1a659e", // 진한 파랑 (26% - 플라스틱)
-    "#2e7ca8", // 중간 파랑 (5% - 통발)
-    "#4d91b5", // (5% - 박스)
-    "#6ba6c3", // (4% - 무표)
-    "#89bbd1", // (4% - 마대)
-    "#a7d0df", // (3% - 기타)
-    "#c5e5ed", // 가장 밝은 파랑 (1% - 금속)
-    "#e0f2f7", // 거의 하얀 파랑 (0% - 약품)
+    "#004e89",
+    "#1a659e",
+    "#2e7ca8",
+    "#4d91b5",
+    "#6ba6c3",
+    "#89bbd1",
+    "#a7d0df",
+    "#c5e5ed",
+    "#e0f2f7",
   ];
 
   const [hoveredWasteType, setHoveredWasteType] = useState<string | null>(null);
@@ -354,14 +450,12 @@ export default function StatsPage() {
       <div className="max-w-[1200px] mx-auto pt-48 pb-20 px-8">
         <h2 className="text-center text-[22px] md:text-[30px] font-bold text-center mb-20 leading-normal">통계</h2>
 
-        {/* 🔹 필터 바 */}
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-4">
             <button className="w-9 h-9 bg-[#0077A7] rounded-full flex items-center justify-center shadow-sm">
               <img src={filterIcon} className="w-5 h-5" />
             </button>
 
-            {/* 내정보/전체 토글 스위치 */}
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => {
@@ -371,19 +465,21 @@ export default function StatsPage() {
                   }
                   setViewMode("mine");
                 }}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "mine"
-                  ? "bg-[#0066aa] text-white shadow-md"
-                  : "text-gray-600"
-                  }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  viewMode === "mine"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
               >
                 내정보
               </button>
               <button
                 onClick={() => setViewMode("all")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "all"
-                  ? "bg-[#0066aa] text-white shadow-md"
-                  : "text-gray-600"
-                  }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  viewMode === "all"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
               >
                 전체
               </button>
@@ -391,7 +487,6 @@ export default function StatsPage() {
 
             <div className="w-px h-6 bg-gray-300"></div>
 
-            {/* 기간 선택 */}
             <div className="relative">
               <button
                 onClick={() => {
@@ -440,7 +535,6 @@ export default function StatsPage() {
               )}
             </div>
 
-            {/* 장소 선택 */}
             <div className="relative">
               <button
                 onClick={() => {
@@ -464,13 +558,15 @@ export default function StatsPage() {
                         setLocation(loc);
                         setLocationOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${location === loc
-                        ? "bg-blue-50 text-[#0066aa] font-medium"
-                        : ""
-                        } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === locationOptions.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                        location === loc
+                          ? "bg-blue-50 text-[#0066aa] font-medium"
+                          : ""
+                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
+                        idx === locationOptions.length - 1
                           ? "rounded-b-xl"
                           : ""
-                        }`}
+                      }`}
                     >
                       {loc}
                     </div>
@@ -479,7 +575,6 @@ export default function StatsPage() {
               )}
             </div>
 
-            {/* 조회 버튼 */}
             <button
               onClick={handleSearch}
               className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-md hover:bg-[#004d7a] hover:shadow-lg hover:scale-105 active:bg-[#002845] active:scale-95 active:shadow-inner transition-all duration-150 font-semibold cursor-pointer"
@@ -487,20 +582,19 @@ export default function StatsPage() {
               조회
             </button>
 
-            {/* 초기화 버튼 */}
             <button
               onClick={() => {
                 const today = new Date();
                 const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-
+                
                 setStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 setLocation("전체 지역");
-                setViewMode(user ? "mine" : "all"); // 로그인 상태에 따라 다르게 설정
-
+                setViewMode(user ? "mine" : "all");
+                
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
-
+                
                 fetchAllData();
               }}
               className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
@@ -509,6 +603,7 @@ export default function StatsPage() {
             </button>
           </div>
 
+          {/* 🔥 파일 다운로드 버튼 - 클릭 핸들러 추가 */}
           <div className="relative" ref={downloadRef}>
             <button
               onClick={() => setDownloadOpen(!downloadOpen)}
@@ -520,12 +615,18 @@ export default function StatsPage() {
 
             {downloadOpen && (
               <div className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[220px]">
-                <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-t-xl cursor-pointer transition">
+                <div 
+                  onClick={handlePdfDownload}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-t-xl cursor-pointer transition"
+                >
                   <img src={pdfIcon} className="w-5 h-5 flex-shrink-0" />
                   <span className="text-sm whitespace-nowrap">PDF 보고서 다운로드</span>
                 </div>
                 <div className="h-px bg-gray-100"></div>
-                <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-b-xl cursor-pointer transition">
+                <div 
+                  onClick={handleExcelDownload}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-b-xl cursor-pointer transition"
+                >
                   <img src={excelIcon} className="w-5 h-5 flex-shrink-0" />
                   <span className="text-sm whitespace-nowrap">데이터 엑셀 다운로드</span>
                 </div>
@@ -534,7 +635,6 @@ export default function StatsPage() {
           </div>
         </div>
 
-        {/* 🔹 활동 보고서 */}
         <h2 className="text-lg font-semibold mb-4">
           {displayStartDate} ~ {displayEndDate} 활동 보고서
         </h2>
@@ -562,25 +662,26 @@ export default function StatsPage() {
           />
         </div>
 
-        {/* 🔹 월별 수거량 추이 */}
         <SectionBox title="월별 수거량 추이">
           <div className="flex justify-end mb-4">
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => setUnit("kg")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${unit === "kg"
-                  ? "bg-[#0066aa] text-white shadow-md"
-                  : "text-gray-600"
-                  }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  unit === "kg"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
               >
                 kg
               </button>
               <button
                 onClick={() => setUnit("l")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${unit === "l"
-                  ? "bg-[#0066aa] text-white shadow-md"
-                  : "text-gray-600"
-                  }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  unit === "l"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
               >
                 L
               </button>
@@ -621,12 +722,10 @@ export default function StatsPage() {
           )}
         </SectionBox>
 
-        {/* 🔹 폐기물 분류 비율 */}
         <SectionBox title="폐기물 분류 비율">
           {wasteRatio.length > 0 ? (
             <div className="flex justify-center items-center gap-16">
-              {/* 도넛 차트 - 크기 확대 및 오른쪽 이동 */}
-              <div className="w-[480px] h-[380px] flex-shrink-0">
+              <div className="w-[420px] h-[320px] flex-shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -640,37 +739,52 @@ export default function StatsPage() {
                       dataKey="value"
                       cx="50%"
                       cy="50%"
-                      outerRadius={130}
-                      innerRadius={80}
+                      startAngle={90}
+                      endAngle={-270}
+                      outerRadius={100}
+                      innerRadius={65}
                       stroke="#fff"
                       strokeWidth={3}
                       labelLine={false}
                       label={(props) => {
                         const { name, value, cx, cy, midAngle, outerRadius } = props;
                         const ratio = Number(value ?? 0);
-
-                        // 3% 이하는 아무것도 렌더링하지 않음
+                        
                         if (ratio <= 3) return null;
-
+                        
                         const RADIAN = Math.PI / 180;
-                        const baseDistance = ratio < 10 ? 70 : 50;
-
-                        // 선의 시작점 (도넛 끝)
+                        
+                        // 각도를 정규화 (0~360도)
+                        const normalizedAngle = ((90 - (midAngle ?? 0)) % 360 + 360) % 360;
+                        
+                        // 비율과 각도에 따라 거리 동적 조정
+                        let baseDistance = 40;
+                        if (ratio < 7) {
+                          baseDistance = 70; // 가장 작은 비율
+                        } else if (ratio < 10) {
+                          baseDistance = 60;
+                        } else if (ratio < 15) {
+                          baseDistance = 50;
+                        }
+                        
+                        // 하단 영역(180~360도)에 있으면 더 멀리 배치
+                        if (normalizedAngle > 180 && normalizedAngle < 360) {
+                          baseDistance += 8;
+                        }
+                        
                         const lineStartRadius = outerRadius + 5;
                         const lineStartX = cx + lineStartRadius * Math.cos(-(midAngle ?? 0) * RADIAN);
                         const lineStartY = cy + lineStartRadius * Math.sin(-(midAngle ?? 0) * RADIAN);
-
-                        // 선의 끝점 (텍스트 위치)
+                        
                         const radius = outerRadius + baseDistance;
                         const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
                         const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
-
+                        
                         const safeValue = ratio.toFixed(0);
-                        const fontSize = ratio < 10 ? 11 : 13;
-
+                        const fontSize = ratio < 7 ? 10 : ratio < 10 ? 11 : ratio < 15 ? 12 : 13;
+                        
                         return (
                           <g>
-                            {/* 선 그리기 */}
                             <line
                               x1={lineStartX}
                               y1={lineStartY}
@@ -679,7 +793,6 @@ export default function StatsPage() {
                               stroke="#0066aa"
                               strokeWidth={1.5}
                             />
-                            {/* 텍스트 */}
                             <text
                               x={x}
                               y={y}
@@ -698,8 +811,8 @@ export default function StatsPage() {
                       {[...wasteRatio]
                         .sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
                         .map((item, idx) => (
-                          <Cell
-                            key={idx}
+                          <Cell 
+                            key={idx} 
                             fill={COLORS[idx % COLORS.length]}
                             opacity={hoveredWasteType === null || hoveredWasteType === item.wasteType ? 1 : 0.3}
                             style={{ transition: 'opacity 0.2s' }}
@@ -710,7 +823,6 @@ export default function StatsPage() {
                 </ResponsiveContainer>
               </div>
 
-              {/* 범례 - 호버 효과 추가 */}
               <div className="flex-1 pt-4">
                 <div className="grid grid-cols-1 gap-3">
                   {[...wasteRatio]
@@ -751,26 +863,27 @@ export default function StatsPage() {
           )}
         </SectionBox>
 
-        {/* 🔹 지역별 활동 */}
         <SectionBox
           title="지역별 활동 현황"
           rightElement={
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${regionMode === "count"
-                  ? "bg-[#0066aa] text-white shadow-md"
-                  : "text-gray-600"
-                  }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  regionMode === "count"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${regionMode === "amount"
-                  ? "bg-[#0066aa] text-white shadow-md"
-                  : "text-gray-600"
-                  }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  regionMode === "amount"
+                    ? "bg-[#0066aa] text-white shadow-md"
+                    : "text-gray-600"
+                }`}
               >
                 수거량별
               </button>
@@ -844,10 +957,6 @@ export default function StatsPage() {
     </div>
   );
 }
-
-/* ------------------------------------------------------ */
-/* Components */
-/* ------------------------------------------------------ */
 
 function SummaryCard({ title, value, icon }: any) {
   return (
