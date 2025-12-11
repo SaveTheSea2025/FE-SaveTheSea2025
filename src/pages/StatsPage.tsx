@@ -127,6 +127,7 @@ export default function StatsPage() {
 
   const fetchAllData = async () => {
     // ⚠️ BASE_URL 체크 제거 (Proxy 사용)
+    const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     if (!user && viewMode === "mine") {
       // useEffect에서 처리하지만, 비동기 호출 시점 방어 코드
