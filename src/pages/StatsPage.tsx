@@ -126,6 +126,7 @@ export default function StatsPage() {
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
   const fetchAllData = async () => {
+    // 내 정보를 보려는데 유저가 없으면 API 호출 안 함
     if (!user && viewMode === "mine") {
       return;
     }
@@ -144,7 +145,7 @@ export default function StatsPage() {
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // 공통 파라미터 생성 (instance params 옵션 사용)
+      // 공통 파라미터 (instance가 자동으로 params를 쿼리스트링으로 변환함)
       const commonParams = {
         startYear,
         startMonth,
@@ -161,7 +162,7 @@ export default function StatsPage() {
 
         console.log("전체 통계 요청:", summaryUrl);
 
-        // instance 사용 및 params 객체 전달
+        // instance 사용 (자동으로 Header에 토큰 포함됨)
         const summaryRes = await instance.get(summaryUrl, { params: commonParams });
         const summaryData = summaryRes.data;
 
@@ -280,6 +281,7 @@ export default function StatsPage() {
 
       console.log("엑셀 다운로드 요청:", params);
 
+      // instance 사용
       const response = await instance.get("/api/export/excel", {
         params,
         responseType: "blob",
@@ -329,6 +331,7 @@ export default function StatsPage() {
 
       console.log("PDF 다운로드 요청:", params);
 
+      // instance 사용
       const response = await instance.get("/api/statistics/pdf/download", {
         params,
         responseType: "blob",
@@ -529,6 +532,8 @@ export default function StatsPage() {
 
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
+
+                fetchAllData();
               }}
               className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
             >
