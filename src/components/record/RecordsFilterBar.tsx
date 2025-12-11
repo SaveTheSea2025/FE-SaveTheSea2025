@@ -16,7 +16,7 @@ const RecordsFilterBar: React.FC<FilterBarProps> = ({
 }) => {
     return (
         <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-[#FDFDFB]">
-            {/* ✅ 필터 버튼 */}
+            {/* 필터 버튼 */}
             <button
                 onClick={onFilterClick}
                 className="flex items-center gap-1 text-sky-800 border border-sky-800 px-3 py-[6px] rounded-full text-sm font-medium hover:bg-sky-50 transition"
@@ -28,7 +28,7 @@ const RecordsFilterBar: React.FC<FilterBarProps> = ({
             {/* 구분선 */}
             <div className="w-px h-5 bg-gray-300" />
 
-            {/* ✅ 지역 필터 */}
+            {/* 지역 필터 */}
             <div className="flex gap-2">
                 {regions.map((region) => (
                     <button
