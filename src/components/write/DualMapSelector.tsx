@@ -57,11 +57,14 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     geocoderRef.current.coord2Address(lng, lat, (result: any, status: string) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
         const addr = result[0].address.address_name;
+        console.log(`🗺️ [${type}] 주소 업데이트:`, addr); // 🔍 디버깅 로그
 
         if (type === "start") {
           setStartAddress(addr);
           const endLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
           const endLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
+
+          console.log('🔥 출발 마커 onChange 호출:', { startAddress: addr }); // 🔍 디버깅 로그
 
           onChange?.({
             startAddress: addr,
@@ -210,6 +213,33 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
 
     initMap();
   }, [regionCenter]);
+
+  // 🔥 regionCenter가 바뀔 때마다 마커 위치와 주소 업데이트 (핵심 추가!)
+  useEffect(() => {
+    // 지도가 이미 초기화되어 있고, regionCenter가 있을 때만 실행
+    if (!regionCenter || !startMarkerRef.current || !endMarkerRef.current || !mapInstance.current) {
+      return;
+    }
+
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+
+    // 출발 마커를 새 위치로 이동
+    const newStartPos = new kakao.maps.LatLng(regionCenter.lat, regionCenter.lng);
+    startMarkerRef.current.setPosition(newStartPos);
+    mapInstance.current.setCenter(newStartPos);
+
+    // 도착 마커를 출발지 옆으로 이동
+    const newEndLat = regionCenter.lat - OFFSET_LAT;
+    const newEndLng = regionCenter.lng + OFFSET_LNG;
+    const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
+    endMarkerRef.current.setPosition(newEndPos);
+
+    // 🔥 주소 업데이트 (핵심!) - 이 부분이 드롭다운 업데이트를 트리거함
+    updateAddress(regionCenter.lat, regionCenter.lng, "start");
+    updateAddress(newEndLat, newEndLng, "end");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regionCenter?.lat, regionCenter?.lng]); // ✅ lat, lng 값만 감지
 
   // ✅ 장소 검색 함수 수정
   const handlePlaceSearch = async (type: "start" | "end") => {

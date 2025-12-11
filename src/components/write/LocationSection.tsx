@@ -33,9 +33,9 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
 
-  const [startAddr, setStartAddr] = useState("");  // ✅ setter 추가
+  const [startAddr, setStartAddr] = useState("");
   const [endAddr, setEndAddr] = useState("");
-  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);  // ✅ setter 추가
+  const [startPos, setStartPos] = useState<{ lat: number; lng: number } | null>(null);
   const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const [locked, setLocked] = useState(false);
@@ -45,6 +45,75 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
     sido && sigungu && regionCenters[sido]?.[sigungu]
       ? regionCenters[sido][sigungu]
       : null;
+
+  // 🔥 주소에서 시/도, 시/군/구 추출 함수 (핵심 기능!)
+  const extractRegionFromAddress = (address: string): { sido: string; sigungu: string } => {
+    let extractedSido = "";
+    let extractedSigungu = "";
+
+    console.log('🔍 extractRegionFromAddress 실행:', address);
+
+    // 시/도 매칭 (부분 매칭 지원)
+    const sidoList = Object.keys(regionCenters);
+    for (const s of sidoList) {
+      // "경기도"와 "경기", "강원특별자치도"와 "강원" 등 부분 매칭
+      if (address.includes(s)) {
+        extractedSido = s;
+        break;
+      }
+      // "경기" → "경기도", "강원" → "강원특별자치도" 매핑
+      if (s === "경기도" && address.includes("경기")) {
+        extractedSido = s;
+        break;
+      }
+      if (s === "강원특별자치도" && (address.includes("강원") || address.includes("강원도"))) {
+        extractedSido = s;
+        break;
+      }
+      if (s === "충청북도" && (address.includes("충북") || address.includes("충청북"))) {
+        extractedSido = s;
+        break;
+      }
+      if (s === "충청남도" && (address.includes("충남") || address.includes("충청남"))) {
+        extractedSido = s;
+        break;
+      }
+      if (s === "전라북도" && (address.includes("전북") || address.includes("전라북"))) {
+        extractedSido = s;
+        break;
+      }
+      if (s === "전라남도" && (address.includes("전남") || address.includes("전라남"))) {
+        extractedSido = s;
+        break;
+      }
+      if (s === "경상북도" && (address.includes("경북") || address.includes("경상북"))) {
+        extractedSido = s;
+        break;
+      }
+      if (s === "경상남도" && (address.includes("경남") || address.includes("경상남"))) {
+        extractedSido = s;
+        break;
+      }
+    }
+
+    console.log('📍 추출된 시/도:', extractedSido);
+
+    // 시/군/구 매칭
+    if (extractedSido && regionCenters[extractedSido]) {
+      const sigunguList = Object.keys(regionCenters[extractedSido]);
+      for (const sg of sigunguList) {
+        if (address.includes(sg)) {
+          extractedSigungu = sg;
+          break;
+        }
+      }
+    }
+
+    console.log('📍 추출된 시/군/구:', extractedSigungu);
+    console.log('✅ 최종 결과:', { sido: extractedSido, sigungu: extractedSigungu });
+
+    return { sido: extractedSido, sigungu: extractedSigungu };
+  };
 
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
@@ -230,11 +299,31 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
           <DualMapSelector
             regionCenter={regionCenter}
             onChange={(data) => {
+              console.log('📥 DualMapSelector onChange 받음:', {
+                startAddress: data.startAddress,
+                locked,
+              });
+
               // ✅ LocationSection 상태 업데이트
               setStartAddr(data.startAddress);
               setStartPos({ lat: data.startLat, lng: data.startLng });
               setEndAddr(data.endAddress);
               setEndPos({ lat: data.endLat, lng: data.endLng });
+
+              // 🔥 핵심: 출발 깃발(startAddress) 기준으로 드롭다운 자동 업데이트!
+              if (data.startAddress) {
+                const extracted = extractRegionFromAddress(data.startAddress);
+                console.log('🔍 추출된 지역:', extracted, '주소:', data.startAddress, 'locked:', locked);
+                
+                // ✅ locked 체크 제거 - 항상 업데이트!
+                if (extracted.sido && extracted.sigungu) {
+                  console.log('✅ 드롭다운 업데이트:', extracted.sido, extracted.sigungu);
+                  setSido(extracted.sido);
+                  setSigungu(extracted.sigungu);
+                } else {
+                  console.warn('⚠️ 지역 추출 실패 - sido:', extracted.sido, 'sigungu:', extracted.sigungu);
+                }
+              }
 
               const kakao = (window as any).kakao;
               const geocoder = new kakao.maps.services.Geocoder();
@@ -244,6 +333,12 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                   if (status === kakao.maps.services.Status.OK && result[0]) {
                     const addr = result[0].address.address_name;
                     setEndAddr(addr);  // ✅ 상태 업데이트
+                    
+                    // 🔥 출발 깃발 기준으로 추출된 지역 사용
+                    const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
+                    const finalSido = currentExtracted.sido || sido;
+                    const finalSigungu = currentExtracted.sigungu || sigungu;
+                    
                     onChange?.({
                       startAddress: data.startAddress,
                       startLat: data.startLat,
@@ -251,8 +346,8 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                       endAddress: addr,
                       endLat: data.endLat,
                       endLng: data.endLng,
-                      regionSido: sido,
-                      regionSigungu: sigungu,
+                      regionSido: finalSido,
+                      regionSigungu: finalSigungu,
                       startLatitude: data.startLat,
                       startLongitude: data.startLng,
                       endLatitude: data.endLat,
@@ -261,6 +356,11 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                   }
                 });
               } else {
+                // 🔥 출발 깃발 기준으로 추출된 지역 사용
+                const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
+                const finalSido = currentExtracted.sido || sido;
+                const finalSigungu = currentExtracted.sigungu || sigungu;
+                
                 onChange?.({
                   startAddress: data.startAddress,
                   startLat: data.startLat,
@@ -268,8 +368,8 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                   endAddress: data.endAddress,
                   endLat: data.endLat,
                   endLng: data.endLng,
-                  regionSido: sido,
-                  regionSigungu: sigungu,
+                  regionSido: finalSido,
+                  regionSigungu: finalSigungu,
                   startLatitude: data.startLat,
                   startLongitude: data.startLng,
                   endLatitude: data.endLat,
