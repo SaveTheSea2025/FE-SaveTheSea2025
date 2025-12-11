@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Header from "../components/common/Header";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -39,6 +40,7 @@ interface SummaryStats {
 interface MonthlyWeight {
   month: string;
   totalWeight: number;
+  totalVolume: number;
 }
 
 interface WasteTypeRatio {
@@ -56,7 +58,7 @@ interface RegionStats {
 
 export default function StatsPage() {
   const { user } = useAuth();
-  
+
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
@@ -90,17 +92,20 @@ export default function StatsPage() {
   const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
   const [regionData, setRegionData] = useState<RegionStats[]>([]);
 
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+  // ✅ [수정됨] viewMode가 변경될 때마다 fetchAllData가 실행되도록 의존성 배열에 추가
   useEffect(() => {
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
-    if (!user) {
+
+    // 로그아웃 상태에서 'mine'으로 접근 시 'all'로 강제 전환
+    if (!user && viewMode === "mine") {
       setViewMode("all");
+      return; // setViewMode가 다시 useEffect를 트리거하므로 여기서는 중단
     }
+
     fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, viewMode]); // 🔥 viewMode 추가됨!
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -121,14 +126,10 @@ export default function StatsPage() {
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
   const fetchAllData = async () => {
-    if (!BASE_URL) {
-      console.warn("BASE_URL이 설정되지 않았습니다.");
-      return;
-    }
+    // ⚠️ BASE_URL 체크 제거 (Proxy 사용)
 
     if (!user && viewMode === "mine") {
-      console.warn("비로그인 상태에서는 전체 데이터만 조회 가능합니다.");
-      setViewMode("all");
+      // useEffect에서 처리하지만, 비동기 호출 시점 방어 코드
       return;
     }
 
@@ -138,7 +139,7 @@ export default function StatsPage() {
       const endYear = parseInt(endDate.split("-")[0]);
       const endMonth = parseInt(endDate.split("-")[1]);
 
-      const regionParam = location === "전체 지역" ? "" : location;
+      const regionParam = location === "전체 지역" ? "전체" : location;
 
       const token = localStorage.getItem("accessToken");
       const headers: HeadersInit = {
@@ -154,26 +155,25 @@ export default function StatsPage() {
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
+      // 공통 파라미터 생성
+      const params = new URLSearchParams({
+        startYear: startYear.toString(),
+        startMonth: startMonth.toString(),
+        endYear: endYear.toString(),
+        endMonth: endMonth.toString(),
+        region: regionParam,
+      });
+
       // 1. 전체 통계
       try {
-        const params = new URLSearchParams({
-          startYear: startYear.toString(),
-          startMonth: startMonth.toString(),
-          endYear: endYear.toString(),
-          endMonth: endMonth.toString(),
-        });
-        if (regionParam) params.append("region", regionParam);
-
         const summaryUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-summary?${params}`
-          : `${BASE_URL}/api/statistics/summary?${params}`;
+          ? `/api/statistics/my-summary?${params}`
+          : `/api/statistics/summary?${params}`;
 
         console.log("📡 전체 통계 요청:", summaryUrl);
 
         const summaryRes = await fetch(summaryUrl, { headers });
         const summaryData = await summaryRes.json();
-
-        console.log("📦 전체 통계 응답:", summaryData);
 
         if (summaryData.code === 0) {
           const data = summaryData.data;
@@ -183,7 +183,6 @@ export default function StatsPage() {
             totalWeight: data.totalWeight ?? 0,
             totalVolume: data.totalVolume ?? 0,
           });
-          console.log("✅ 전체 통계 로드 완료", data);
         }
       } catch (err) {
         console.error("❌ 전체 통계 API 실패:", err);
@@ -191,24 +190,14 @@ export default function StatsPage() {
 
       // 2. 월별 수거량
       try {
-        const params = new URLSearchParams({
-          startYear: startYear.toString(),
-          startMonth: startMonth.toString(),
-          endYear: endYear.toString(),
-          endMonth: endMonth.toString(),
-        });
-        if (regionParam) params.append("region", regionParam);
-
         const monthlyUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-monthly-change?${params}`
-          : `${BASE_URL}/api/statistics/monthly-change?${params}`;
+          ? `/api/statistics/my-monthly-change?${params}`
+          : `/api/statistics/monthly-change?${params}`;
 
         console.log("📡 월별 수거량 요청:", monthlyUrl);
 
         const monthlyRes = await fetch(monthlyUrl, { headers });
         const monthlyResult = await monthlyRes.json();
-
-        console.log("📦 월별 수거량 응답:", monthlyResult);
 
         if (monthlyResult.code === 0 && monthlyResult.data.length > 0) {
           const formatted = monthlyResult.data.map((item: any) => ({
@@ -217,7 +206,6 @@ export default function StatsPage() {
             totalVolume: item.totalVolume,
           }));
           setMonthlyData(formatted);
-          console.log("✅ 월별 수거량 로드 완료");
         } else {
           setMonthlyData([]);
         }
@@ -228,24 +216,14 @@ export default function StatsPage() {
 
       // 3. 폐기물 비율
       try {
-        const params = new URLSearchParams({
-          startYear: startYear.toString(),
-          startMonth: startMonth.toString(),
-          endYear: endYear.toString(),
-          endMonth: endMonth.toString(),
-        });
-        if (regionParam) params.append("region", regionParam);
-
         const wasteUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-waste-type-ratio?${params}`
-          : `${BASE_URL}/api/statistics/waste-type-ratio?${params}`;
+          ? `/api/statistics/my-waste-type-ratio?${params}`
+          : `/api/statistics/waste-type-ratio?${params}`;
 
         console.log("📡 폐기물 비율 요청:", wasteUrl);
 
         const wasteRes = await fetch(wasteUrl, { headers });
         const wasteResult = await wasteRes.json();
-
-        console.log("📦 폐기물 비율 응답:", wasteResult);
 
         if (wasteResult.code === 0) {
           const formatted = wasteResult.data.map((item: any) => ({
@@ -254,7 +232,6 @@ export default function StatsPage() {
             ratio: item.percentage,
           }));
           setWasteRatio(formatted);
-          console.log("✅ 폐기물 비율 로드 완료");
         }
       } catch (err) {
         console.error("❌ 폐기물 비율 API 실패:", err);
@@ -262,29 +239,18 @@ export default function StatsPage() {
 
       // 4. 지역별 통계
       try {
-        const params = new URLSearchParams({
-          startYear: startYear.toString(),
-          startMonth: startMonth.toString(),
-          endYear: endYear.toString(),
-          endMonth: endMonth.toString(),
-        });
-
         const regionUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-region-activity?${params}`
-          : `${BASE_URL}/api/statistics/region-activity?${params}`;
+          ? `/api/statistics/my-region-activity?${params}`
+          : `/api/statistics/region-activity?${params}`;
 
         console.log("📡 지역별 통계 요청:", regionUrl);
 
         const regionRes = await fetch(regionUrl, { headers });
         const regionResult = await regionRes.json();
 
-        console.log("📦 지역별 통계 응답:", regionResult);
-
         if (regionResult.code === 0) {
           setRegionData(regionResult.data);
-          console.log("✅ 지역별 통계 로드 완료");
         } else {
-          console.warn("⚠️ 지역별 통계 API 응답 코드:", regionResult.code);
           setRegionData([]);
         }
       } catch (err) {
@@ -292,7 +258,6 @@ export default function StatsPage() {
         setRegionData([]);
       }
 
-      console.log("🎉 모든 API 호출 완료");
     } catch (error) {
       console.error("전체 API 로드 오류:", error);
     }
@@ -312,20 +277,21 @@ export default function StatsPage() {
       const startMonth = parseInt(startDate.split("-")[1]);
       const endYear = parseInt(endDate.split("-")[0]);
       const endMonth = parseInt(endDate.split("-")[1]);
-      const regionParam = location === "전체 지역" ? "" : location;
-      
+
+      const regionParam = location === "전체 지역" ? "전체" : location;
+
       const params = {
-        viewType: viewMode, // ✅ scope → viewType으로 수정
+        viewType: viewMode,
         startYear,
         startMonth,
         endYear,
         endMonth,
-        ...(regionParam && { region: regionParam }),
+        region: regionParam,
       };
 
       console.log("📊 엑셀 다운로드 요청:", params);
 
-      const response = await axios.get(`${BASE_URL}/api/export/excel`, { // ✅ 올바른 경로로 수정
+      const response = await axios.get(`/api/export/excel`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -340,24 +306,19 @@ export default function StatsPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
-      const fileName = `통계데이터_${startYear}-${String(startMonth).padStart(2, "0")}_${endYear}-${String(endMonth).padStart(2, "0")}.xlsx`;
+
+      const fileName = `통계데이터_${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}.xlsx`;
       link.setAttribute("download", fileName);
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       link.remove();
       window.URL.revokeObjectURL(url);
-
-      console.log("✅ 엑셀 다운로드 완료");
       setDownloadOpen(false);
     } catch (error: any) {
       console.error("❌ 엑셀 다운로드 실패:", error);
-      if (error.response) {
-        console.error("서버 응답:", error.response.data);
-      }
-      alert("엑셀 다운로드에 실패했습니다.");
+      alert("엑셀 다운로드에 실패했습니다. (CORS 문제가 지속되면 vite.config.ts proxy 설정을 확인해주세요)");
     }
   };
 
@@ -369,20 +330,21 @@ export default function StatsPage() {
       const startMonth = parseInt(startDate.split("-")[1]);
       const endYear = parseInt(endDate.split("-")[0]);
       const endMonth = parseInt(endDate.split("-")[1]);
-      const regionParam = location === "전체 지역" ? "" : location;
-      
+
+      const regionParam = location === "전체 지역" ? "전체" : location;
+
       const params = {
-        viewType: viewMode, // ✅ scope → viewType으로 수정
+        scope: viewMode,
         startYear,
         startMonth,
         endYear,
         endMonth,
-        ...(regionParam && { region: regionParam }),
+        region: regionParam,
       };
 
       console.log("📄 PDF 다운로드 요청:", params);
 
-      const response = await axios.get(`${BASE_URL}/api/statistics/pdf/download`, { // ✅ PDF 경로 (확인 필요)
+      const response = await axios.get(`/api/statistics/pdf/download`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -394,23 +356,18 @@ export default function StatsPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
-      const fileName = `통계보고서_${startYear}-${String(startMonth).padStart(2, "0")}_${endYear}-${String(endMonth).padStart(2, "0")}.pdf`;
+
+      const fileName = `통계보고서_${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}.pdf`;
       link.setAttribute("download", fileName);
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       link.remove();
       window.URL.revokeObjectURL(url);
-
-      console.log("✅ PDF 다운로드 완료");
       setDownloadOpen(false);
     } catch (error: any) {
       console.error("❌ PDF 다운로드 실패:", error);
-      if (error.response) {
-        console.error("서버 응답:", error.response.data);
-      }
       alert("PDF 다운로드에 실패했습니다.");
     }
   };
@@ -465,21 +422,19 @@ export default function StatsPage() {
                   }
                   setViewMode("mine");
                 }}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  viewMode === "mine"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "mine"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 내정보
               </button>
               <button
                 onClick={() => setViewMode("all")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  viewMode === "all"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${viewMode === "all"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 전체
               </button>
@@ -558,15 +513,13 @@ export default function StatsPage() {
                         setLocation(loc);
                         setLocationOpen(false);
                       }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                        location === loc
-                          ? "bg-blue-50 text-[#0066aa] font-medium"
-                          : ""
-                      } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                        idx === locationOptions.length - 1
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-50 text-sm ${location === loc
+                        ? "bg-blue-50 text-[#0066aa] font-medium"
+                        : ""
+                        } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === locationOptions.length - 1
                           ? "rounded-b-xl"
                           : ""
-                      }`}
+                        }`}
                     >
                       {loc}
                     </div>
@@ -586,16 +539,18 @@ export default function StatsPage() {
               onClick={() => {
                 const today = new Date();
                 const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-                
+
                 setStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 setLocation("전체 지역");
                 setViewMode(user ? "mine" : "all");
-                
+
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
-                
-                fetchAllData();
+
+                // viewMode 변경이 비동기라 여기서 fetchAllData 호출하면 이전 viewMode로 호출될 수 있음.
+                // 하지만 setViewMode가 useEffect를 트리거하므로 여기서 직접 호출할 필요 없음.
+                // 다만 날짜/지역 초기화 후 'all'로 돌아가는 로직은 useEffect가 처리함.
               }}
               className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
             >
@@ -603,7 +558,6 @@ export default function StatsPage() {
             </button>
           </div>
 
-          {/* 🔥 파일 다운로드 버튼 - 클릭 핸들러 추가 */}
           <div className="relative" ref={downloadRef}>
             <button
               onClick={() => setDownloadOpen(!downloadOpen)}
@@ -615,7 +569,7 @@ export default function StatsPage() {
 
             {downloadOpen && (
               <div className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[220px]">
-                <div 
+                <div
                   onClick={handlePdfDownload}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-t-xl cursor-pointer transition"
                 >
@@ -623,7 +577,7 @@ export default function StatsPage() {
                   <span className="text-sm whitespace-nowrap">PDF 보고서 다운로드</span>
                 </div>
                 <div className="h-px bg-gray-100"></div>
-                <div 
+                <div
                   onClick={handleExcelDownload}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-b-xl cursor-pointer transition"
                 >
@@ -667,21 +621,19 @@ export default function StatsPage() {
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => setUnit("kg")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  unit === "kg"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${unit === "kg"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 kg
               </button>
               <button
                 onClick={() => setUnit("l")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  unit === "l"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${unit === "l"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 L
               </button>
@@ -749,40 +701,32 @@ export default function StatsPage() {
                       label={(props) => {
                         const { name, value, cx, cy, midAngle, outerRadius } = props;
                         const ratio = Number(value ?? 0);
-                        
+
                         if (ratio <= 3) return null;
-                        
+
                         const RADIAN = Math.PI / 180;
-                        
-                        // 각도를 정규화 (0~360도)
                         const normalizedAngle = ((90 - (midAngle ?? 0)) % 360 + 360) % 360;
-                        
-                        // 비율과 각도에 따라 거리 동적 조정
+
                         let baseDistance = 40;
-                        if (ratio < 7) {
-                          baseDistance = 70; // 가장 작은 비율
-                        } else if (ratio < 10) {
-                          baseDistance = 60;
-                        } else if (ratio < 15) {
-                          baseDistance = 50;
-                        }
-                        
-                        // 하단 영역(180~360도)에 있으면 더 멀리 배치
+                        if (ratio < 7) baseDistance = 70;
+                        else if (ratio < 10) baseDistance = 60;
+                        else if (ratio < 15) baseDistance = 50;
+
                         if (normalizedAngle > 180 && normalizedAngle < 360) {
                           baseDistance += 8;
                         }
-                        
+
                         const lineStartRadius = outerRadius + 5;
                         const lineStartX = cx + lineStartRadius * Math.cos(-(midAngle ?? 0) * RADIAN);
                         const lineStartY = cy + lineStartRadius * Math.sin(-(midAngle ?? 0) * RADIAN);
-                        
+
                         const radius = outerRadius + baseDistance;
                         const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
                         const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
-                        
+
                         const safeValue = ratio.toFixed(0);
                         const fontSize = ratio < 7 ? 10 : ratio < 10 ? 11 : ratio < 15 ? 12 : 13;
-                        
+
                         return (
                           <g>
                             <line
@@ -811,8 +755,8 @@ export default function StatsPage() {
                       {[...wasteRatio]
                         .sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
                         .map((item, idx) => (
-                          <Cell 
-                            key={idx} 
+                          <Cell
+                            key={idx}
                             fill={COLORS[idx % COLORS.length]}
                             opacity={hoveredWasteType === null || hoveredWasteType === item.wasteType ? 1 : 0.3}
                             style={{ transition: 'opacity 0.2s' }}
@@ -869,21 +813,19 @@ export default function StatsPage() {
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
               <button
                 onClick={() => setRegionMode("count")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  regionMode === "count"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${regionMode === "count"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 활동 횟수별
               </button>
               <button
                 onClick={() => setRegionMode("amount")}
-                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  regionMode === "amount"
-                    ? "bg-[#0066aa] text-white shadow-md"
-                    : "text-gray-600"
-                }`}
+                className={`relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${regionMode === "amount"
+                  ? "bg-[#0066aa] text-white shadow-md"
+                  : "text-gray-600"
+                  }`}
               >
                 수거량별
               </button>
