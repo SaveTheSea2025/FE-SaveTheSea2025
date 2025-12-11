@@ -275,16 +275,8 @@ const RecordsPage: React.FC = () => {
           });
         }
 
-        // 공통 클릭 이벤트 리스너 추가 (썸네일이 있든 없든)
-        // 커스텀 오버레이는 지도 객체가 아니어서 addListener가 안 먹힐 수 있으므로 분기 처리
+
         if (d.thumbnail) {
-          // 커스텀 오버레이는 생성 시 content 문자열이므로, 생성된 후 내부 엘리먼트를 찾기 어려움.
-          // 대신 document string에 onclick을 심거나, 생성 후 처리해야 함.
-          // 하지만 Clusterer를 쓰면 마커로 변환되어 관리되므로, 아래 방식 사용 권장:
-          // CustomOverlay 대신 Marker를 쓰고 마커 이미지를 커스텀하거나 해야 하는데,
-          // 현재 구조상 오버레이 content에 직접 이벤트를 거는게 가장 확실함.
-          // 그러나 React 내부에서 string으로 주입된 HTML의 이벤트 핸들링은 어려우므로,
-          // 여기서는 Kakao CustomOverlay의 content를 HTMLElement로 생성하여 이벤트를 부착함.
 
           const div = document.createElement('div');
           div.style.position = 'relative';
@@ -310,10 +302,9 @@ const RecordsPage: React.FC = () => {
             yAnchor: 1.0,
             clickable: true
           });
-          markerOrOverlay.setMap(null); // 클러스터러에 추가하기 위해 맵에서는 제거
+          markerOrOverlay.setMap(null);
 
         } else {
-          // 일반 마커의 경우 Kakao 이벤트 리스너 사용
           kakao.maps.event.addListener(markerOrOverlay, "click", () => {
             map.panTo(markerPosition);
             map.setLevel(5, { animate: true });
@@ -326,7 +317,6 @@ const RecordsPage: React.FC = () => {
 
       clusterer.addMarkers(markers);
 
-      // 클러스터 클릭 시 확대
       kakao.maps.event.addListener(clusterer, "clusterclick", (cluster: any) => {
         const level = map.getLevel() - 2;
         map.setLevel(level, { anchor: cluster.getCenter() });

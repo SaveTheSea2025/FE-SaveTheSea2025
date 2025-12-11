@@ -7,7 +7,6 @@ interface FilterModalProps {
 }
 
 const FilterModal: React.FC<FilterModalProps> = ({ onClose, onApply }) => {
-    // ✅ 날짜 도우미 함수 (오늘, 3개월 전)
     const getToday = () => new Date().toISOString().split("T")[0];
     const getThreeMonthsAgo = () => {
         const d = new Date();
@@ -15,20 +14,16 @@ const FilterModal: React.FC<FilterModalProps> = ({ onClose, onApply }) => {
         return d.toISOString().split("T")[0];
     };
 
-    // ✅ 상태 관리
-    // 1. 기간 (기본값: 오늘 ~ 3개월 전)
     const [startDate, setStartDate] = useState(getThreeMonthsAgo());
     const [endDate, setEndDate] = useState(getToday());
 
-    // 2. 유저명 검색 (타입 + 키워드)
     const [userType, setUserType] = useState("ALL"); // ALL | PERSONAL | GROUP
     const [username, setUsername] = useState("");
 
-    // 3. 활동명 검색 (타입 + 키워드)
     const [activityType, setActivityType] = useState("ALL"); // ALL | PERSONAL | GROUP
     const [activityName, setActivityName] = useState("");
 
-    /* ✅ 필터 적용 */
+    /* 필터 적용 */
     const handleApply = () => {
         const filters = {
             startDate,
@@ -46,7 +41,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ onClose, onApply }) => {
         onClose();
     };
 
-    /* ✅ 필터 초기화 */
+    /* 필터 초기화 */
     const handleReset = () => {
         setStartDate(getThreeMonthsAgo());
         setEndDate(getToday());

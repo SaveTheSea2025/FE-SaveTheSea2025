@@ -9,7 +9,7 @@ declare global {
     }
 }
 
-// ✅ API 응답에 맞춰 타입 정의 (activeName 등 확인)
+// API 응답에 맞춰 타입 정의 (activeName 등 확인)
 type DetailData = {
     id: number;
     username: string; // 단체명 (예: 속초 청년봉사단)
@@ -57,13 +57,13 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
     const [isReportOpen, setIsReportOpen] = useState(false);
     const [reason, setReason] = useState("");
 
-    // ✅ 1. 상세 정보 가져오기 (토큰 헤더 추가됨)
+    // 1. 상세 정보 가져오기 (토큰 헤더 추가됨)
     useEffect(() => {
         const fetchDetail = async () => {
             try {
                 setLoading(true);
 
-                // 🔑 토큰 가져오기 및 헤더 설정
+                // 토큰 가져오기 및 헤더 설정
                 const token = localStorage.getItem("accessToken");
                 const headers: HeadersInit = {
                     "Content-Type": "application/json",
@@ -91,7 +91,7 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
         fetchDetail();
     }, [BASE_URL, recordId]);
 
-    // 🗺️ 2. 지도 로드 (기존 로직 유지)
+    // 2. 지도 로드 (기존 로직 유지)
     useEffect(() => {
         if (!detail) return;
 
@@ -162,7 +162,7 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
         };
     }, [detail]);
 
-    // 🚨 3. 신고하기 로직 (기존 로직 유지)
+    // 3. 신고하기 로직 
     const submitReport = async () => {
         if (!reason.trim()) {
             alert("신고 사유를 입력해주세요.");
@@ -197,10 +197,7 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
         }
     };
 
-    // ✅ 시간 포맷 함수 (안전장치 추가)
-    // 백엔드에서 "4시간 0분"이라고 오면 그대로 리턴, 숫자만 오면 변환
     const formatMinutes = (value: string) => {
-        // 이미 한글이 포함되어 있다면 포맷팅 된 것이므로 그대로 반환
         if (value.includes("시간") || value.includes("분")) return value;
 
         const minutes = parseInt(value, 10);
@@ -230,7 +227,6 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
 
     if (!detail) return null;
 
-    // 무게 표시 우선순위: 상세조회값 > 목록에서넘겨준값
     const displayWeight =
         detail.totalWeight !== undefined && !isNaN(Number(detail.totalWeight))
             ? Number(detail.totalWeight)
@@ -269,7 +265,7 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                         {detail.username}
                     </div>
 
-                    {/* 활동명 (메인 제목) - JSON의 activeName 사용 */}
+                    {/* 활동명 (메인 제목) */}
                     <h2 className="text-xl font-bold text-[#114C79] mb-3 leading-tight">
                         {detail.activityName}
                     </h2>
@@ -308,7 +304,6 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
 
                         <div className="rounded-xl py-3 text-center" style={{ backgroundColor: "#FFFAE6" }}>
                             <Clock size={18} className="mx-auto mb-1" style={{ color: "#FFA550" }} />
-                            {/* ✅ 수정된 formatMinutes 사용 */}
                             <p className="text-lg font-semibold">{formatMinutes(detail.totalActivityTime)}</p>
                             <p className="text-xs text-gray-600">소요시간</p>
                         </div>
