@@ -127,7 +127,6 @@ export default function StatsPage() {
 
   const fetchAllData = async () => {
     // ⚠️ BASE_URL 체크 제거 (Proxy 사용)
-    const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     if (!user && viewMode === "mine") {
       // useEffect에서 처리하지만, 비동기 호출 시점 방어 코드
@@ -168,8 +167,8 @@ export default function StatsPage() {
       // 1. 전체 통계
       try {
         const summaryUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-summary?${params}`
-          : `${BASE_URL}/api/statistics/summary?${params}`;
+          ? `/api/statistics/my-summary?${params}`
+          : `/api/statistics/summary?${params}`;
 
         console.log("📡 전체 통계 요청:", summaryUrl);
 
@@ -192,8 +191,8 @@ export default function StatsPage() {
       // 2. 월별 수거량
       try {
         const monthlyUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-monthly-change?${params}`
-          : `${BASE_URL}/api/statistics/monthly-change?${params}`;
+          ? `/api/statistics/my-monthly-change?${params}`
+          : `/api/statistics/monthly-change?${params}`;
 
         console.log("📡 월별 수거량 요청:", monthlyUrl);
 
@@ -218,8 +217,8 @@ export default function StatsPage() {
       // 3. 폐기물 비율
       try {
         const wasteUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-waste-type-ratio?${params}`
-          : `${BASE_URL}/api/statistics/waste-type-ratio?${params}`;
+          ? `/api/statistics/my-waste-type-ratio?${params}`
+          : `/api/statistics/waste-type-ratio?${params}`;
 
         console.log("📡 폐기물 비율 요청:", wasteUrl);
 
@@ -241,8 +240,8 @@ export default function StatsPage() {
       // 4. 지역별 통계
       try {
         const regionUrl = viewMode === "mine"
-          ? `${BASE_URL}/api/statistics/my-region-activity?${params}`
-          : `${BASE_URL}/api/statistics/region-activity?${params}`;
+          ? `/api/statistics/my-region-activity?${params}`
+          : `/api/statistics/region-activity?${params}`;
 
         console.log("📡 지역별 통계 요청:", regionUrl);
 
@@ -292,7 +291,7 @@ export default function StatsPage() {
 
       console.log("📊 엑셀 다운로드 요청:", params);
 
-      const response = await axios.get(`${BASE_URL}/api/export/excel`, {
+      const response = await axios.get(`/api/export/excel`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -345,7 +344,7 @@ export default function StatsPage() {
 
       console.log("📄 PDF 다운로드 요청:", params);
 
-      const response = await axios.get(`${BASE_URL}/api/statistics/pdf/download`, {
+      const response = await axios.get(`/api/statistics/pdf/download`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
