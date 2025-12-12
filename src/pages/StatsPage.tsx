@@ -62,6 +62,7 @@ export default function StatsPage() {
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
+  const [loading, setLoading] = useState(false); // 🔥 loading으로 변경
 
   const downloadRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +131,8 @@ export default function StatsPage() {
     if (!user && viewMode === "mine") {
       return;
     }
+
+    setLoading(true); // 🔥 로딩 시작
 
     try {
       const startYear = parseInt(startDate.split("-")[0]);
@@ -251,6 +254,8 @@ export default function StatsPage() {
 
     } catch (error) {
       console.error("전체 API 로드 오류:", error);
+    } finally {
+      setLoading(false); // 🔥 로딩 종료
     }
   };
 
@@ -295,7 +300,10 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const fileName = `통계데이터_${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}.xlsx`;
+      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
+      const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
+      
       link.setAttribute("download", fileName);
 
       document.body.appendChild(link);
@@ -342,7 +350,10 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const fileName = `통계보고서_${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}.pdf`;
+      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
+      const fileName = `${prefix}_통계보고서_${dateRange}.pdf`;
+      
       link.setAttribute("download", fileName);
 
       document.body.appendChild(link);
@@ -358,29 +369,39 @@ export default function StatsPage() {
   };
 
   const wasteTypeMap: Record<string, string> = {
-    PLASTIC: "플라스틱",
+    PLASTIC: "페트병",
     GLASS: "유리",
-    CAN: "금속",
-    PAPER: "종이",
+    CAN: "캔",
+    PAPER: "박스",
     ETC: "기타",
     SACK: "마대",
     BUOY: "부표",
     FISH_TRAP: "통발",
-    FISH_NET: "폐트병",
-    SYRINGE: "박스",
+    SYRINGE: "주사기",
     MEDICINE: "약품",
+    RUBBER: "고무류",
+    FOREIGN_WASTE: "외국쓰레기",
+    METAL: "금속류",
+    WOOD: "나무류",
+    COMPOSITE: "혼합재질류",
   };
 
   const COLORS = [
-    "#004e89",
-    "#1a659e",
-    "#2e7ca8",
-    "#4d91b5",
-    "#6ba6c3",
-    "#89bbd1",
-    "#a7d0df",
-    "#c5e5ed",
-    "#e0f2f7",
+    "#08306b",
+    "#08519c",
+    "#2171b5",
+    "#4292c6",
+    "#6baed6",
+    "#9ecae1",
+    "#c6dbef",
+    "#deebf7",
+    "#084594",
+    "#2171b5",
+    "#4292c6",
+    "#6baed6",
+    "#9ecae1",
+    "#c6dbef",
+    "#eff3ff",
   ];
 
   const [hoveredWasteType, setHoveredWasteType] = useState<string | null>(null);
@@ -388,6 +409,14 @@ export default function StatsPage() {
   return (
     <div className="w-full bg-[#e5edf2] min-h-screen">
       <Header forceScrolled />
+
+      {/* 🔥 WritePage와 동일한 로딩 스타일 */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
+          <p className="text-sm tracking-wide">데이터 로딩 중입니다...</p>
+        </div>
+      )}
 
       <div className="max-w-[1200px] mx-auto pt-48 pb-20 px-8">
         <h2 className="text-center text-[22px] md:text-[30px] font-bold text-center mb-20 leading-normal">통계</h2>
@@ -515,7 +544,8 @@ export default function StatsPage() {
 
             <button
               onClick={handleSearch}
-              className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-md hover:bg-[#004d7a] hover:shadow-lg hover:scale-105 active:bg-[#002845] active:scale-95 active:shadow-inner transition-all duration-150 font-semibold cursor-pointer"
+              disabled={loading}
+              className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-md hover:bg-[#004d7a] hover:shadow-lg hover:scale-105 active:bg-[#002845] active:scale-95 active:shadow-inner transition-all duration-150 font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               조회
             </button>
@@ -535,7 +565,8 @@ export default function StatsPage() {
 
                 fetchAllData();
               }}
-              className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
+              disabled={loading}
+              className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               초기화
             </button>
