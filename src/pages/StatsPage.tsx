@@ -303,7 +303,7 @@ export default function StatsPage() {
       const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
-      
+
       link.setAttribute("download", fileName);
 
       document.body.appendChild(link);
@@ -353,7 +353,7 @@ export default function StatsPage() {
       const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계보고서_${dateRange}.pdf`;
-      
+
       link.setAttribute("download", fileName);
 
       document.body.appendChild(link);
@@ -691,7 +691,7 @@ export default function StatsPage() {
         <SectionBox title="폐기물 분류 비율">
           {wasteRatio.length > 0 ? (
             <div className="flex justify-center items-center gap-16">
-              <div className="w-[420px] h-[320px] flex-shrink-0">
+              <div className="w-[420px] h-[400px] flex-shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
