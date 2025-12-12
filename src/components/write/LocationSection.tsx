@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import DualMapSelector from "./DualMapSelector";
 import { regionCenters } from "../../data/regionCenters";
 
