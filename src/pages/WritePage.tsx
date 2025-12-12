@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ 추가
+import { useNavigate } from "react-router-dom";
 import Header from "../components/common/Header";
 import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
@@ -9,13 +9,11 @@ import bluecheck from "../assets/write/bluecheck.webp";
 import PhotoUploadSection from "../components/write/PhotoUploadSection";
 import backgroundimage2 from "@/assets/write/backgroundimage2.webp";
 import LocationSection from "../components/write/LocationSection";
-import axios from "axios";
-
+import instance from "../api/axios";
 
 const WritePage = () => {
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const { user } = useAuth();
-  const navigate = useNavigate(); // ✅ 추가
+  const navigate = useNavigate();
 
   const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
   const groupName = user?.memberType === "GROUP"
@@ -83,7 +81,7 @@ const WritePage = () => {
         const el = document.getElementById(targetId);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-        alert("⚠️ 필수 항목을 모두 입력해주세요.");
+        alert("필수 항목을 모두 입력해주세요.");
         return;
       }
 
@@ -120,27 +118,22 @@ endAddress: locationData?.endAddress || "해상",
       formData.append("data", new Blob([JSON.stringify(data)], { type: "application/json" }));
       photoFiles.forEach((file) => formData.append("photos", file));
 
-      const response = await axios.post(
-        `${BASE_URL}/api/activity-records`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
+      // instance를 사용하여 요청 (headers 설정 제거)
+      const response = await instance.post(
+        "/api/activity-records",
+        formData
       );
 
       if (response.data.code === 0) {
         alert("활동 기록이 성공적으로 저장되었습니다.");
-        // ✅ 성공 시 함께한 기록 페이지로 이동
+        // 성공 시 함께한 기록 페이지로 이동
         navigate("/records");
       } else {
-        alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
+        alert("저장 실패: " + (response.data.message || "알 수 없는 오류"));
       }
     } catch (error: any) {
-      console.error("❌ 서버 오류:", error);
-      if (error.response) console.log("📨 서버 응답:", error.response.data);
+      console.error("서버 오류:", error);
+      if (error.response) console.log("서버 응답:", error.response.data);
       alert("서버 통신 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);

@@ -6,6 +6,7 @@ import MainpageScrollReveal from "../components/main/MainpageScrollReveal";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
+import instance from "../api/axios";
 
 // 메인 배경
 import backgroundImage from "@/assets/main/backgroundimage.webp";
@@ -22,7 +23,7 @@ import arrowIcon from "@/assets/main/mainpage-arrow.webp";
 import youtubeIcon from "@/assets/main/mainpage-youtube.webp";
 import earthIcon from "@/assets/main/mainpage-earth.webp";
 
-// ✅ ActivityRecord 타입 정의
+// ActivityRecord 타입 정의
 interface ActivityRecord {
   id: number;
   name: string;
@@ -40,9 +41,15 @@ function Dashboard() {
   useEffect(() => {
     const fetchActivities = async () => {
       try {
-        const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${BASE_URL}/api/activity-records?page=0&size=50`);
-        const result = await response.json();
+        // instance 사용으로 변경 (BASE_URL 제거, fetch 제거)
+        const response = await instance.get("/api/activity-records", {
+          params: {
+            page: 0,
+            size: 50,
+          },
+        });
+
+        const result = response.data;
 
         if (result.code === 0 && result.data?.content) {
           setActivities(result.data.content);
@@ -57,7 +64,7 @@ function Dashboard() {
     fetchActivities();
   }, []);
 
-  // ✅ 스크롤 감지 (모바일 snap 컨테이너용)
+  // 스크롤 감지 (모바일 snap 컨테이너용)
   useEffect(() => {
     const container = document.getElementById('scroll-container');
 
