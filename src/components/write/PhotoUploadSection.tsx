@@ -70,6 +70,26 @@ const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionPr
     onFavoriteChange?.(index);
   };
 
+  // 🔥 이미지 삭제 기능 추가
+  const handleDelete = (index: number) => {
+    const updated = images.filter((_, i) => i !== index);
+    
+    // 삭제된 이미지가 대표 이미지였다면 첫 번째 이미지를 대표로 설정
+    if (images[index].favorite && updated.length > 0) {
+      updated[0].favorite = true;
+      onFavoriteChange?.(0);
+    } else if (updated.length > 0) {
+      // 대표 이미지 인덱스 재조정
+      const newFavoriteIndex = updated.findIndex(img => img.favorite);
+      if (newFavoriteIndex !== -1) {
+        onFavoriteChange?.(newFavoriteIndex);
+      }
+    }
+    
+    setImages(updated);
+    onChange?.(updated.map((img) => img.file));
+  };
+
   return (
     <section className="mb-10">
       <h3 className="text-base md:text-lg font-semibold mb-4">활동 사진 첨부</h3>
@@ -100,23 +120,44 @@ const PhotoUploadSection = ({ onChange, onFavoriteChange }: PhotoUploadSectionPr
               {images.map((img, index) => (
                 <div
                   key={index}
-                  className="relative w-[calc(50%-6px)] md:w-[140px] aspect-square rounded-md overflow-hidden bg-gray-100 shadow-sm"
+                  className="relative w-[calc(50%-6px)] md:w-[140px] aspect-square rounded-md overflow-hidden bg-gray-100 shadow-sm group"
                 >
                   <img
                     src={img.url}
                     alt={`uploaded-${index}`}
                     className="object-cover w-full h-full"
                   />
+                  {/* 대표 이미지 별 버튼 */}
                   <button
                     type="button"
                     onClick={() => handleFavorite(index)}
-                    className="absolute top-2 right-2"
+                    className="absolute top-2 right-2 z-10"
                   >
                     <img
                       src={img.favorite ? starFilled : starOutline}
                       alt="star"
                       className="w-5 h-5"
                     />
+                  </button>
+                  {/* 🔥 삭제 버튼 추가 */}
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(index)}
+                    className="absolute top-2 left-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="삭제"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                   </button>
                 </div>
               ))}

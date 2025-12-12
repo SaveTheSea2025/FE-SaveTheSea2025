@@ -66,7 +66,8 @@ const WritePage = () => {
       if (!activityName.trim()) missing.push("activityName");
       if (!startDate || !startTime || !endDate || !endTime) missing.push("dateTime");
       if (memberCount <= 0) missing.push("memberCount");
-      if (!locationData?.startAddress || !locationData?.endAddress) missing.push("location");
+      if (!locationData?.startLat || !locationData?.startLng || 
+    !locationData?.endLat || !locationData?.endLng) missing.push("location");
 
       if (missing.length > 0) {
         setMissingFields(missing);
@@ -102,8 +103,8 @@ const WritePage = () => {
         totalActivityTime: volunteerHours,
         regionSido: locationData?.regionSido || selectedRegion.sido,
         regionSigungu: locationData?.regionSigungu || selectedRegion.sigungu,
-        startAddress: locationData?.startAddress || "",
-        endAddress: locationData?.endAddress || "",
+        startAddress: locationData?.startAddress || "해상",
+endAddress: locationData?.endAddress || "해상",
         startLatitude: locationData?.startLat,
         startLongitude: locationData?.startLng,
         endLatitude: locationData?.endLat,
