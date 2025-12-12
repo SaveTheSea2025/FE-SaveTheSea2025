@@ -135,7 +135,7 @@ const RecordsPage: React.FC = () => {
       const map = mapRef.current;
 
       // ------------------------------------------------
-      // 히트맵 (HeatCircle) 구현부
+      // 히트맵 (HeatCircle) 구현부 - 코드 생략 없음
       // ------------------------------------------------
       function HeatCircle(this: any, bounds: any, color: string, opacity: number) {
         this.bounds = bounds;
@@ -227,15 +227,28 @@ const RecordsPage: React.FC = () => {
       clusterer.clear();
 
       const markers: any[] = [];
+
+      // 마커/카드 클릭 시 공통 이동 함수
+      const focusOnRecord = (lat: number, lng: number, record: CleanupItem) => {
+        const moveLatLon = new kakao.maps.LatLng(lat, lng);
+        map.panTo(moveLatLon);
+
+        // 레벨 9로 적당히 확대 (너무 가깝지 않게)
+        map.setLevel(9, { animate: true });
+
+        // 사이드바(400px) 고려하여 지도 중심 이동 (마커가 왼쪽 영역 중앙에 오도록)
+        setTimeout(() => {
+          map.panBy(200, 0);
+          setSelectedRecord(record);
+        }, 300);
+      };
+
       data.forEach((d) => {
         const markerPosition = new kakao.maps.LatLng(d.startLatitude, d.startLongitude);
         let markerOrOverlay: any;
 
         if (d.thumbnail) {
           // 썸네일 커스텀 오버레이
-          // React 내부에서 string으로 주입된 HTML의 이벤트 핸들링은 어려우므로,
-          // 여기서는 Kakao CustomOverlay의 content를 HTMLElement로 생성하여 이벤트를 부착함.
-
           const div = document.createElement('div');
           div.style.position = 'relative';
           div.style.width = '60px';
@@ -249,9 +262,7 @@ const RecordsPage: React.FC = () => {
           `;
 
           div.addEventListener('click', () => {
-            map.panTo(markerPosition);
-            map.setLevel(5, { animate: true });
-            setTimeout(() => setSelectedRecord(d), 300);
+            focusOnRecord(d.startLatitude, d.startLongitude, d);
           });
 
           markerOrOverlay = new kakao.maps.CustomOverlay({
@@ -271,11 +282,8 @@ const RecordsPage: React.FC = () => {
             position: markerPosition, image: markerImage, clickable: true
           });
 
-          // 지도 마커 클릭 시 동작 (확대 + 상세패널 열기)
           kakao.maps.event.addListener(markerOrOverlay, "click", () => {
-            map.panTo(markerPosition);
-            map.setLevel(5, { animate: true }); // 레벨 5로 확대
-            setTimeout(() => setSelectedRecord(d), 300); // 패널 열기
+            focusOnRecord(d.startLatitude, d.startLongitude, d);
           });
         }
         markers.push(markerOrOverlay);
@@ -339,7 +347,7 @@ const RecordsPage: React.FC = () => {
         map.setLevel(level, { animate: true });
       }, 300);
     } else {
-      // 지역 선택 해제 시 로직은 handleResetMap에서 처리됨
+      // 지역 선택 해제 시 handleResetMap에서 처리됨
     }
   }, [activeRegion]);
 
@@ -355,29 +363,28 @@ const RecordsPage: React.FC = () => {
   /* ==================================
    * 4. 지도 컨트롤 핸들러
    * ================================== */
-  // 카드 클릭 시 지도 이동 및 확대
+  // 카드 클릭 시 지도 이동 및 확대 (마커 클릭과 로직 통일)
   const handleCardClick = (record: CleanupItem) => {
-    setSelectedRecord(record);
     if (mapRef.current && window.kakao) {
       const map = mapRef.current;
       const moveLatLon = new window.kakao.maps.LatLng(record.startLatitude, record.startLongitude);
+
       map.panTo(moveLatLon);
+      map.setLevel(9, { animate: true }); // 레벨 9로 적당히 확대
+
       setTimeout(() => {
-        map.setLevel(5, { animate: true }); // 상세 보기 레벨
+        map.panBy(200, 0); // 사이드바 공간 고려 이동
+        setSelectedRecord(record);
       }, 300);
     }
   };
 
   // 전체보기 버튼 (지도를 초기 상태로 되돌리고 필터도 해제)
   const handleResetMap = () => {
-    // 1. 상태 초기화
     setActiveRegion("");
     setSelectedRecord(null);
     setFilters(null);
 
-    // 2. 강제 지도 리셋
-    // activeRegion 상태가 이미 ""인 상태에서 지도를 확대한 후 다시 전체보기를 누르면
-    // useEffect가 트리거되지 않으므로 여기서 직접 지도를 원복시킵니다.
     if (mapRef.current && window.kakao) {
       const map = mapRef.current;
       const defaultCenter = new window.kakao.maps.LatLng(36.5, 127.8);
@@ -520,7 +527,7 @@ const RecordsPage: React.FC = () => {
                 profileUrl={d.profileUrl}
                 activityName={d.activityName}
                 date={`${d.startDate.split("T")[0]} / ${formatMinutes(d.totalActivityTime)}`}
-                location={`${d.regionSido} ${d.regionSigungu}`}
+                location={d.startAddress} // 전체 주소로 수정됨
                 people={d.memberCount}
                 weight={d.totalWeight.toString()}
                 thumbnail={d.thumbnail}
