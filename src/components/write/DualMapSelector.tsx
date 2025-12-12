@@ -389,7 +389,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
               />
               <button
                 onClick={() => handlePlaceSearch("start")}
-                className="px-4 py-2.5 bg-[#0284C7] text-white text-sm rounded hover:bg-[#0369A1] whitespace-nowrap flex-shrink-0"
+                className="px-4 py-2.5 bg-[#0369A1] text-white text-sm rounded hover:bg-[#0369A1] whitespace-nowrap flex-shrink-0"
               >
                 검색
               </button>

@@ -236,7 +236,7 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
         )}
       </div>
 
-      {/* ✅ 모바일 버전 - kg/L 정렬 수정 */}
+      {/* ✅ 모바일 버전 - 왼쪽 라벨 제거 및 간격 조정 */}
       <div className="md:hidden border-t border-b border-gray-300">
         {/* 총 수거량 */}
         <div className="border-b border-gray-300 py-4">
@@ -284,16 +284,14 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
           </div>
         </div>
 
-        {/* ✅ 선택된 항목 입력 - kg/L 정렬 수정 */}
+        {/* ✅ 선택된 항목 입력 - 폐기물 이름을 왼쪽에 배치 */}
         {selectedItems.length > 0 && (
-          <div className="py-4 space-y-4">
+          <div className="py-4 space-y-6">
             <label className="block text-sm font-semibold text-gray-700">폐기물</label>
             {selectedItems.map((item) => (
               <div key={item} className="space-y-2">
-                <span className="block text-sm font-medium text-gray-700">{item}</span>
-
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-600 w-12 flex-shrink-0">kg</label>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700 w-20 flex-shrink-0">{item}</span>
                   <input
                     type="number"
                     step="1"
@@ -304,13 +302,13 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
                     }
                     onBlur={() => handleBlur(item, "kg")}
                     onFocus={(e) => e.target.select()}
-                    className="flex-1 border border-gray-300 rounded px-2 py-2 text-center bg-white text-gray-700 text-sm"
+                    className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-center bg-white text-gray-700 text-sm"
                   />
                   <span className="text-sm text-gray-600 w-8 flex-shrink-0">kg</span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-600 w-12 flex-shrink-0">L</label>
+                <div className="flex items-center gap-3">
+                  <span className="w-20 flex-shrink-0"></span>
                   <input
                     type="number"
                     step="1"
@@ -321,7 +319,7 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
                     }
                     onBlur={() => handleBlur(item, "L")}
                     onFocus={(e) => e.target.select()}
-                    className="flex-1 border border-gray-300 rounded px-2 py-2 text-center bg-white text-gray-700 text-sm"
+                    className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-center bg-white text-gray-700 text-sm"
                   />
                   <span className="text-sm text-gray-600 w-8 flex-shrink-0">L</span>
                 </div>

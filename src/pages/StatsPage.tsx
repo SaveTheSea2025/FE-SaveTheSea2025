@@ -62,6 +62,7 @@ export default function StatsPage() {
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
+  const [loading, setLoading] = useState(false); // 🔥 loading으로 변경
 
   const downloadRef = useRef<HTMLDivElement>(null);
 
@@ -92,20 +93,18 @@ export default function StatsPage() {
   const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
   const [regionData, setRegionData] = useState<RegionStats[]>([]);
 
-  // ✅ [수정됨] viewMode가 변경될 때마다 fetchAllData가 실행되도록 의존성 배열에 추가
   useEffect(() => {
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
 
-    // 로그아웃 상태에서 'mine'으로 접근 시 'all'로 강제 전환
     if (!user && viewMode === "mine") {
       setViewMode("all");
-      return; // setViewMode가 다시 useEffect를 트리거하므로 여기서는 중단
+      return;
     }
 
     fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, viewMode]); // 🔥 viewMode 추가됨!
+  }, [user, viewMode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -126,12 +125,11 @@ export default function StatsPage() {
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
   const fetchAllData = async () => {
-    // ⚠️ BASE_URL 체크 제거 (Proxy 사용)
-
     if (!user && viewMode === "mine") {
-      // useEffect에서 처리하지만, 비동기 호출 시점 방어 코드
       return;
     }
+
+    setLoading(true); // 🔥 로딩 시작
 
     try {
       const startYear = parseInt(startDate.split("-")[0]);
@@ -155,7 +153,6 @@ export default function StatsPage() {
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // 공통 파라미터 생성
       const params = new URLSearchParams({
         startYear: startYear.toString(),
         startMonth: startMonth.toString(),
@@ -260,6 +257,8 @@ export default function StatsPage() {
 
     } catch (error) {
       console.error("전체 API 로드 오류:", error);
+    } finally {
+      setLoading(false); // 🔥 로딩 종료
     }
   };
 
@@ -269,7 +268,6 @@ export default function StatsPage() {
     fetchAllData();
   };
 
-  // 🔥 엑셀 다운로드 함수
   const handleExcelDownload = async () => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -307,7 +305,6 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      // 🔥 viewMode에 따라 파일명 생성
       const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
@@ -322,11 +319,10 @@ export default function StatsPage() {
       setDownloadOpen(false);
     } catch (error: any) {
       console.error("❌ 엑셀 다운로드 실패:", error);
-      alert("엑셀 다운로드에 실패했습니다. (CORS 문제가 지속되면 vite.config.ts proxy 설정을 확인해주세요)");
+      alert("엑셀 다운로드에 실패했습니다.");
     }
   };
 
-  // 🔥 PDF 다운로드 함수
   const handlePdfDownload = async () => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -361,7 +357,6 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      // 🔥 viewMode에 따라 파일명 생성
       const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계보고서_${dateRange}.pdf`;
@@ -421,6 +416,14 @@ export default function StatsPage() {
   return (
     <div className="w-full bg-[#e5edf2] min-h-screen">
       <Header forceScrolled />
+
+      {/* 🔥 WritePage와 동일한 로딩 스타일 */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
+          <p className="text-sm tracking-wide">데이터 로딩 중입니다...</p>
+        </div>
+      )}
 
       <div className="max-w-[1200px] mx-auto pt-48 pb-20 px-8">
         <h2 className="text-center text-[22px] md:text-[30px] font-bold text-center mb-20 leading-normal">통계</h2>
@@ -548,7 +551,8 @@ export default function StatsPage() {
 
             <button
               onClick={handleSearch}
-              className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-md hover:bg-[#004d7a] hover:shadow-lg hover:scale-105 active:bg-[#002845] active:scale-95 active:shadow-inner transition-all duration-150 font-semibold cursor-pointer"
+              disabled={loading}
+              className="px-5 py-2 rounded-xl bg-[#0066aa] text-white text-sm shadow-md hover:bg-[#004d7a] hover:shadow-lg hover:scale-105 active:bg-[#002845] active:scale-95 active:shadow-inner transition-all duration-150 font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               조회
             </button>
@@ -565,12 +569,9 @@ export default function StatsPage() {
 
                 setDisplayStartDate(oneYearAgo.toISOString().split("T")[0]);
                 setDisplayEndDate(today.toISOString().split("T")[0]);
-
-                // viewMode 변경이 비동기라 여기서 fetchAllData 호출하면 이전 viewMode로 호출될 수 있음.
-                // 하지만 setViewMode가 useEffect를 트리거하므로 여기서 직접 호출할 필요 없음.
-                // 다만 날짜/지역 초기화 후 'all'로 돌아가는 로직은 useEffect가 처리함.
               }}
-              className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer"
+              disabled={loading}
+              className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-all duration-150 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               초기화
             </button>
