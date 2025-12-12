@@ -4,6 +4,7 @@ import { loadKakaoCustom } from "../../lib/loadKakaoCustom";
 
 interface DualMapSelectorProps {
   regionCenter?: { lat: number; lng: number } | null;
+  isUserSelecting?: boolean; // 🔥 사용자가 직접 드롭다운 선택했는지
   onChange?: (data: {
     startAddress: string;
     startLat: number;
@@ -19,7 +20,7 @@ interface DualMapSelectorProps {
   }) => void;
 }
 
-const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
+const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: DualMapSelectorProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
 
@@ -30,6 +31,8 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [isMapVisible, setIsMapVisible] = useState(false);
+  const isUserDraggingRef = useRef(false); // 🔥 state → ref로 변경
+  const isInitialMount = useRef(true); // 🔥 최초 마운트 체크
 
   const OFFSET_LAT = 0.0005;
   const OFFSET_LNG = 0.0007;
@@ -162,14 +165,18 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
       });
       endMarkerRef.current = endMarker;
 
+      // 🔥 드래그 시작 시 플래그 설정
       kakao.maps.event.addListener(startMarker, "dragstart", () => {
+        console.log('🔴 출발 마커 드래그 시작');
         startMarker.setImage(startDragImage);
+        isUserDraggingRef.current = true; // 🔥 ref 사용
       });
 
       kakao.maps.event.addListener(startMarker, "dragend", () => {
+        console.log('🔴 출발 마커 드래그 종료');
         const sPos = startMarker.getPosition();
         startMarker.setImage(startImage);
-        map.panTo(sPos); // ✅ 출발지 드래그 시 지도 이동
+        map.panTo(sPos);
 
         updateAddress(sPos.getLat(), sPos.getLng(), "start");
 
@@ -190,18 +197,29 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
           endMarker.setPosition(newEndPos);
           updateAddress(newEndLat, newEndLng, "end");
         }
+
+        // 🔥 드래그 완료 후 플래그 해제
+        console.log('✅ isUserDragging → false');
+        isUserDraggingRef.current = false;
       });
 
       kakao.maps.event.addListener(endMarker, "dragstart", () => {
+        console.log('🔵 종료 마커 드래그 시작');
         endMarker.setImage(endDragImage);
+        isUserDraggingRef.current = true; // 🔥 ref 사용
       });
 
       kakao.maps.event.addListener(endMarker, "dragend", () => {
+        console.log('🔵 종료 마커 드래그 종료');
         const pos = endMarker.getPosition();
         endMarker.setImage(endImage);
-        map.panTo(pos); // ✅ 도착지 드래그 시 지도 이동
+        map.panTo(pos);
 
         updateAddress(pos.getLat(), pos.getLng(), "end");
+
+        // 🔥 드래그 완료 후 플래그 해제
+        console.log('✅ isUserDragging → false');
+        isUserDraggingRef.current = false;
       });
 
       const sPos = startMarker.getPosition();
@@ -214,8 +232,26 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     initMap();
   }, [regionCenter]);
 
-  // 🔥 regionCenter가 바뀔 때마다 마커 위치와 주소 업데이트 (핵심 추가!)
+  // 🔥 regionCenter가 바뀔 때마다 마커 위치와 주소 업데이트
   useEffect(() => {
+    // 🔥 최초 마운트거나 사용자가 드래그 중이면 무시
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // 🔥 사용자가 마커를 직접 드래그하는 경우 regionCenter 업데이트 무시
+    if (isUserDraggingRef.current) {
+      console.log('⏭️ 사용자 드래그 중이므로 regionCenter 업데이트 무시');
+      return;
+    }
+
+    // 🔥 사용자가 직접 드롭다운을 선택한 경우에만 지도 이동
+    if (!isUserSelecting) {
+      console.log('⏭️ 자동 업데이트이므로 지도 이동 무시');
+      return;
+    }
+
     // 지도가 이미 초기화되어 있고, regionCenter가 있을 때만 실행
     if (!regionCenter || !startMarkerRef.current || !endMarkerRef.current || !mapInstance.current) {
       return;
@@ -223,6 +259,8 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
 
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
+
+    console.log('🗺️ 사용자 드롭다운 선택으로 지도 업데이트:', regionCenter);
 
     // 출발 마커를 새 위치로 이동
     const newStartPos = new kakao.maps.LatLng(regionCenter.lat, regionCenter.lng);
@@ -235,15 +273,15 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
     endMarkerRef.current.setPosition(newEndPos);
 
-    // 🔥 주소 업데이트 (핵심!) - 이 부분이 드롭다운 업데이트를 트리거함
+    // 🔥 주소 업데이트
     updateAddress(regionCenter.lat, regionCenter.lng, "start");
     updateAddress(newEndLat, newEndLng, "end");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionCenter?.lat, regionCenter?.lng]); // ✅ lat, lng 값만 감지
+  }, [regionCenter?.lat, regionCenter?.lng, isUserSelecting]);
 
   // ✅ 장소 검색 함수 수정
   const handlePlaceSearch = async (type: "start" | "end") => {
-    const searchQuery = type === "start" ? startAddress : endAddress; // ✅ keyword → searchQuery
+    const searchQuery = type === "start" ? startAddress : endAddress;
     if (!searchQuery.trim()) return alert("검색어를 입력해주세요!");
 
     await loadKakaoCustom();
@@ -253,7 +291,10 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
     const ps = new kakao.maps.services.Places();
     const map = mapInstance.current;
 
-    ps.keywordSearch(searchQuery, (data: any[], status: string) => { // ✅ 수정
+    // 🔥 검색도 사용자 액션으로 간주
+    isUserDraggingRef.current = true;
+
+    ps.keywordSearch(searchQuery, (data: any[], status: string) => {
       if (status === kakao.maps.services.Status.OK && data[0]) {
         const { y, x } = data[0];
         const baseLat = parseFloat(y);
@@ -278,8 +319,13 @@ const DualMapSelector = ({ regionCenter, onChange }: DualMapSelectorProps) => {
           map.panTo(pos);
           updateAddress(baseLat, baseLng, "end");
         }
+
+        // 🔥 검색 완료 후 플래그 해제
+        console.log('🔍 검색 완료, isUserDragging → false');
+        isUserDraggingRef.current = false;
       } else {
         alert("검색 결과가 없습니다!");
+        isUserDraggingRef.current = false;
       }
     });
   };

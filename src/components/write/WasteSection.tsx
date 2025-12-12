@@ -18,6 +18,11 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
     통발: "FISH_TRAP",
     주사기: "SYRINGE",
     약품: "MEDICINE",
+    고무류: "RUBBER",
+    외국쓰레기: "FOREIGN_WASTE",
+    금속류: "METAL",
+    나무류: "WOOD",
+    혼합재질류: "COMPOSITE",
     기타: "ETC",
   };
 
@@ -29,6 +34,11 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
     "통발",
     "주사기",
     "약품",
+    "고무류",
+    "외국쓰레기",
+    "금속류",
+    "나무류",
+    "혼합재질류",
     "기타",
   ];
 
@@ -192,7 +202,7 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
           <div className="grid grid-cols-2 gap-y-10 gap-x-8 px-6 py-4 bg-white border-t border-gray-300">
             {selectedItems.map((item) => (
               <div key={item} className="flex items-center gap-2">
-                <label className="w-16 font-medium text-gray-800">{item}</label>
+                <label className="w-20 font-medium text-gray-800">{item}</label>
                 <input
                   type="number"
                   step="1"
@@ -259,7 +269,7 @@ const WasteSection = ({ onChange }: WasteSectionProps) => {
         {/* 구분 체크박스 */}
         <div className="border-b border-gray-300 py-4">
           <label className="block text-sm font-semibold mb-3 text-gray-700">구분</label>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {wasteOptions.map((item) => (
               <label key={item} className="flex items-center gap-2 text-sm">
                 <input

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DualMapSelector from "./DualMapSelector";
 import { regionCenters } from "../../data/regionCenters";
 
@@ -21,7 +21,6 @@ interface LocationSectionProps {
     endLng: number;
     regionSido: string;
     regionSigungu: string;
-    // ✅ WritePage에서 사용하는 필드 추가
     startLatitude: number;
     startLongitude: number;
     endLatitude: number;
@@ -41,27 +40,25 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [locked, setLocked] = useState(false);
   const [hasEditedEndMap] = useState(false);
 
+  // 🔥 사용자가 직접 드롭다운을 클릭했는지 추적
+  const [isUserSelecting, setIsUserSelecting] = useState(false);
+
   const regionCenter =
     sido && sigungu && regionCenters[sido]?.[sigungu]
       ? regionCenters[sido][sigungu]
       : null;
 
-  // 🔥 주소에서 시/도, 시/군/구 추출 함수 (핵심 기능!)
+  // 🔥 주소에서 시/도, 시/군/구 추출 함수
   const extractRegionFromAddress = (address: string): { sido: string; sigungu: string } => {
     let extractedSido = "";
     let extractedSigungu = "";
 
-    console.log('🔍 extractRegionFromAddress 실행:', address);
-
-    // 시/도 매칭 (부분 매칭 지원)
     const sidoList = Object.keys(regionCenters);
     for (const s of sidoList) {
-      // "경기도"와 "경기", "강원특별자치도"와 "강원" 등 부분 매칭
       if (address.includes(s)) {
         extractedSido = s;
         break;
       }
-      // "경기" → "경기도", "강원" → "강원특별자치도" 매핑
       if (s === "경기도" && address.includes("경기")) {
         extractedSido = s;
         break;
@@ -96,9 +93,6 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
       }
     }
 
-    console.log('📍 추출된 시/도:', extractedSido);
-
-    // 시/군/구 매칭
     if (extractedSido && regionCenters[extractedSido]) {
       const sigunguList = Object.keys(regionCenters[extractedSido]);
       for (const sg of sigunguList) {
@@ -108,9 +102,6 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         }
       }
     }
-
-    console.log('📍 추출된 시/군/구:', extractedSigungu);
-    console.log('✅ 최종 결과:', { sido: extractedSido, sigungu: extractedSigungu });
 
     return { sido: extractedSido, sigungu: extractedSigungu };
   };
@@ -126,7 +117,6 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         endLng: endPos.lng,
         regionSido: sido,
         regionSigungu: sigungu,
-        // ✅ WritePage 필드 추가
         startLatitude: startPos.lat,
         startLongitude: startPos.lng,
         endLatitude: endPos.lat,
@@ -180,7 +170,6 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
     <section className="mb-10 relative">
       <h3 className="text-base md:text-lg font-semibold mb-4">활동 위치</h3>
 
-      {/* STEP 1 */}
       <p className="text-[#0071CE] font-semibold mb-3 text-sm md:text-base">
         STEP 1 <span className="text-black font-normal">지역 선택</span>
       </p>
@@ -196,8 +185,13 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
               <select
                 value={sido}
                 onChange={(e) => {
+                  // 🔥 사용자가 직접 선택
+                  setIsUserSelecting(true);
                   setSido(e.target.value);
                   setSigungu("");
+                  setTimeout(() => {
+                    setIsUserSelecting(false);
+                  }, 500);
                 }}
                 disabled={locked}
                 className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
@@ -215,7 +209,14 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
             <td className="px-4 py-3 w-1/2">
               <select
                 value={sigungu}
-                onChange={(e) => setSigungu(e.target.value)}
+                onChange={(e) => {
+                  // 🔥 사용자가 직접 선택
+                  setIsUserSelecting(true);
+                  setSigungu(e.target.value);
+                  setTimeout(() => {
+                    setIsUserSelecting(false);
+                  }, 500);
+                }}
                 disabled={!sido || locked}
                 className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
               >
@@ -242,8 +243,12 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                 <select
                   value={sido}
                   onChange={(e) => {
+                    setIsUserSelecting(true);
                     setSido(e.target.value);
                     setSigungu("");
+                    setTimeout(() => {
+                      setIsUserSelecting(false);
+                    }, 500);
                   }}
                   disabled={locked}
                   className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
@@ -268,7 +273,13 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
               <div className="relative">
                 <select
                   value={sigungu}
-                  onChange={(e) => setSigungu(e.target.value)}
+                  onChange={(e) => {
+                    setIsUserSelecting(true);
+                    setSigungu(e.target.value);
+                    setTimeout(() => {
+                      setIsUserSelecting(false);
+                    }, 500);
+                  }}
                   disabled={!sido || locked}
                   className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
                 >
@@ -289,7 +300,6 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         </div>
       </div>
 
-      {/* STEP 2 */}
       <p className="text-[#0071CE] font-semibold mb-3 text-sm md:text-base">
         STEP 2 <span className="text-black font-normal">출발·종료지점 선택</span>
       </p>
@@ -298,30 +308,21 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         <div className="relative">
           <DualMapSelector
             regionCenter={regionCenter}
+            isUserSelecting={isUserSelecting}
             onChange={(data) => {
-              console.log('📥 DualMapSelector onChange 받음:', {
-                startAddress: data.startAddress,
-                locked,
-              });
-
-              // ✅ LocationSection 상태 업데이트
               setStartAddr(data.startAddress);
               setStartPos({ lat: data.startLat, lng: data.startLng });
               setEndAddr(data.endAddress);
               setEndPos({ lat: data.endLat, lng: data.endLng });
 
-              // 🔥 핵심: 출발 깃발(startAddress) 기준으로 드롭다운 자동 업데이트!
+              // 🔥 출발 주소에서 지역 추출 → 드롭다운 자동 업데이트
               if (data.startAddress) {
                 const extracted = extractRegionFromAddress(data.startAddress);
-                console.log('🔍 추출된 지역:', extracted, '주소:', data.startAddress, 'locked:', locked);
                 
-                // ✅ locked 체크 제거 - 항상 업데이트!
                 if (extracted.sido && extracted.sigungu) {
-                  console.log('✅ 드롭다운 업데이트:', extracted.sido, extracted.sigungu);
+                  // 자동 업데이트 (지도 이동 없음)
                   setSido(extracted.sido);
                   setSigungu(extracted.sigungu);
-                } else {
-                  console.warn('⚠️ 지역 추출 실패 - sido:', extracted.sido, 'sigungu:', extracted.sigungu);
                 }
               }
 
@@ -332,9 +333,8 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                 geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
                   if (status === kakao.maps.services.Status.OK && result[0]) {
                     const addr = result[0].address.address_name;
-                    setEndAddr(addr);  // ✅ 상태 업데이트
+                    setEndAddr(addr);
                     
-                    // 🔥 출발 깃발 기준으로 추출된 지역 사용
                     const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
                     const finalSido = currentExtracted.sido || sido;
                     const finalSigungu = currentExtracted.sigungu || sigungu;
@@ -356,7 +356,6 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                   }
                 });
               } else {
-                // 🔥 출발 깃발 기준으로 추출된 지역 사용
                 const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
                 const finalSido = currentExtracted.sido || sido;
                 const finalSigungu = currentExtracted.sigungu || sigungu;

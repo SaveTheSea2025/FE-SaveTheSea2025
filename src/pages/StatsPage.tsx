@@ -307,7 +307,11 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const fileName = `통계데이터_${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}.xlsx`;
+      // 🔥 viewMode에 따라 파일명 생성
+      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
+      const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
+      
       link.setAttribute("download", fileName);
 
       document.body.appendChild(link);
@@ -357,7 +361,11 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const fileName = `통계보고서_${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}.pdf`;
+      // 🔥 viewMode에 따라 파일명 생성
+      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
+      const fileName = `${prefix}_통계보고서_${dateRange}.pdf`;
+      
       link.setAttribute("download", fileName);
 
       document.body.appendChild(link);
@@ -373,29 +381,39 @@ export default function StatsPage() {
   };
 
   const wasteTypeMap: Record<string, string> = {
-    PLASTIC: "플라스틱",
+    PLASTIC: "페트병",
     GLASS: "유리",
-    CAN: "금속",
-    PAPER: "종이",
+    CAN: "캔",
+    PAPER: "박스",
     ETC: "기타",
     SACK: "마대",
     BUOY: "부표",
     FISH_TRAP: "통발",
-    FISH_NET: "폐트병",
-    SYRINGE: "박스",
+    SYRINGE: "주사기",
     MEDICINE: "약품",
+    RUBBER: "고무류",
+    FOREIGN_WASTE: "외국쓰레기",
+    METAL: "금속류",
+    WOOD: "나무류",
+    COMPOSITE: "혼합재질류",
   };
 
   const COLORS = [
-    "#004e89",
-    "#1a659e",
-    "#2e7ca8",
-    "#4d91b5",
-    "#6ba6c3",
-    "#89bbd1",
-    "#a7d0df",
-    "#c5e5ed",
-    "#e0f2f7",
+    "#08306b",
+    "#08519c",
+    "#2171b5",
+    "#4292c6",
+    "#6baed6",
+    "#9ecae1",
+    "#c6dbef",
+    "#deebf7",
+    "#084594",
+    "#2171b5",
+    "#4292c6",
+    "#6baed6",
+    "#9ecae1",
+    "#c6dbef",
+    "#eff3ff",
   ];
 
   const [hoveredWasteType, setHoveredWasteType] = useState<string | null>(null);
