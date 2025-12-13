@@ -29,7 +29,6 @@ import {
   Bar,
 } from "recharts";
 
-// API 응답 데이터 타입 정의
 interface SummaryStats {
   activityCount: number;
   totalMembers: number;
@@ -62,7 +61,7 @@ export default function StatsPage() {
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
-  const [loading, setLoading] = useState(false); // 🔥 loading으로 변경
+  const [loading, setLoading] = useState(false);
 
   const downloadRef = useRef<HTMLDivElement>(null);
 
@@ -93,12 +92,10 @@ export default function StatsPage() {
   const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
   const [regionData, setRegionData] = useState<RegionStats[]>([]);
 
-  // viewMode가 변경될 때마다 fetchAllData가 실행되도록 의존성 배열에 추가
   useEffect(() => {
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
 
-    // 로그아웃 상태에서 mine으로 접근 시 all로 강제 전환
     if (!user && viewMode === "mine") {
       setViewMode("all");
       return;
@@ -127,33 +124,25 @@ export default function StatsPage() {
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
   const fetchAllData = async () => {
-    // 내 정보를 보려는데 유저가 없으면 API 호출 안 함
     if (!user && viewMode === "mine") {
       return;
     }
 
-    setLoading(true); // 🔥 로딩 시작
+    setLoading(true);
 
     try {
-      const startYear = parseInt(startDate.split("-")[0]);
-      const startMonth = parseInt(startDate.split("-")[1]);
-      const endYear = parseInt(endDate.split("-")[0]);
-      const endMonth = parseInt(endDate.split("-")[1]);
-
       const regionParam = location === "전체 지역" ? "전체" : location;
 
       console.log("[API 호출 정보]");
-      console.log("startYear:", startYear, "startMonth:", startMonth);
-      console.log("endYear:", endYear, "endMonth:", endMonth);
+      console.log("startDate:", startDate);
+      console.log("endDate:", endDate);
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // 공통 파라미터 (instance가 자동으로 params를 쿼리스트링으로 변환함)
+      // 🔥 API 공통 파라미터: startDate, endDate만 사용
       const commonParams = {
-        startYear,
-        startMonth,
-        endYear,
-        endMonth,
+        startDate: startDate,
+        endDate: endDate,
         region: regionParam,
       };
 
@@ -165,7 +154,6 @@ export default function StatsPage() {
 
         console.log("전체 통계 요청:", summaryUrl);
 
-        // instance 사용 (자동으로 Header에 토큰 포함됨)
         const summaryRes = await instance.get(summaryUrl, { params: commonParams });
         const summaryData = summaryRes.data;
 
@@ -194,44 +182,46 @@ export default function StatsPage() {
         const monthlyResult = monthlyRes.data;
 
         if (monthlyResult.code === 0 && monthlyResult.data.length > 0) {
-  console.log("📊 백엔드 원본 데이터:", monthlyResult.data);
-  
-  // 🔥 빠진 월을 0으로 채우는 함수
-  const fillMissingMonths = (data: any[]) => {
-    const result: any[] = [];
-    
-    let currentYear = startYear;
-    let currentMonth = startMonth;
-    
-    while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-      const monthKey = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
-      
-      // 해당 월 데이터 찾기
-      const found = data.find((item: any) => 
-        item.year === currentYear && item.month === currentMonth
-      );
-      
-      result.push({
-        month: monthKey,
-        totalWeight: found?.totalWeight || 0,
-        totalVolume: found?.totalVolume || 0,
-      });
-      
-      // 다음 달로
-      currentMonth++;
-      if (currentMonth > 12) {
-        currentMonth = 1;
-        currentYear++;
-      }
-    }
-    
-    return result;
-  };
-  
-  const formatted = fillMissingMonths(monthlyResult.data);
-  console.log("📊 빠진 월 채운 데이터:", formatted);
-  setMonthlyData(formatted);
-} else {
+          console.log("📊 백엔드 원본 데이터:", monthlyResult.data);
+          
+          const fillMissingMonths = (data: any[]) => {
+            const result: any[] = [];
+            
+            const startYear = parseInt(startDate.split("-")[0]);
+            const startMonth = parseInt(startDate.split("-")[1]);
+            const endYear = parseInt(endDate.split("-")[0]);
+            const endMonth = parseInt(endDate.split("-")[1]);
+            
+            let currentYear = startYear;
+            let currentMonth = startMonth;
+            
+            while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
+              const monthKey = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
+              
+              const found = data.find((item: any) => 
+                item.year === currentYear && item.month === currentMonth
+              );
+              
+              result.push({
+                month: monthKey,
+                totalWeight: found?.totalWeight || 0,
+                totalVolume: found?.totalVolume || 0,
+              });
+              
+              currentMonth++;
+              if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+              }
+            }
+            
+            return result;
+          };
+          
+          const formatted = fillMissingMonths(monthlyResult.data);
+          console.log("📊 빠진 월 채운 데이터:", formatted);
+          setMonthlyData(formatted);
+        } else {
           setMonthlyData([]);
         }
       } catch (err) {
@@ -286,7 +276,7 @@ export default function StatsPage() {
     } catch (error) {
       console.error("전체 API 로드 오류:", error);
     } finally {
-      setLoading(false); // 🔥 로딩 종료
+      setLoading(false);
     }
   };
 
@@ -296,91 +286,66 @@ export default function StatsPage() {
     fetchAllData();
   };
 
-  // 엑셀 다운로드 함수
-  // 엑셀 다운로드 함수만 수정
-// 디버깅용 엑셀 다운로드 함수
-const handleExcelDownload = async () => {
-  try {
-    const regionParam = location === "전체 지역" ? "전체" : location;
-
-    const params = {
-      viewType: viewMode,
-      startDate: startDate,
-      endDate: endDate,
-      region: regionParam,
-    };
-
-    console.log("📊 엑셀 다운로드 요청 파라미터:", params);
-    console.log("📊 최종 URL:", `/api/export/excel?${new URLSearchParams(params).toString()}`);
-
-    const response = await instance.get("/api/export/excel", {
-      params,
-      responseType: "blob",
-    });
-
-    console.log("✅ 응답 받음:", response);
-    console.log("✅ Content-Type:", response.headers['content-type']);
-
-    const blob = new Blob([response.data], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-
-    const startYear = parseInt(startDate.split("-")[0]);
-    const startMonth = parseInt(startDate.split("-")[1]);
-    const endYear = parseInt(endDate.split("-")[0]);
-    const endMonth = parseInt(endDate.split("-")[1]);
-    const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
-    const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
-    const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
-    
-    link.setAttribute("download", fileName);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-    setDownloadOpen(false);
-  } catch (error: any) {
-    console.error("❌ 엑셀 다운로드 실패:", error);
-    console.error("❌ 에러 응답:", error.response);
-    console.error("❌ 에러 데이터:", error.response?.data);
-    
-    // Blob 에러 메시지 파싱
-    if (error.response?.data instanceof Blob) {
-      const text = await error.response.data.text();
-      console.error("❌ 서버 에러 메시지:", text);
-      alert(`엑셀 다운로드 실패:\n${text}`);
-    } else {
-      alert("엑셀 다운로드에 실패했습니다.");
-    }
-  }
-};
-
-  // PDF 다운로드 함수
-  const handlePdfDownload = async () => {
+  const handleExcelDownload = async () => {
     try {
+      const regionParam = location === "전체 지역" ? "전체" : location;
+
+      const params = {
+        viewType: viewMode,
+        startDate: startDate,
+        endDate: endDate,
+        region: regionParam,
+      };
+
+      console.log("📊 엑셀 다운로드 요청:", params);
+
+      const response = await instance.get("/api/export/excel", {
+        params,
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+
       const startYear = parseInt(startDate.split("-")[0]);
       const startMonth = parseInt(startDate.split("-")[1]);
       const endYear = parseInt(endDate.split("-")[0]);
       const endMonth = parseInt(endDate.split("-")[1]);
+      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
+      const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
+      
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setDownloadOpen(false);
+    } catch (error: any) {
+      console.error("❌ 엑셀 다운로드 실패:", error);
+      alert("엑셀 다운로드에 실패했습니다.");
+    }
+  };
 
+  const handlePdfDownload = async () => {
+    try {
       const regionParam = location === "전체 지역" ? "전체" : location;
 
+      // 🔥 PDF도 startDate/endDate 방식으로 통일
       const params = {
         scope: viewMode,
-        startYear,
-        startMonth,
-        endYear,
-        endMonth,
+        startDate: startDate,
+        endDate: endDate,
         region: regionParam,
       };
 
       console.log("PDF 다운로드 요청:", params);
 
-      // instance 사용
       const response = await instance.get("/api/statistics/pdf/download", {
         params,
         responseType: "blob",
@@ -391,6 +356,11 @@ const handleExcelDownload = async () => {
       const link = document.createElement("a");
       link.href = url;
 
+      // 🔥 파일명 생성할 때만 년/월 추출
+      const startYear = parseInt(startDate.split("-")[0]);
+      const startMonth = parseInt(startDate.split("-")[1]);
+      const endYear = parseInt(endDate.split("-")[0]);
+      const endMonth = parseInt(endDate.split("-")[1]);
       const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계보고서_${dateRange}.pdf`;
@@ -428,23 +398,22 @@ const handleExcelDownload = async () => {
   };
 
   const COLORS = [
-  "#08306b", // 가장 진함 (박스 35%)
-  "#084594",
-  "#08519c",
-  
-  "#2171b5",
-  "#2171b5",
-  "#4292c6",
-  "#4292c6",
-  "#6baed6",
-  "#6baed6",
-  "#9ecae1",
-  "#9ecae1",
-  "#c6dbef",
-  "#c6dbef",
-  "#deebf7",
-  "#eff3ff", // 가장 연함 (캔 0%)
-];
+    "#08306b",
+    "#08519c",
+    "#084594",
+    "#2171b5",
+    "#2171b5",
+    "#4292c6",
+    "#4292c6",
+    "#6baed6",
+    "#6baed6",
+    "#9ecae1",
+    "#9ecae1",
+    "#c6dbef",
+    "#c6dbef",
+    "#deebf7",
+    "#eff3ff",
+  ];
 
   const [hoveredWasteType, setHoveredWasteType] = useState<string | null>(null);
 
@@ -452,7 +421,6 @@ const handleExcelDownload = async () => {
     <div className="w-full bg-[#e5edf2] min-h-screen">
       <Header forceScrolled />
 
-      {/* 🔥 WritePage와 동일한 로딩 스타일 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
@@ -702,13 +670,13 @@ const handleExcelDownload = async () => {
                 <LineChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d9d9d9" />
                   <XAxis 
-  dataKey="month" 
-  angle={-45}           // 🔥 45도 기울이기
-  textAnchor="end"      // 🔥 텍스트 정렬
-  height={80}           // 🔥 X축 높이 증가 (기울인 텍스트 공간)
-  interval={0}          // 🔥 모든 라벨 표시! (생략 없음)
-  tick={{ fontSize: 12 }} // 🔥 폰트 크기
-/>
+                    dataKey="month" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    interval={0}
+                    tick={{ fontSize: 12 }}
+                  />
                   <YAxis />
                   <Tooltip
                     formatter={(value: any) => [value, unit === "kg" ? "무게(kg)" : "부피(L)"]}
@@ -731,7 +699,7 @@ const handleExcelDownload = async () => {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="w-full h-72 flex items-center justify-center text-gray-400">
+            <div className="w-full h-72 flex items-center justify-center text-gray-400 min-h-[288px]">
               <p>조회된 데이터가 없습니다.</p>
             </div>
           )}
@@ -864,7 +832,7 @@ const handleExcelDownload = async () => {
               </div>
             </div>
           ) : (
-            <div className="w-full h-72 flex items-center justify-center text-gray-400">
+            <div className="w-full h-72 flex items-center justify-center text-gray-400 min-h-[288px]">
               <p>조회된 데이터가 없습니다.</p>
             </div>
           )}
@@ -953,7 +921,7 @@ const handleExcelDownload = async () => {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="w-full h-72 flex items-center justify-center text-gray-400">
+            <div className="w-full h-72 flex items-center justify-center text-gray-400 min-h-[288px]">
               <p>조회된 데이터가 없습니다.</p>
             </div>
           )}

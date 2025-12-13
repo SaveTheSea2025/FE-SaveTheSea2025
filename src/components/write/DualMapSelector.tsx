@@ -4,7 +4,7 @@ import { loadKakaoCustom } from "../../lib/loadKakaoCustom";
 
 interface DualMapSelectorProps {
   regionCenter?: { lat: number; lng: number } | null;
-  isUserSelecting?: boolean; // 🔥 사용자가 직접 드롭다운 선택했는지
+  isUserSelecting?: boolean;
   onChange?: (data: {
     startAddress: string;
     startLat: number;
@@ -12,7 +12,6 @@ interface DualMapSelectorProps {
     endAddress: string;
     endLat: number;
     endLng: number;
-    // WritePage에서 필요한 필드 추가
     startLatitude: number;
     startLongitude: number;
     endLatitude: number;
@@ -31,8 +30,8 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [isMapVisible, setIsMapVisible] = useState(false);
-  const isUserDraggingRef = useRef(false); // 🔥 state → ref로 변경
-  const isInitialMount = useRef(true); // 🔥 최초 마운트 체크
+  const isUserDraggingRef = useRef(false);
+  const isInitialMount = useRef(true);
 
   const OFFSET_LAT = 0.0005;
   const OFFSET_LNG = 0.0007;
@@ -52,53 +51,117 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     return 2 * R * Math.asin(Math.sqrt(h));
   };
 
-  // ✅ updateAddress 함수 수정 - startLatitude/endLatitude 추가
+  // 🔥 시/도 이름을 줄임말로 변환하는 함수
+  const convertSidoToShort = (sido: string): string => {
+    const sidoMap: Record<string, string> = {
+      "강원특별자치도": "강원",
+      "충청북도": "충북",
+      "충청남도": "충남",
+      "전북특별자치도": "전북",
+      "전라남도": "전남",
+      "경상북도": "경북",
+      "경상남도": "경남",
+      "제주특별자치도": "제주",
+      // 광역시/특별시는 그대로
+      "서울특별시": "서울특별시",
+      "부산광역시": "부산광역시",
+      "대구광역시": "대구광역시",
+      "인천광역시": "인천광역시",
+      "광주광역시": "광주광역시",
+      "대전광역시": "대전광역시",
+      "울산광역시": "울산광역시",
+      "세종특별자치시": "세종특별자치시",
+      "경기도": "경기도",
+    };
+
+    return sidoMap[sido] || sido;
+  };
+
+  // 🔧 주소 및 좌표 업데이트 함수 (중복 제거)
+  const updateMarkerData = (type: "start" | "end", address: string, lat: number, lng: number) => {
+    if (type === "start") {
+      setStartAddress(address);
+      const endLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
+      const endLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
+
+      onChange?.({
+        startAddress: address,
+        startLat: lat,
+        startLng: lng,
+        startLatitude: lat,
+        startLongitude: lng,
+        endAddress,
+        endLat,
+        endLng,
+        endLatitude: endLat,
+        endLongitude: endLng,
+      });
+    } else {
+      setEndAddress(address);
+      const startLat = startMarkerRef.current?.getPosition()?.getLat() ?? 0;
+      const startLng = startMarkerRef.current?.getPosition()?.getLng() ?? 0;
+
+      onChange?.({
+        startAddress,
+        startLat,
+        startLng,
+        startLatitude: startLat,
+        startLongitude: startLng,
+        endAddress: address,
+        endLat: lat,
+        endLng: lng,
+        endLatitude: lat,
+        endLongitude: lng,
+      });
+    }
+  };
+
+  // 🌊 updateAddress 함수 - 해상일 때 가까운 육지 행정구역 찾기
   const updateAddress = (lat: number, lng: number, type: "start" | "end") => {
     const kakao = (window as any).kakao;
     if (!geocoderRef.current) return;
 
+    // 1️⃣ 먼저 주소 찾기 시도 (육지인지 확인)
     geocoderRef.current.coord2Address(lng, lat, (result: any, status: string) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
-        const addr = result[0].address.address_name;
-        console.log(`🗺️ [${type}] 주소 업데이트:`, addr); // 🔍 디버깅 로그
+        // ✅ 주소가 있으면 육지 → 그대로 사용
+        const address = result[0].address.address_name;
+        console.log(`📍 [${type}] 육지 주소:`, address);
+        updateMarkerData(type, address, lat, lng);
+      } else {
+        // 🌊 주소가 없으면 해상 → 가장 가까운 행정구역 찾기
+        console.log(`🌊 [${type}] 해상 감지, 행정구역 조회 중...`);
+        
+        geocoderRef.current.coord2RegionCode(lng, lat, (region: any, regionStatus: string) => {
+          let finalAddress = "해상";
 
-        if (type === "start") {
-          setStartAddress(addr);
-          const endLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
-          const endLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
-
-          console.log('🔥 출발 마커 onChange 호출:', { startAddress: addr }); // 🔍 디버깅 로그
-
-          onChange?.({
-            startAddress: addr,
-            startLat: lat,
-            startLng: lng,
-            startLatitude: lat,      // ✅ 추가
-            startLongitude: lng,     // ✅ 추가
-            endAddress,
-            endLat,
-            endLng,
-            endLatitude: endLat,     // ✅ 추가
-            endLongitude: endLng,    // ✅ 추가
-          });
-        } else {
-          setEndAddress(addr);
-          const startLat = startMarkerRef.current?.getPosition()?.getLat() ?? 0;
-          const startLng = startMarkerRef.current?.getPosition()?.getLng() ?? 0;
-
-          onChange?.({
-            startAddress,
-            startLat,
-            startLng,
-            startLatitude: startLat,  // ✅ 추가
-            startLongitude: startLng, // ✅ 추가
-            endAddress: addr,
-            endLat: lat,
-            endLng: lng,
-            endLatitude: lat,         // ✅ 추가
-            endLongitude: lng,        // ✅ 추가
-          });
-        }
+          if (regionStatus === kakao.maps.services.Status.OK && region[0]) {
+            // 행정구역 정보에서 시/도, 시/군/구 추출
+            const regionData = region[0];
+            const sido = regionData.region_1depth_name || "";
+            const sigungu = regionData.region_2depth_name || "";
+            
+            if (sido && sigungu) {
+              // 🔥 시/도를 줄임말로 변환
+              const shortSido = convertSidoToShort(sido);
+              finalAddress = `${shortSido} ${sigungu} 해상`;
+              console.log(`🌊 [${type}] 해상 (가까운 육지: ${sido} ${sigungu}) → "${finalAddress}"`);
+            } else if (sido) {
+              // 시/도만 있을 때
+              const shortSido = convertSidoToShort(sido);
+              finalAddress = `${shortSido} 해상`;
+              console.log(`🌊 [${type}] 해상 (가까운 육지: ${sido}) → "${finalAddress}"`);
+            } else {
+              console.log(`🌊 [${type}] 해상 (행정구역 정보 없음) → "해상"`);
+            }
+          } else {
+            console.log(`🌊 [${type}] 해상 (행정구역 조회 실패) → "해상"`);
+          }
+          
+          // 🔥 여기서 updateMarkerData 호출! (비동기 콜백 안에서)
+          console.log(`📤 [${type}] 백엔드 전송 주소: "${finalAddress}"`);
+          updateMarkerData(type, finalAddress, lat, lng);
+        });
       }
     });
   };
@@ -165,15 +228,12 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
       });
       endMarkerRef.current = endMarker;
 
-      // 🔥 드래그 시작 시 플래그 설정
       kakao.maps.event.addListener(startMarker, "dragstart", () => {
-        console.log('🔴 출발 마커 드래그 시작');
         startMarker.setImage(startDragImage);
-        isUserDraggingRef.current = true; // 🔥 ref 사용
+        isUserDraggingRef.current = true;
       });
 
       kakao.maps.event.addListener(startMarker, "dragend", () => {
-        console.log('🔴 출발 마커 드래그 종료');
         const sPos = startMarker.getPosition();
         startMarker.setImage(startImage);
         map.panTo(sPos);
@@ -188,7 +248,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
           ePos.getLng()
         );
 
-        // 🔥 5km 이상이면 도착 마커를 출발지 옆으로 이동
         if (distance > FOLLOW_THRESHOLD_M) {
           const newEndLat = sPos.getLat() - OFFSET_LAT;
           const newEndLng = sPos.getLng() + OFFSET_LNG;
@@ -198,27 +257,21 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
           updateAddress(newEndLat, newEndLng, "end");
         }
 
-        // 🔥 드래그 완료 후 플래그 해제
-        console.log('✅ isUserDragging → false');
         isUserDraggingRef.current = false;
       });
 
       kakao.maps.event.addListener(endMarker, "dragstart", () => {
-        console.log('🔵 종료 마커 드래그 시작');
         endMarker.setImage(endDragImage);
-        isUserDraggingRef.current = true; // 🔥 ref 사용
+        isUserDraggingRef.current = true;
       });
 
       kakao.maps.event.addListener(endMarker, "dragend", () => {
-        console.log('🔵 종료 마커 드래그 종료');
         const pos = endMarker.getPosition();
         endMarker.setImage(endImage);
         map.panTo(pos);
 
         updateAddress(pos.getLat(), pos.getLng(), "end");
 
-        // 🔥 드래그 완료 후 플래그 해제
-        console.log('✅ isUserDragging → false');
         isUserDraggingRef.current = false;
       });
 
@@ -232,54 +285,10 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     initMap();
   }, [regionCenter]);
 
-  // 🔥 regionCenter가 바뀔 때마다 마커 위치와 주소 업데이트
-  useEffect(() => {
-    // 🔥 최초 마운트거나 사용자가 드래그 중이면 무시
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
+  
 
-    // 🔥 사용자가 마커를 직접 드래그하는 경우 regionCenter 업데이트 무시
-    if (isUserDraggingRef.current) {
-      console.log('⏭️ 사용자 드래그 중이므로 regionCenter 업데이트 무시');
-      return;
-    }
+  
 
-    // 🔥 사용자가 직접 드롭다운을 선택한 경우에만 지도 이동
-    if (!isUserSelecting) {
-      console.log('⏭️ 자동 업데이트이므로 지도 이동 무시');
-      return;
-    }
-
-    // 지도가 이미 초기화되어 있고, regionCenter가 있을 때만 실행
-    if (!regionCenter || !startMarkerRef.current || !endMarkerRef.current || !mapInstance.current) {
-      return;
-    }
-
-    const kakao = (window as any).kakao;
-    if (!kakao?.maps) return;
-
-    console.log('🗺️ 사용자 드롭다운 선택으로 지도 업데이트:', regionCenter);
-
-    // 출발 마커를 새 위치로 이동
-    const newStartPos = new kakao.maps.LatLng(regionCenter.lat, regionCenter.lng);
-    startMarkerRef.current.setPosition(newStartPos);
-    mapInstance.current.setCenter(newStartPos);
-
-    // 도착 마커를 출발지 옆으로 이동
-    const newEndLat = regionCenter.lat - OFFSET_LAT;
-    const newEndLng = regionCenter.lng + OFFSET_LNG;
-    const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
-    endMarkerRef.current.setPosition(newEndPos);
-
-    // 🔥 주소 업데이트
-    updateAddress(regionCenter.lat, regionCenter.lng, "start");
-    updateAddress(newEndLat, newEndLng, "end");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionCenter?.lat, regionCenter?.lng, isUserSelecting]);
-
-  // ✅ 장소 검색 함수 수정
   const handlePlaceSearch = async (type: "start" | "end") => {
     const searchQuery = type === "start" ? startAddress : endAddress;
     if (!searchQuery.trim()) return alert("검색어를 입력해주세요!");
@@ -291,7 +300,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     const ps = new kakao.maps.services.Places();
     const map = mapInstance.current;
 
-    // 🔥 검색도 사용자 액션으로 간주
     isUserDraggingRef.current = true;
 
     ps.keywordSearch(searchQuery, (data: any[], status: string) => {
@@ -320,8 +328,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
           updateAddress(baseLat, baseLng, "end");
         }
 
-        // 🔥 검색 완료 후 플래그 해제
-        console.log('🔍 검색 완료, isUserDragging → false');
         isUserDraggingRef.current = false;
       } else {
         alert("검색 결과가 없습니다!");
@@ -333,7 +339,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
   return (
     <div className="mb-8">
       <div className="flex flex-col gap-3 mb-3">
-        {/* 데스크톱: 테이블 형식 */}
         <div className="hidden md:flex items-center w-full border-t border-b border-gray-300 text-sm">
           <label className="w-32 bg-[#f5f6f8] border-r border-gray-300 px-10 py-3 text-left font-medium whitespace-nowrap">
             출발지점
@@ -374,7 +379,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
           </button>
         </div>
 
-        {/* 모바일: 카드 형식 */}
         <div className="md:hidden">
           <div className="border-t border-b border-gray-300 py-4">
             <label className="block text-sm font-semibold mb-2">출발지점</label>
@@ -389,7 +393,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
               />
               <button
                 onClick={() => handlePlaceSearch("start")}
-                className="px-4 py-2.5 bg-[#0369A1] text-white text-sm rounded hover:bg-[#0369A1] whitespace-nowrap flex-shrink-0"
+                className="px-4 py-2.5 bg-[#0369A1] text-white text-sm rounded hover:bg-[#025985] whitespace-nowrap flex-shrink-0"
               >
                 검색
               </button>
@@ -418,7 +422,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
         </div>
       </div>
 
-      {/* 지도 */}
       {isMapVisible && (
         <div
           ref={mapRef}

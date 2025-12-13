@@ -9,8 +9,7 @@ import bluecheck from "../assets/write/bluecheck.webp";
 import PhotoUploadSection from "../components/write/PhotoUploadSection";
 import backgroundimage2 from "@/assets/write/backgroundimage2.webp";
 import LocationSection from "../components/write/LocationSection";
-import axios from "axios";
-
+import instance from "../api/axios";
 
 const WritePage = () => {
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -106,7 +105,7 @@ const WritePage = () => {
         regionSido: locationData?.regionSido || selectedRegion.sido,
         regionSigungu: locationData?.regionSigungu || selectedRegion.sigungu,
         startAddress: locationData?.startAddress || "해상",
-endAddress: locationData?.endAddress || "해상",
+        endAddress: locationData?.endAddress || "해상",
         startLatitude: locationData?.startLat,
         startLongitude: locationData?.startLng,
         endLatitude: locationData?.endLat,
@@ -120,8 +119,8 @@ endAddress: locationData?.endAddress || "해상",
       formData.append("data", new Blob([JSON.stringify(data)], { type: "application/json" }));
       photoFiles.forEach((file) => formData.append("photos", file));
 
-      const response = await axios.post(
-        `${BASE_URL}/api/activity-records`,
+      const response = await instance.post(
+        "/api/activity-records",
         formData,
         {
           headers: {
