@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; 
 import Header from "../components/common/Header";
 import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
@@ -14,6 +14,7 @@ import instance from "../api/axios";
 const WritePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
   const groupName = user?.memberType === "GROUP"
     ? (user as any)?.organizationName || user?.userName || ""
