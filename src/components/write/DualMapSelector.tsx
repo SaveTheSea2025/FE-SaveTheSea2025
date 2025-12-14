@@ -60,25 +60,35 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
       "경상북도": "경북",
       "경상남도": "경남",
       "제주특별자치도": "제주",
-      "서울특별시": "서울특별시",
-      "부산광역시": "부산광역시",
-      "대구광역시": "대구광역시",
-      "인천광역시": "인천광역시",
-      "광주광역시": "광주광역시",
-      "대전광역시": "대전광역시",
-      "울산광역시": "울산광역시",
-      "세종특별자치시": "세종특별자치시",
-      "경기도": "경기도",
+      "서울특별시": "서울", // 간결하게 수정
+      "부산광역시": "부산", // 간결하게 수정
+      "대구광역시": "대구", // 간결하게 수정
+      "인천광역시": "인천", // 간결하게 수정
+      "광주광역시": "광주", // 간결하게 수정
+      "대전광역시": "대전", // 간결하게 수정
+      "울산광역시": "울산", // 간결하게 수정
+      "세종특별자치시": "세종", // 간결하게 수정
+      "경기도": "경기", // 간결하게 수정
     };
 
     return sidoMap[sido] || sido;
   };
 
   const updateMarkerData = (type: "start" | "end", address: string, lat: number, lng: number) => {
+    const currentStartLat = startMarkerRef.current?.getPosition()?.getLat() ?? 0;
+    const currentStartLng = startMarkerRef.current?.getPosition()?.getLng() ?? 0;
+    const currentEndLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
+    const currentEndLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
+
+    const logData = {
+      type: type === "start" ? "출발" : "도착",
+      address: address,
+      lat: lat.toFixed(6),
+      lng: lng.toFixed(6),
+    };
+
     if (type === "start") {
       setStartAddress(address);
-      const currentEndLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
-      const currentEndLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
 
       onChange?.({
         startAddress: address,
@@ -94,8 +104,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
       });
     } else {
       setEndAddress(address);
-      const currentStartLat = startMarkerRef.current?.getPosition()?.getLat() ?? 0;
-      const currentStartLng = startMarkerRef.current?.getPosition()?.getLng() ?? 0;
 
       onChange?.({
         startAddress,
@@ -110,6 +118,13 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
         endLongitude: lng,
       });
     }
+
+    // ⭐ 콘솔 로그 출력: 마커 위치/주소 업데이트 시
+    console.log(`[MAP UPDATE] ${logData.type} 지점 업데이트:`, {
+      주소: logData.address,
+      위도_lat: logData.lat,
+      경도_lng: logData.lng,
+    });
   };
 
   const updateAddress = (lat: number, lng: number, type: "start" | "end") => {
@@ -122,7 +137,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
         updateMarkerData(type, address, lat, lng);
       } else {
         geocoderRef.current.coord2RegionCode(lng, lat, (region: any, regionStatus: string) => {
-          let finalAddress = "해상";
+          let finalAddress = "해상/지역 외";
 
           if (regionStatus === kakao.maps.services.Status.OK && region[0]) {
             const regionData = region[0];
@@ -226,6 +241,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
         startMarker.setImage(startImage);
         map.panTo(sPos);
 
+        // ⭐ 마커 이동 후 주소/데이터 업데이트
         updateAddress(sPos.getLat(), sPos.getLng(), "start");
 
         const ePos = endMarker.getPosition();
@@ -242,6 +258,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
           const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
 
           endMarker.setPosition(newEndPos);
+          // ⭐ 종료 마커 자동 이동 후 주소/데이터 업데이트
           updateAddress(newEndLat, newEndLng, "end");
         }
 
@@ -258,11 +275,13 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
         endMarker.setImage(endImage);
         map.panTo(pos);
 
+        // ⭐ 마커 이동 후 주소/데이터 업데이트
         updateAddress(pos.getLat(), pos.getLng(), "end");
 
         isUserDraggingRef.current = false;
       });
 
+      // ⭐ 초기 주소/데이터 업데이트
       const sPos = startMarker.getPosition();
       updateAddress(sPos.getLat(), sPos.getLng(), "start");
 
@@ -290,7 +309,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     const kakao = (window as any).kakao;
     if (!kakao?.maps || !geocoderRef.current) return;
 
-    console.log("✅ 드롭다운 선택 → 지도 이동");
+    console.log("✅ 드롭다운 선택: 지도 이동 및 마커 위치 재설정 시작");
 
     const newStartPos = new kakao.maps.LatLng(regionCenter.lat, regionCenter.lng);
     startMarkerRef.current.setPosition(newStartPos);
@@ -301,25 +320,39 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
     endMarkerRef.current.setPosition(newEndPos);
 
+    // ⭐ 드롭다운 이동 후 주소 업데이트 (onChange 호출됨)
     geocoderRef.current.coord2Address(regionCenter.lng, regionCenter.lat, (result: any, status: string) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
-        setStartAddress(result[0].address.address_name);
+        updateMarkerData("start", result[0].address.address_name, regionCenter.lat, regionCenter.lng);
       } else {
         geocoderRef.current.coord2RegionCode(regionCenter.lng, regionCenter.lat, (region: any, regionStatus: string) => {
+          let finalAddress = "해상/지역 외";
           if (regionStatus === kakao.maps.services.Status.OK && region[0]) {
             const sido = region[0].region_1depth_name || "";
             const sigungu = region[0].region_2depth_name || "";
             const shortSido = convertSidoToShort(sido);
-            const finalAddress = sigungu ? `${shortSido} ${sigungu} 해상` : `${shortSido} 해상`;
-            setStartAddress(finalAddress);
+            finalAddress = sigungu ? `${shortSido} ${sigungu} 해상` : `${shortSido} 해상`;
           }
+          updateMarkerData("start", finalAddress, regionCenter.lat, regionCenter.lng);
         });
       }
     });
 
+    // ⭐ 드롭다운 이동 후 종료 지점 주소 업데이트 (onChange 호출됨)
     geocoderRef.current.coord2Address(newEndLng, newEndLat, (result: any, status: string) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
-        setEndAddress(result[0].address.address_name);
+        updateMarkerData("end", result[0].address.address_name, newEndLat, newEndLng);
+      } else {
+        geocoderRef.current.coord2RegionCode(newEndLng, newEndLat, (region: any, regionStatus: string) => {
+          let finalAddress = "해상/지역 외";
+          if (regionStatus === kakao.maps.services.Status.OK && region[0]) {
+            const sido = region[0].region_1depth_name || "";
+            const sigungu = region[0].region_2depth_name || "";
+            const shortSido = convertSidoToShort(sido);
+            finalAddress = sigungu ? `${shortSido} ${sigungu} 해상` : `${shortSido} 해상`;
+          }
+          updateMarkerData("end", finalAddress, newEndLat, newEndLng);
+        });
       }
     });
   }, [regionCenter?.lat, regionCenter?.lng, isUserSelecting]);
@@ -343,24 +376,27 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
         const baseLat = parseFloat(y);
         const baseLng = parseFloat(x);
 
+        // ⭐ 검색 결과 로그
+        console.log(`🔍 장소 검색 결과: ${searchQuery}`, { lat: baseLat.toFixed(6), lng: baseLng.toFixed(6) });
+
         if (type === "start") {
           const pos = new kakao.maps.LatLng(baseLat, baseLng);
           startMarkerRef.current.setPosition(pos);
           map.panTo(pos);
 
-          updateAddress(baseLat, baseLng, "start");
+          updateAddress(baseLat, baseLng, "start"); // 주소 업데이트 시 onChange 및 콘솔 로그 발생
 
           const newEndLat = baseLat - OFFSET_LAT;
           const newEndLng = baseLng + OFFSET_LNG;
 
           const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
           endMarkerRef.current.setPosition(newEndPos);
-          updateAddress(newEndLat, newEndLng, "end");
+          updateAddress(newEndLat, newEndLng, "end"); // 주소 업데이트 시 onChange 및 콘솔 로그 발생
         } else {
           const pos = new kakao.maps.LatLng(baseLat, baseLng);
           endMarkerRef.current.setPosition(pos);
           map.panTo(pos);
-          updateAddress(baseLat, baseLng, "end");
+          updateAddress(baseLat, baseLng, "end"); // 주소 업데이트 시 onChange 및 콘솔 로그 발생
         }
 
         isUserDraggingRef.current = false;
