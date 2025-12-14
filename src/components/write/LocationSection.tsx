@@ -52,59 +52,97 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   const extractRegionFromAddress = (address: string): { sido: string; sigungu: string } => {
     let extractedSido = "";
     let extractedSigungu = "";
-
-    const sidoList = Object.keys(regionCenters);
-    for (const s of sidoList) {
-      if (address.includes(s)) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "경기도" && address.includes("경기")) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "강원특별자치도" && (address.includes("강원") || address.includes("강원도"))) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "충청북도" && (address.includes("충북") || address.includes("충청북"))) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "충청남도" && (address.includes("충남") || address.includes("충청남"))) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "전라북도" && (address.includes("전북") || address.includes("전라북"))) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "전라남도" && (address.includes("전남") || address.includes("전라남"))) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "경상북도" && (address.includes("경북") || address.includes("경상북"))) {
-        extractedSido = s;
-        break;
-      }
-      if (s === "경상남도" && (address.includes("경남") || address.includes("경상남"))) {
-        extractedSido = s;
-        break;
+  
+    const cleanAddress = address.replace("해상", "").trim();
+  
+    // 🔥 특별시/광역시 간단 매칭 먼저 체크
+    if (cleanAddress.includes("서울")) extractedSido = "서울특별시";
+    else if (cleanAddress.includes("부산")) extractedSido = "부산광역시";
+    else if (cleanAddress.includes("대구")) extractedSido = "대구광역시";
+    else if (cleanAddress.includes("인천")) extractedSido = "인천광역시";
+    else if (cleanAddress.includes("광주")) extractedSido = "광주광역시";
+    else if (cleanAddress.includes("대전")) extractedSido = "대전광역시";
+    else if (cleanAddress.includes("울산")) extractedSido = "울산광역시";
+    else if (cleanAddress.includes("세종")) extractedSido = "세종특별자치시";
+    else {
+      // 나머지 도(道) 체크
+      const sidoList = Object.keys(regionCenters);
+      for (const s of sidoList) {
+        if (cleanAddress.includes(s)) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "경기도" && cleanAddress.includes("경기")) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "강원특별자치도" && (cleanAddress.includes("강원") || cleanAddress.includes("강원도"))) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "충청북도" && (cleanAddress.includes("충북") || cleanAddress.includes("충청북"))) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "충청남도" && (cleanAddress.includes("충남") || cleanAddress.includes("충청남"))) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "전북특별자치도" && (cleanAddress.includes("전북") || cleanAddress.includes("전라북"))) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "전라남도" && (cleanAddress.includes("전남") || cleanAddress.includes("전라남"))) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "경상북도" && (cleanAddress.includes("경북") || cleanAddress.includes("경상북"))) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "경상남도" && (cleanAddress.includes("경남") || cleanAddress.includes("경상남"))) {
+          extractedSido = s;
+          break;
+        }
+        if (s === "제주특별자치도" && cleanAddress.includes("제주")) {
+          extractedSido = s;
+          break;
+        }
       }
     }
-
+  
+    // 시/군/구 추출
     if (extractedSido && regionCenters[extractedSido]) {
       const sigunguList = Object.keys(regionCenters[extractedSido]);
       for (const sg of sigunguList) {
-        if (address.includes(sg)) {
+        if (cleanAddress.includes(sg)) {
           extractedSigungu = sg;
           break;
         }
       }
     }
-
+  
+    console.log("🔍 주소 파싱:", cleanAddress, "→ sido:", extractedSido, "sigungu:", extractedSigungu);
+    
     return { sido: extractedSido, sigungu: extractedSigungu };
   };
+
+  // 🔥 startAddr이 변경될 때마다 실행
+  useEffect(() => {
+    if (startAddr) {
+      const extracted = extractRegionFromAddress(startAddr);
+      console.log("🔄 startAddr 변경:", startAddr);
+      console.log("🔍 추출 결과:", extracted);
+      
+      if (extracted.sido && extracted.sigungu) {
+        console.log("✅ 드롭다운 업데이트:", extracted.sido, extracted.sigungu);
+        setSido(extracted.sido);
+        setSigungu(extracted.sigungu);
+      } else {
+        console.log("⚠️ 추출 실패:", extracted);
+      }
+    }
+  }, [startAddr]);
 
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
@@ -185,13 +223,13 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
               <select
                 value={sido}
                 onChange={(e) => {
-                  // 🔥 사용자가 직접 선택
+                  // 🔥 setTimeout 복원! (React 배치 업데이트 문제 해결)
                   setIsUserSelecting(true);
                   setSido(e.target.value);
                   setSigungu("");
                   setTimeout(() => {
                     setIsUserSelecting(false);
-                  }, 500);
+                  }, 100); // 100ms로 단축
                 }}
                 disabled={locked}
                 className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
@@ -210,12 +248,12 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
               <select
                 value={sigungu}
                 onChange={(e) => {
-                  // 🔥 사용자가 직접 선택
+                  // 🔥 setTimeout 복원!
                   setIsUserSelecting(true);
                   setSigungu(e.target.value);
                   setTimeout(() => {
                     setIsUserSelecting(false);
-                  }, 500);
+                  }, 100);
                 }}
                 disabled={!sido || locked}
                 className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
@@ -248,7 +286,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                     setSigungu("");
                     setTimeout(() => {
                       setIsUserSelecting(false);
-                    }, 500);
+                    }, 100);
                   }}
                   disabled={locked}
                   className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
@@ -278,7 +316,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                     setSigungu(e.target.value);
                     setTimeout(() => {
                       setIsUserSelecting(false);
-                    }, 500);
+                    }, 100);
                   }}
                   disabled={!sido || locked}
                   className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
@@ -310,6 +348,8 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
             regionCenter={regionCenter}
             isUserSelecting={isUserSelecting}
             onChange={(data) => {
+              console.log("📍 주소 변경:", data.startAddress, data.endAddress);
+
               setStartAddr(data.startAddress);
               setStartPos({ lat: data.startLat, lng: data.startLng });
               setEndAddr(data.endAddress);
