@@ -128,7 +128,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
             const regionData = region[0];
             const sido = regionData.region_1depth_name || "";
             const sigungu = regionData.region_2depth_name || "";
-            
+
             if (sido && sigungu) {
               const shortSido = convertSidoToShort(sido);
               finalAddress = `${shortSido} ${sigungu} 해상`;
@@ -137,7 +137,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
               finalAddress = `${shortSido} 해상`;
             }
           }
-          
+
           updateMarkerData(type, finalAddress, lat, lng);
         });
       }
@@ -153,7 +153,7 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
       }
       return;
     }
-    
+
     if (mapInstance.current) {
       // 이미 지도가 있으면 스킵
       return;

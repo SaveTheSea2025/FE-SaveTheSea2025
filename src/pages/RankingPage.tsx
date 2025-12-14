@@ -7,6 +7,24 @@ import AwardCard from "../components/ranking/AwardCard";
 import type { RankingData, StatItem } from "../types/ranking";
 import instance from "../api/axios";
 
+const FilterIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-5 h-5 text-white"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v7l-4 2v-8.414a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+    />
+  </svg>
+);
+
+
 interface ApiResponse<T> {
   code: number;
   message: string;
@@ -29,7 +47,10 @@ const getAwardsData = (stats: StatItem[]): MonthlyAwardsData => {
   const findStat = (cat: StatItem["category"]) =>
     stats.find(s => s.category === cat);
 
-  const makeItem = (stat: StatItem | undefined, category: AwardItem["category"]) => ({
+  const makeItem = (
+    stat: StatItem | undefined,
+    category: AwardItem["category"]
+  ) => ({
     userName: stat?.userName || "N/A",
     value: stat?.value ?? 0,
     category,
@@ -51,24 +72,38 @@ const Footer = () => (
   </footer>
 );
 
+// 년도와 월 목록 생성
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth() + 1;
+
+// 현재 연도부터 이전 3년까지의 연도 목록
+const years = Array.from({ length: 3 }, (_, i) => currentYear - i);
+// 1월부터 12월까지의 월 목록
+const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
 const RankingPage = () => {
   const [tab, setTab] = useState<"group" | "personal">("group");
 
+  // 년/월 선택 상태
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+
   const [groupRanking, setGroupRanking] = useState<RankingData | null>(null);
-  const [personalRanking, setPersonalRanking] = useState<RankingData | null>(null);
+  const [personalRanking, setPersonalRanking] = useState<RankingData | null>(
+    null
+  );
 
   const [groupLoading, setGroupLoading] = useState(false);
   const [personalLoading, setPersonalLoading] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-
-  // API 호출 공통 함수
+  // API 호출 공통 함수 - year, month 인자 추가
   const callRankingAPI = async (
     url: string,
+    year: number,
+    month: number,
     setter: (data: RankingData) => void,
     setLoading: (v: boolean) => void
   ) => {
@@ -76,9 +111,9 @@ const RankingPage = () => {
     setError(null);
 
     try {
-      // instance 사용으로 변경
+      // instance 사용
       const response = await instance.get<ApiResponse<RankingData>>(url, {
-        params: { year, month }
+        params: { year, month },
       });
 
       setter(response.data.data);
@@ -91,24 +126,38 @@ const RankingPage = () => {
   };
 
   // 단체 API
-  const fetchGroupRanking = async () => {
-    if (!groupRanking) {
-      await callRankingAPI("/api/ranking/groups", setGroupRanking, setGroupLoading);
-    }
+  const fetchGroupRanking = async (year: number, month: number) => {
+    await callRankingAPI(
+      "/api/ranking/groups",
+      year,
+      month,
+      setGroupRanking,
+      setGroupLoading
+    );
   };
 
   // 개인 API
-  const fetchPersonalRanking = async () => {
-    if (!personalRanking) {
-      await callRankingAPI("/api/ranking/users", setPersonalRanking, setPersonalLoading);
-    }
+  const fetchPersonalRanking = async (year: number, month: number) => {
+    await callRankingAPI(
+      "/api/ranking/users",
+      year,
+      month,
+      setPersonalRanking,
+      setPersonalLoading
+    );
   };
 
-  // 탭 변경 시 API 호출
+  // 탭, 년, 월 변경 시 API 호출
   useEffect(() => {
-    if (tab === "group") fetchGroupRanking();
-    else fetchPersonalRanking();
-  }, [tab]);
+    setGroupRanking(null);
+    setPersonalRanking(null);
+
+    if (tab === "group") {
+      fetchGroupRanking(selectedYear, selectedMonth);
+    } else {
+      fetchPersonalRanking(selectedYear, selectedMonth);
+    }
+  }, [tab, selectedYear, selectedMonth]);
 
   // 현재 탭의 데이터 선택
   const currentRankingData = useMemo(() => {
@@ -152,8 +201,85 @@ const RankingPage = () => {
     );
   }
 
+  // 데이터 없음 및 메인 렌더링을 위한 공통 컴포넌트
+  const RankingControls = (
+    <section className="flex justify-center">
+      <div className="max-w-3xl mx-auto w-full px-6  mt-15 mb-10">
+        <div className="flex items-center gap-4 mb-6">
+          {/* 필터 아이콘 버튼 */}
+          <button className="w-9 h-9 bg-[#0C4A6E] rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+            <FilterIcon />
+          </button>
+
+          {/* 탭 버튼 - 스위치 스타일 */}
+          <div className="relative inline-flex bg-gray-200 rounded-full p-1 flex-shrink-0">
+            <button
+              onClick={() => setTab("group")}
+              className={`relative px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${tab === "group"
+                ? "bg-[#0C4A6E] text-white shadow-md"
+                : "text-gray-600"
+                }`}
+            >
+              단체별
+            </button>
+            <button
+              onClick={() => setTab("personal")}
+              className={`relative px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${tab === "personal"
+                ? "bg-[#0C4A6E] text-white shadow-md"
+                : "text-gray-600"
+                }`}
+            >
+              개인별
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-gray-300 flex-shrink-0"></div>
+
+          {/* 년/월 드롭다운 - 버튼 스타일 */}
+          <div className="flex items-center gap-3">
+            {/* 년도 선택 드롭다운 */}
+            <div className="relative flex-shrink-0">
+              <select
+                value={selectedYear}
+                onChange={e => setSelectedYear(Number(e.target.value))}
+                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50 cursor-pointer"
+              >
+                {years.map(year => (
+                  <option key={year} value={year}>
+                    {year}년
+                  </option>
+                ))}
+              </select>
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">
+                ▼
+              </span>
+            </div>
+
+            {/* 월 선택 드롭다운 */}
+            <div className="relative flex-shrink-0">
+              <select
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(Number(e.target.value))}
+                className="appearance-none bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm pr-8 focus:outline-none hover:bg-gray-50 cursor-pointer"
+              >
+                {months.map(month => (
+                  <option key={month} value={month}>
+                    {month}월
+                  </option>
+                ))}
+              </select>
+              <span className="absolute right-3 top-3 pointer-events-none text-gray-500 text-xs">
+                ▼
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
   // 데이터 없음
-  if (top10.length === 0) {
+  if (top10.length === 0 && !isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-[#F9F9F9]">
         <Header forceScrolled={true} />
@@ -164,30 +290,15 @@ const RankingPage = () => {
           </h1>
         </section>
 
-        <section className="flex justify-center mt-6 gap-3">
-          <button
-            onClick={() => setTab("group")}
-            className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "group"
-              ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-              : "bg-white text-gray-600 border-gray-300"
-              }`}
-          >
-            단체별
-          </button>
-          <button
-            onClick={() => setTab("personal")}
-            className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "personal"
-              ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-              : "bg-white text-gray-600 border-gray-300"
-              }`}
-          >
-            개인별
-          </button>
-        </section>
+        {/* 필터 컨트롤 */}
+        {RankingControls}
 
         <div className="flex flex-col items-center justify-center py-20 flex-grow">
           <p className="text-xl text-gray-500 font-semibold mb-4">
-            이번 달 랭킹 데이터가 없습니다.
+            선택한 기간의 랭킹 데이터가 없습니다.
+          </p>
+          <p className="text-gray-500">
+            {selectedYear}년 {selectedMonth}월에는 활동 내역이 없어요.
           </p>
         </div>
 
@@ -201,35 +312,22 @@ const RankingPage = () => {
       <Header forceScrolled={true} />
 
       <section className="mt-60">
-        <h1 className="text-center text-4xl font-semibold text-[#0C4A6E]">랭킹</h1>
+        <h1 className="text-center text-4xl font-semibold text-[#0C4A6E]">
+          랭킹
+        </h1>
       </section>
 
-      {/* 탭 버튼 */}
-      <section className="flex justify-center mt-6 gap-3">
-        <button
-          onClick={() => setTab("group")}
-          className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "group"
-            ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-            : "bg-white text-gray-600 border-gray-300"
-            }`}
-        >
-          단체별
-        </button>
-
-        <button
-          onClick={() => setTab("personal")}
-          className={`px-5 py-2 rounded-full text-sm font-medium border ${tab === "personal"
-            ? "bg-[#0C4A6E] text-white border-[#0C4A6E]"
-            : "bg-white text-gray-600 border-gray-300"
-            }`}
-        >
-          개인별
-        </button>
-      </section>
+      {/* 필터 컨트롤 */}
+      {RankingControls}
 
       {/* TOP 3 */}
       <section className="mt-14 px-6">
-        <h2 className="text-center text-xl font-bold mb-8 text-gray-700">Top 3</h2>
+        <p className="text-center text-lg text-gray-400 mb-4 font-semibold">
+          {selectedYear}년 {selectedMonth}월 기준
+        </p>
+        <h2 className="text-center text-2xl font-bold mb-8 text-gray-700">
+          Top 3
+        </h2>
 
         <div className="flex flex-col md:flex-row justify-center items-end gap-5 max-w-6xl mx-auto">
           {/* 2위 */}
@@ -258,7 +356,9 @@ const RankingPage = () => {
 
       {/* 이달의 업적 */}
       <section className="mt-20 px-6 pb-20 pt-10 bg-F9F9F9">
-        <h2 className="text-center text-2xl font-bold mb-10 text-[#0C4A6E]">이달의 업적</h2>
+        <h2 className="text-center text-2xl font-bold mb-10 text-[#0C4A6E]">
+          이달의 업적
+        </h2>
 
         <div
           className={`grid grid-cols-1 gap-6 max-w-6xl mx-auto ${isPersonalTab
