@@ -12,7 +12,6 @@ import LocationSection from "../components/write/LocationSection";
 import instance from "../api/axios";
 
 const WritePage = () => {
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const { user } = useAuth();
   const navigate = useNavigate(); // ✅ 추가
 
