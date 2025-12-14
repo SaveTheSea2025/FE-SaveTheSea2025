@@ -29,9 +29,10 @@ import {
   Bar,
 } from "recharts";
 
+// API 응답 데이터 타입 정의
 interface SummaryStats {
   activityCount: number;
-  totalMembers: number;
+  totalParticipants: number;
   totalWeight: number;
   totalVolume: number;
 }
@@ -92,10 +93,12 @@ export default function StatsPage() {
   const [wasteRatio, setWasteRatio] = useState<WasteTypeRatio[]>([]);
   const [regionData, setRegionData] = useState<RegionStats[]>([]);
 
+  // viewMode가 변경될 때마다 fetchAllData가 실행되도록 의존성 배열에 추가
   useEffect(() => {
     setDisplayStartDate(startDate);
     setDisplayEndDate(endDate);
 
+    // 로그아웃 상태에서 mine으로 접근 시 all로 강제 전환
     if (!user && viewMode === "mine") {
       setViewMode("all");
       return;
@@ -124,6 +127,7 @@ export default function StatsPage() {
   const locationOptions = ["전체 지역", "동해", "서해", "남해", "제주"];
 
   const fetchAllData = async () => {
+    // 내 정보를 보려는데 유저가 없으면 API 호출 안 함
     if (!user && viewMode === "mine") {
       return;
     }
@@ -139,19 +143,20 @@ export default function StatsPage() {
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // ✅ viewMode를 파라미터에 추가
+      // 공통 파라미터 (API 명세에 맞춰 startDate, endDate 사용)
       const commonParams = {
-        viewMode: viewMode,
         startDate: startDate,
         endDate: endDate,
         region: regionParam,
       };
 
-      // 1. 전체 통계 - ✅ 엔드포인트 통일
+      // 1. 전체 통계
       try {
-        const summaryUrl = "/api/statistics/summary";
+        const summaryUrl = viewMode === "mine"
+          ? "/api/statistics/my-summary"
+          : "/api/statistics/summary";
 
-        console.log("전체 통계 요청:", summaryUrl, commonParams);
+        console.log("전체 통계 요청:", summaryUrl);
 
         const summaryRes = await instance.get(summaryUrl, { params: commonParams });
         const summaryData = summaryRes.data;
@@ -160,7 +165,7 @@ export default function StatsPage() {
           const data = summaryData.data;
           setSummaryStats({
             activityCount: data.activityCount ?? 0,
-            totalMembers: data.totalParticipants ?? data.totalParticipant ?? 0,
+            totalParticipants: data.totalParticipants ?? data.totalParticipant ?? 0,
             totalWeight: data.totalWeight ?? 0,
             totalVolume: data.totalVolume ?? 0,
           });
@@ -169,54 +174,23 @@ export default function StatsPage() {
         console.error("전체 통계 API 실패:", err);
       }
 
-      // 2. 월별 수거량 - ✅ 엔드포인트 통일
+      // 2. 월별 수거량
       try {
-        const monthlyUrl = "/api/statistics/monthly-change";
+        const monthlyUrl = viewMode === "mine"
+          ? "/api/statistics/my-monthly-change"
+          : "/api/statistics/monthly-change";
 
-        console.log("월별 수거량 요청:", monthlyUrl, commonParams);
+        console.log("월별 수거량 요청:", monthlyUrl);
 
         const monthlyRes = await instance.get(monthlyUrl, { params: commonParams });
         const monthlyResult = monthlyRes.data;
 
         if (monthlyResult.code === 0 && monthlyResult.data.length > 0) {
-          console.log("📊 백엔드 원본 데이터:", monthlyResult.data);
-          
-          const fillMissingMonths = (data: any[]) => {
-            const result: any[] = [];
-            
-            const startYear = parseInt(startDate.split("-")[0]);
-            const startMonth = parseInt(startDate.split("-")[1]);
-            const endYear = parseInt(endDate.split("-")[0]);
-            const endMonth = parseInt(endDate.split("-")[1]);
-            
-            let currentYear = startYear;
-            let currentMonth = startMonth;
-            
-            while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-              const monthKey = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
-              
-              const found = data.find((item: any) => 
-                item.year === currentYear && item.month === currentMonth
-              );
-              
-              result.push({
-                month: monthKey,
-                totalWeight: found?.totalWeight || 0,
-                totalVolume: found?.totalVolume || 0,
-              });
-              
-              currentMonth++;
-              if (currentMonth > 12) {
-                currentMonth = 1;
-                currentYear++;
-              }
-            }
-            
-            return result;
-          };
-          
-          const formatted = fillMissingMonths(monthlyResult.data);
-          console.log("📊 빠진 월 채운 데이터:", formatted);
+          const formatted = monthlyResult.data.map((item: any) => ({
+            month: `${item.year}-${String(item.month).padStart(2, "0")}`,
+            totalWeight: item.totalWeight,
+            totalVolume: item.totalVolume,
+          }));
           setMonthlyData(formatted);
         } else {
           setMonthlyData([]);
@@ -226,11 +200,13 @@ export default function StatsPage() {
         setMonthlyData([]);
       }
 
-      // 3. 폐기물 비율 - ✅ 엔드포인트 통일
+      // 3. 폐기물 비율
       try {
-        const wasteUrl = "/api/statistics/waste-type-ratio";
+        const wasteUrl = viewMode === "mine"
+          ? "/api/statistics/my-waste-type-ratio"
+          : "/api/statistics/waste-type-ratio";
 
-        console.log("폐기물 비율 요청:", wasteUrl, commonParams);
+        console.log("폐기물 비율 요청:", wasteUrl);
 
         const wasteRes = await instance.get(wasteUrl, { params: commonParams });
         const wasteResult = wasteRes.data;
@@ -247,11 +223,13 @@ export default function StatsPage() {
         console.error("폐기물 비율 API 실패:", err);
       }
 
-      // 4. 지역별 통계 - ✅ 엔드포인트 통일
+      // 4. 지역별 통계
       try {
-        const regionUrl = "/api/statistics/region-activity";
+        const regionUrl = viewMode === "mine"
+          ? "/api/statistics/my-region-activity"
+          : "/api/statistics/region-activity";
 
-        console.log("지역별 통계 요청:", regionUrl, commonParams);
+        console.log("지역별 통계 요청:", regionUrl);
 
         const regionRes = await instance.get(regionUrl, { params: commonParams });
         const regionResult = regionRes.data;
@@ -279,6 +257,7 @@ export default function StatsPage() {
     fetchAllData();
   };
 
+  // 엑셀 다운로드 함수
   const handleExcelDownload = async () => {
     try {
       const regionParam = location === "전체 지역" ? "전체" : location;
@@ -290,7 +269,7 @@ export default function StatsPage() {
         region: regionParam,
       };
 
-      console.log("📊 엑셀 다운로드 요청:", params);
+      console.log("엑셀 다운로드 요청:", params);
 
       const response = await instance.get("/api/export/excel", {
         params,
@@ -305,26 +284,25 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const startYear = parseInt(startDate.split("-")[0]);
-      const startMonth = parseInt(startDate.split("-")[1]);
-      const endYear = parseInt(endDate.split("-")[0]);
-      const endMonth = parseInt(endDate.split("-")[1]);
-      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const dateRange = `${startDate.replace(/-/g, "")}-${endDate.replace(/-/g, "")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
-      
+
       link.setAttribute("download", fileName);
+
       document.body.appendChild(link);
       link.click();
+
       link.remove();
       window.URL.revokeObjectURL(url);
       setDownloadOpen(false);
     } catch (error: any) {
-      console.error("❌ 엑셀 다운로드 실패:", error);
-      alert("엑셀 다운로드에 실패했습니다.");
+      console.error("엑셀 다운로드 실패:", error);
+      alert("엑셀 다운로드에 실패했습니다. (서버 OPTIONS 허용 설정 확인 필요)");
     }
   };
 
+  // PDF 다운로드 함수
   const handlePdfDownload = async () => {
     try {
       const regionParam = location === "전체 지역" ? "전체" : location;
@@ -348,14 +326,10 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const startYear = parseInt(startDate.split("-")[0]);
-      const startMonth = parseInt(startDate.split("-")[1]);
-      const endYear = parseInt(endDate.split("-")[0]);
-      const endMonth = parseInt(endDate.split("-")[1]);
-      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const dateRange = `${startDate.replace(/-/g, "")}-${endDate.replace(/-/g, "")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계보고서_${dateRange}.pdf`;
-      
+
       link.setAttribute("download", fileName);
 
       document.body.appendChild(link);
@@ -391,18 +365,18 @@ export default function StatsPage() {
   const COLORS = [
     "#08306b",
     "#08519c",
-    "#084594",
-    "#2171b5",
     "#2171b5",
     "#4292c6",
-    "#4292c6",
-    "#6baed6",
     "#6baed6",
     "#9ecae1",
-    "#9ecae1",
-    "#c6dbef",
     "#c6dbef",
     "#deebf7",
+    "#084594",
+    "#2171b5",
+    "#4292c6",
+    "#6baed6",
+    "#9ecae1",
+    "#c6dbef",
     "#eff3ff",
   ];
 
@@ -425,7 +399,7 @@ export default function StatsPage() {
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-4">
             <button className="w-9 h-9 bg-[#0077A7] rounded-full flex items-center justify-center shadow-sm">
-              <img src={filterIcon} className="w-5 h-5" />
+              <img src={filterIcon} className="w-5 h-5" alt="filter" />
             </button>
 
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
@@ -578,7 +552,7 @@ export default function StatsPage() {
               onClick={() => setDownloadOpen(!downloadOpen)}
               className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white border border-gray-200 text-sm shadow-sm hover:bg-gray-50 transition"
             >
-              <img src={downloadIcon} className="w-4 h-4" />
+              <img src={downloadIcon} className="w-4 h-4" alt="download" />
               파일 다운
             </button>
 
@@ -588,7 +562,7 @@ export default function StatsPage() {
                   onClick={handlePdfDownload}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-t-xl cursor-pointer transition"
                 >
-                  <img src={pdfIcon} className="w-5 h-5 flex-shrink-0" />
+                  <img src={pdfIcon} className="w-5 h-5 flex-shrink-0" alt="pdf" />
                   <span className="text-sm whitespace-nowrap">PDF 보고서 다운로드</span>
                 </div>
                 <div className="h-px bg-gray-100"></div>
@@ -596,7 +570,7 @@ export default function StatsPage() {
                   onClick={handleExcelDownload}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-b-xl cursor-pointer transition"
                 >
-                  <img src={excelIcon} className="w-5 h-5 flex-shrink-0" />
+                  <img src={excelIcon} className="w-5 h-5 flex-shrink-0" alt="excel" />
                   <span className="text-sm whitespace-nowrap">데이터 엑셀 다운로드</span>
                 </div>
               </div>
@@ -616,7 +590,7 @@ export default function StatsPage() {
           />
           <SummaryCard
             title="총 참여자 수"
-            value={`${(summaryStats?.totalMembers ?? 0).toLocaleString()}명`}
+            value={`${(summaryStats?.totalParticipants ?? 0).toLocaleString()}명`}
             icon={personIcon}
           />
           <SummaryCard
@@ -660,14 +634,7 @@ export default function StatsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d9d9d9" />
-                  <XAxis 
-                    dataKey="month" 
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    interval={0}
-                    tick={{ fontSize: 12 }}
-                  />
+                  <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip
                     formatter={(value: any) => [value, unit === "kg" ? "무게(kg)" : "부피(L)"]}
@@ -690,7 +657,7 @@ export default function StatsPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="w-full h-72 flex items-center justify-center text-gray-400 min-h-[288px]">
+            <div className="w-full h-72 flex items-center justify-center text-gray-400">
               <p>조회된 데이터가 없습니다.</p>
             </div>
           )}
@@ -823,7 +790,7 @@ export default function StatsPage() {
               </div>
             </div>
           ) : (
-            <div className="w-full h-72 flex items-center justify-center text-gray-400 min-h-[288px]">
+            <div className="w-full h-72 flex items-center justify-center text-gray-400">
               <p>조회된 데이터가 없습니다.</p>
             </div>
           )}
@@ -912,7 +879,7 @@ export default function StatsPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="w-full h-72 flex items-center justify-center text-gray-400 min-h-[288px]">
+            <div className="w-full h-72 flex items-center justify-center text-gray-400">
               <p>조회된 데이터가 없습니다.</p>
             </div>
           )}
@@ -930,7 +897,7 @@ function SummaryCard({ title, value, icon }: any) {
         <p className="text-2xl font-semibold mt-1">{value}</p>
       </div>
       <div className="w-12 h-12 rounded-lg bg-[#c9e3e7] flex items-center justify-center">
-        <img src={icon} className="w-6 h-6" />
+        <img src={icon} className="w-6 h-6" alt="icon" />
       </div>
     </div>
   );
