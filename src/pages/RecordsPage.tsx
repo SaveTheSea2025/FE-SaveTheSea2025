@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Header from "../components/common/Header";
 import RecordCard from "../components/record/RecordCard";
 import RecordDetailPanel from "../components/record/RecordDetailPanel";
@@ -70,7 +70,6 @@ const RecordsPage: React.FC = () => {
       try {
         setLoading(true);
 
-        // instance 사용 (headers 자동 처리, BASE_URL 제거)
         const res = await instance.get("/api/activity-records", {
           params: {
             page: page,
@@ -79,17 +78,15 @@ const RecordsPage: React.FC = () => {
         });
 
         const json = res.data;
-
         const list = json.data?.content || [];
         const pageInfo = json.data?.page;
 
         setData(list);
-        setVisibleData(list); // 초기 로드 시 전체 리스트 표시
+        setVisibleData(list);
 
         if (pageInfo) {
           setTotalPages(pageInfo.totalPages);
         }
-
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -100,12 +97,62 @@ const RecordsPage: React.FC = () => {
   }, [page]);
 
   /* ==================================
+   * 🔥 핵심 로직: 지도 이동 및 오프셋 계산 함수
+   * ================================== */
+  const handleFocusRecord = useCallback((record: CleanupItem) => {
+    if (!mapRef.current || !window.kakao) {
+      // 지도가 로드되지 않은 상태라면 데이터만 세팅
+      setSelectedRecord(record);
+      return;
+    }
+
+    const map = mapRef.current;
+    const kakao = window.kakao;
+    const targetLatLng = new kakao.maps.LatLng(record.startLatitude, record.startLongitude);
+
+    // 1. 기존 선택된 패널을 먼저 닫아서 리렌더링 부하를 줄임
+    setSelectedRecord(null);
+
+    // 2. 줌 레벨 먼저 설정 (애니메이션)
+    map.setLevel(5, { animate: true });
+
+    // 3. 오프셋 계산 (오른쪽 사이드바 400px 고려)
+    // 약간의 지연을 주어 setLevel 애니메이션과 충돌 방지 및 정확한 투영 좌표 계산 유도
+    setTimeout(() => {
+      const projection = map.getProjection();
+      if (!projection) {
+        // 투영 객체가 아직 없으면 그냥 panTo
+        map.panTo(targetLatLng);
+      } else {
+        // 현재 해당 좌표의 화면상 픽셀 좌표 구하기
+        const point = projection.pointFromCoords(targetLatLng);
+
+        // 🔥 중요: 사이드바가 오른쪽에 400px 있으므로,
+        // 시각적 중심은 전체 너비의 중심보다 왼쪽에 있어야 함.
+        // 따라서 지도 중심(Center)을 오른쪽으로 200px(400/2) 이동시켜야
+        // 마커가 왼쪽(시각적 중심)으로 이동됨.
+        point.x = point.x + 200; // 오른쪽으로 200px 오프셋
+
+        // 다시 LatLng로 변환
+        const newCenter = projection.coordsFromPoint(point);
+
+        // 해당 위치로 부드럽게 이동
+        map.panTo(newCenter);
+      }
+    }, 100);
+
+    // 4. 지도 이동 얼추 끝난 후 상세 패널 오픈 (450ms 후)
+    setTimeout(() => {
+      setSelectedRecord(record);
+    }, 450);
+  }, []);
+
+  /* ==================================
    * 2. Kakao 지도 초기화 및 마커/히트맵 설정
    * ================================== */
   useEffect(() => {
     if (loading || data.length === 0) return;
 
-    // 카카오 맵 SDK 스크립트 로드
     const loadKakaoSDK = () =>
       new Promise<void>((resolve) => {
         if (window.kakao && window.kakao.maps) return resolve();
@@ -125,17 +172,16 @@ const RecordsPage: React.FC = () => {
       const container = document.getElementById("map");
       if (!container) return;
 
-      // 지도 객체 생성 (한 번만)
       if (!mapRef.current) {
         mapRef.current = new kakao.maps.Map(container, {
-          center: new kakao.maps.LatLng(36.5, 127.8), // 대한민국 중심 좌표
+          center: new kakao.maps.LatLng(36.5, 127.8),
           level: 13,
         });
       }
       const map = mapRef.current;
 
       // ------------------------------------------------
-      // 히트맵 (HeatCircle) 구현부
+      // 히트맵 (HeatCircle)
       // ------------------------------------------------
       function HeatCircle(this: any, bounds: any, color: string, opacity: number) {
         this.bounds = bounds;
@@ -164,7 +210,6 @@ const RecordsPage: React.FC = () => {
         const map = this.getMap();
         const level = map.getLevel();
 
-        // 줌 레벨에 따른 크기/투명도 조정
         let scaleFactor = 1.0;
         let opacityAdjust = 1.0;
         let blurPx = 10;
@@ -187,7 +232,6 @@ const RecordsPage: React.FC = () => {
         this.node.style.filter = `blur(${blurPx}px)`;
       };
 
-      // 히트맵 데이터 그리기
       const maxW = Math.max(...data.map((d) => d.totalWeight || 0)) || 1;
       data.forEach((p) => {
         const ratio = (p.totalWeight || 0) / maxW;
@@ -233,9 +277,6 @@ const RecordsPage: React.FC = () => {
 
         if (d.thumbnail) {
           // 썸네일 커스텀 오버레이
-          // React 내부에서 string으로 주입된 HTML의 이벤트 핸들링은 어려우므로,
-          // 여기서는 Kakao CustomOverlay의 content를 HTMLElement로 생성하여 이벤트를 부착함.
-
           const div = document.createElement('div');
           div.style.position = 'relative';
           div.style.width = '60px';
@@ -248,10 +289,9 @@ const RecordsPage: React.FC = () => {
             </div>
           `;
 
+          // 🔥 수정: 마커 클릭 시 handleFocusRecord 호출 (공통 로직 사용)
           div.addEventListener('click', () => {
-            map.panTo(markerPosition);
-            map.setLevel(5, { animate: true });
-            setTimeout(() => setSelectedRecord(d), 300);
+            handleFocusRecord(d);
           });
 
           markerOrOverlay = new kakao.maps.CustomOverlay({
@@ -271,11 +311,9 @@ const RecordsPage: React.FC = () => {
             position: markerPosition, image: markerImage, clickable: true
           });
 
-          // 지도 마커 클릭 시 동작 (확대 + 상세패널 열기)
+          // 🔥 수정: 마커 클릭 시 handleFocusRecord 호출 (공통 로직 사용)
           kakao.maps.event.addListener(markerOrOverlay, "click", () => {
-            map.panTo(markerPosition);
-            map.setLevel(5, { animate: true }); // 레벨 5로 확대
-            setTimeout(() => setSelectedRecord(d), 300); // 패널 열기
+            handleFocusRecord(d);
           });
         }
         markers.push(markerOrOverlay);
@@ -289,9 +327,7 @@ const RecordsPage: React.FC = () => {
         map.setLevel(level, { anchor: cluster.getCenter() });
       });
 
-      // ------------------------------------------------
       // 지도 이동 종료 시(idle) 보이는 데이터 업데이트
-      // ------------------------------------------------
       kakao.maps.event.removeListener(map, "idle", updateVisibleData);
       kakao.maps.event.addListener(map, "idle", updateVisibleData);
 
@@ -314,7 +350,7 @@ const RecordsPage: React.FC = () => {
     loadKakaoSDK().then(() => {
       window.kakao.maps.load(initMap);
     });
-  }, [kakaoKey, data, loading]);
+  }, [kakaoKey, data, loading, handleFocusRecord]); // handleFocusRecord 의존성 추가
 
   /* ==================================
    * 3. 지역 필터 & 지도 이동 로직
@@ -332,52 +368,36 @@ const RecordsPage: React.FC = () => {
     };
 
     if (activeRegion && regionCenters[activeRegion]) {
-      // 선택된 지역으로 이동
       const { lat, lng, level } = regionCenters[activeRegion];
       map.panTo(new kakao.maps.LatLng(lat, lng));
       setTimeout(() => {
         map.setLevel(level, { animate: true });
       }, 300);
-    } else {
-      // 지역 선택 해제 시 로직은 handleResetMap에서 처리됨
     }
   }, [activeRegion]);
 
-  // 지역 버튼 토글 (누른 거 또 누르면 취소)
   const handleRegionClick = (region: string) => {
     if (activeRegion === region) {
-      setActiveRegion(""); // 취소 (전체보기)
+      setActiveRegion("");
     } else {
-      setActiveRegion(region); // 지역 선택
+      setActiveRegion(region);
     }
   };
 
   /* ==================================
    * 4. 지도 컨트롤 핸들러
    * ================================== */
-  // 카드 클릭 시 지도 이동 및 확대
+  // 카드 클릭 시 -> handleFocusRecord 호출 (마커 클릭과 동일 동작)
   const handleCardClick = (record: CleanupItem) => {
-    setSelectedRecord(record);
-    if (mapRef.current && window.kakao) {
-      const map = mapRef.current;
-      const moveLatLon = new window.kakao.maps.LatLng(record.startLatitude, record.startLongitude);
-      map.panTo(moveLatLon);
-      setTimeout(() => {
-        map.setLevel(5, { animate: true }); // 상세 보기 레벨
-      }, 300);
-    }
+    handleFocusRecord(record);
   };
 
-  // 전체보기 버튼 (지도를 초기 상태로 되돌리고 필터도 해제)
+  // 전체보기 버튼
   const handleResetMap = () => {
-    // 1. 상태 초기화
     setActiveRegion("");
     setSelectedRecord(null);
     setFilters(null);
 
-    // 2. 강제 지도 리셋
-    // activeRegion 상태가 이미 ""인 상태에서 지도를 확대한 후 다시 전체보기를 누르면
-    // useEffect가 트리거되지 않으므로 여기서 직접 지도를 원복시킵니다.
     if (mapRef.current && window.kakao) {
       const map = mapRef.current;
       const defaultCenter = new window.kakao.maps.LatLng(36.5, 127.8);
@@ -395,7 +415,6 @@ const RecordsPage: React.FC = () => {
 
   if (filters) {
     filteredData = filteredData.filter((d) => {
-      // 기간 필터
       if (filters.startDate && filters.endDate) {
         const start = new Date(filters.startDate);
         start.setHours(0, 0, 0, 0);
@@ -404,28 +423,22 @@ const RecordsPage: React.FC = () => {
         const recordDate = new Date(d.startDate);
         if (recordDate < start || recordDate > end) return false;
       }
-
-      // 유저 필터
       if (filters.userType && filters.userType !== "ALL") {
         if (d.memberType !== filters.userType) return false;
       }
       if (filters.username) {
         if (!d.username.includes(filters.username)) return false;
       }
-
-      // 활동 필터
       if (filters.activityType && filters.activityType !== "ALL") {
         if (d.memberType !== filters.activityType) return false;
       }
       if (filters.activityName) {
         if (!d.activityName.includes(filters.activityName)) return false;
       }
-
       return true;
     });
   }
 
-  // 분 단위 시간을 "시간 분"으로 포맷
   const formatMinutes = (value: string) => {
     if (value.includes("시간") || value.includes("분")) return value;
     const minutes = parseInt(value, 10);
@@ -445,7 +458,7 @@ const RecordsPage: React.FC = () => {
         {/* 지도 영역 */}
         <div id="map" className="flex-1" style={{ height: "calc(100vh - 60px)" }} />
 
-        {/* 왼쪽 하단 '전체보기' 버튼 (지도 위에 띄움) */}
+        {/* 왼쪽 하단 '전체보기' 버튼 */}
         <button
           onClick={handleResetMap}
           className="absolute bottom-6 left-6 z-30 flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 hover:shadow-xl transition-all active:scale-95"
@@ -510,12 +523,12 @@ const RecordsPage: React.FC = () => {
             />
           )}
 
-          {/* 4. 카드 리스트 (스크롤 영역) */}
+          {/* 4. 카드 리스트 */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-16 relative">
             {filteredData.map((d) => (
               <RecordCard
                 key={d.id}
-                onClick={() => handleCardClick(d)} // 카드 클릭 시 지도 이동
+                onClick={() => handleCardClick(d)}
                 username={d.username}
                 profileUrl={d.profileUrl}
                 activityName={d.activityName}
@@ -528,7 +541,7 @@ const RecordsPage: React.FC = () => {
             ))}
           </div>
 
-          {/* 5. 필터 초기화 버튼 (고정 위치) */}
+          {/* 5. 필터 초기화 버튼 */}
           {filters && (
             <div className="absolute bottom-[60px] left-0 w-full flex justify-center z-10 pointer-events-none">
               <button
@@ -563,7 +576,7 @@ const RecordsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 7. 상세 정보 패널 (모달 오버레이 아님, 별도 컴포넌트로 관리) */}
+      {/* 7. 상세 정보 패널 */}
       {selectedRecord && (
         <div
           className="fixed inset-0 z-30 bg-black/10"

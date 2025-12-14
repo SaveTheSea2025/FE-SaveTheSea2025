@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ 추가
+import { useNavigate } from "react-router-dom";
 import Header from "../components/common/Header";
 import { useAuth } from "../context/AuthContext";
 import WasteSection from "../components/write/WasteSection";
@@ -12,10 +12,8 @@ import LocationSection from "../components/write/LocationSection";
 import instance from "../api/axios";
 
 const WritePage = () => {
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const { user } = useAuth();
-  const navigate = useNavigate(); // ✅ 추가
-
+  const navigate = useNavigate();
   const groupType = user?.memberType === "GROUP" ? "단체" : "개인";
   const groupName = user?.memberType === "GROUP"
     ? (user as any)?.organizationName || user?.userName || ""
@@ -67,8 +65,8 @@ const WritePage = () => {
       if (!activityName.trim()) missing.push("activityName");
       if (!startDate || !startTime || !endDate || !endTime) missing.push("dateTime");
       if (memberCount <= 0) missing.push("memberCount");
-      if (!locationData?.startLat || !locationData?.startLng || 
-    !locationData?.endLat || !locationData?.endLng) missing.push("location");
+      if (!locationData?.startLat || !locationData?.startLng ||
+        !locationData?.endLat || !locationData?.endLng) missing.push("location");
 
       if (missing.length > 0) {
         setMissingFields(missing);
@@ -132,7 +130,7 @@ const WritePage = () => {
 
       if (response.data.code === 0) {
         alert("활동 기록이 성공적으로 저장되었습니다.");
-        // ✅ 성공 시 함께한 기록 페이지로 이동
+        // 성공 시 함께한 기록 페이지로 이동
         navigate("/records");
       } else {
         alert("⚠️ 저장 실패: " + (response.data.message || "알 수 없는 오류"));
