@@ -25,7 +25,7 @@ const GroupSignupPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [groupName, setGroupName] = useState("");
-  // ✅ 대표자 이름 상태 복구
+  // 대표자 이름 상태 복구
   const [leaderName, setLeaderName] = useState("");
   const [region, setRegion] = useState("");
 
@@ -35,6 +35,9 @@ const GroupSignupPage: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 파일 크기 제한 (5MB)
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
   // -------------------------
   // 이메일 인증 / 타이머
@@ -59,22 +62,37 @@ const GroupSignupPage: React.FC = () => {
     ).padStart(2, "0")}`;
 
   // -------------------------
-  // 이미지 처리 (Blob URL 로직)
+  // 이미지 처리 (Blob URL 로직 및 사이즈 체크)
   // -------------------------
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
-    // 이전 Blob URL이 있다면 해제 (메모리 정리)
-    if (profileImage && profileImage.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImage);
-    }
-
     if (file) {
+      // 파일 크기 체크
+      if (file.size > MAX_FILE_SIZE) {
+        alert("파일 크기는 5MB 이하만 업로드 가능합니다.");
+
+        // 파일 입력값 초기화
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+
+      // 이전 Blob URL이 있다면 해제 (메모리 정리)
+      if (profileImage && profileImage.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImage);
+      }
+
       setProfileFile(file);
       // Blob URL 생성 및 저장
       const blobUrl = URL.createObjectURL(file);
       setProfileImage(blobUrl);
     } else {
+      // 파일 선택 취소 시
+      if (profileImage && profileImage.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImage);
+      }
       setProfileFile(null);
       setProfileImage(null);
     }
@@ -107,7 +125,7 @@ const GroupSignupPage: React.FC = () => {
 
       if (res.code === 0) {
         alert("인증번호가 이메일로 발송되었습니다.");
-        setTimer(180);
+        setTimer(600);
       } else {
         setEmailError(res.message || "이메일 전송 실패");
       }
@@ -158,23 +176,23 @@ const GroupSignupPage: React.FC = () => {
       return;
     }
 
-    // ✅ 대표자명 필수 검증 추가
+    // 대표자명 필수 검증 추가
     if (!leaderName.trim()) {
       alert("대표자 이름을 입력해주세요.");
       return;
     }
 
-    // ✅ API 명세에 맞춰 데이터 구성: userName=그룹명, representativeName=대표자명
+    // API 명세에 맞춰 데이터 구성: userName=그룹명, representativeName=대표자명
     const data = {
       email,
       password,
       userName: groupName,
-      representativeName: leaderName, // ✅ 대표자명 추가 (API 명세에 따름)
+      representativeName: leaderName, // 대표자명 추가 (API 명세에 따름)
       region: region.toUpperCase(),
       memberType: "GROUP",
     };
 
-    // profileFile이 null이 아니면 배열로 감싸서 전달 (PersonalSignupPage와 동일)
+    // profileFile이 null이 아니면 배열로 감싸서 전달
     const res = await signup(data, profileFile ? [profileFile] : undefined);
 
     if (res.code === 0) {

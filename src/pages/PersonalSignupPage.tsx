@@ -15,6 +15,9 @@ const PersonalSignupPage: React.FC = () => {
     const [profileFile, setProfileFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // 파일 크기 제한 (5MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
     // 입력값
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -50,21 +53,36 @@ const PersonalSignupPage: React.FC = () => {
         return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     };
 
-    // 🟢 Blob URL 사용 및 메모리 정리 로직 (수정됨)
+    // 🟢 Blob URL 사용 및 메모리 정리 로직 (5MB 제한 추가됨)
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
 
-        // 이전 Blob URL이 있다면 해제
-        if (profileImage && profileImage.startsWith('blob:')) {
-            URL.revokeObjectURL(profileImage);
-        }
-
         if (file) {
+            // 파일 크기 체크
+            if (file.size > MAX_FILE_SIZE) {
+                alert("파일 크기는 5MB 이하만 업로드 가능합니다.");
+
+                // 파일 입력값 초기화
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+                return;
+            }
+
+            // 이전 Blob URL이 있다면 해제
+            if (profileImage && profileImage.startsWith('blob:')) {
+                URL.revokeObjectURL(profileImage);
+            }
+
             setProfileFile(file);
             // Blob URL 생성 및 저장
             const blobUrl = URL.createObjectURL(file);
             setProfileImage(blobUrl);
         } else {
+            // 파일 선택 취소 시
+            if (profileImage && profileImage.startsWith('blob:')) {
+                URL.revokeObjectURL(profileImage);
+            }
             setProfileFile(null);
             setProfileImage(null);
         }
@@ -98,7 +116,7 @@ const PersonalSignupPage: React.FC = () => {
 
             if (res.code === 0) {
                 alert("인증번호가 이메일로 발송되었습니다.");
-                setTimer(180); // 3분
+                setTimer(600); // 3분 -> 10분으로 변경 요청 시 여기 수정 (현재 600초=10분 적용)
             } else {
                 setEmailError(res.errorMessage || "이메일 전송 실패");
             }
@@ -167,21 +185,6 @@ const PersonalSignupPage: React.FC = () => {
 
         if (res.code === 0) {
             alert("회원가입 성공! 로그인 페이지로 이동합니다.");
-
-            // 🔴 서버 저장 확인 로직 제거: 500 오류가 나므로 즉시 제거하고 로그인 페이지로 이동
-            /*
-            try {
-                const infoRes = await getMyInfo();
-                if (infoRes.data?.profileUrl) {
-                    console.log("✅ 프로필 URL 저장 성공 확인:", infoRes.data.profileUrl);
-                } else {
-                    console.warn("⚠️ 프로필 URL이 여전히 NULL입니다. 서버 저장 로직을 확인하세요.");
-                }
-            } catch (e) {
-                console.error("회원가입 후 내 정보 조회 실패:", e);
-            }
-            */
-
             navigate("/login");
         } else {
             alert(res.message || "회원가입 실패");
