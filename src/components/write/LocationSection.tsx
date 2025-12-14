@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import DualMapSelector from "./DualMapSelector";
 import { regionCenters } from "../../data/regionCenters";
 
@@ -127,23 +127,22 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
     return { sido: extractedSido, sigungu: extractedSigungu };
   };
 
-  // 🔥 이 코드를 107줄 다음에 추가!
-// 🔥 startAddr이 변경될 때마다 실행
-useEffect(() => {
-  if (startAddr) {
-    const extracted = extractRegionFromAddress(startAddr);
-    console.log("🔄 startAddr 변경:", startAddr);
-    console.log("🔍 추출 결과:", extracted);
-    
-    if (extracted.sido && extracted.sigungu) {
-      console.log("✅ 드롭다운 업데이트:", extracted.sido, extracted.sigungu);
-      setSido(extracted.sido);
-      setSigungu(extracted.sigungu);
-    } else {
-      console.log("⚠️ 추출 실패:", extracted);
+  // 🔥 startAddr이 변경될 때마다 실행
+  useEffect(() => {
+    if (startAddr) {
+      const extracted = extractRegionFromAddress(startAddr);
+      console.log("🔄 startAddr 변경:", startAddr);
+      console.log("🔍 추출 결과:", extracted);
+      
+      if (extracted.sido && extracted.sigungu) {
+        console.log("✅ 드롭다운 업데이트:", extracted.sido, extracted.sigungu);
+        setSido(extracted.sido);
+        setSigungu(extracted.sigungu);
+      } else {
+        console.log("⚠️ 추출 실패:", extracted);
+      }
     }
-  }
-}, [startAddr]);
+  }, [startAddr]);
 
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
@@ -224,13 +223,13 @@ useEffect(() => {
               <select
                 value={sido}
                 onChange={(e) => {
-                  // 🔥 사용자가 직접 선택
+                  // 🔥 setTimeout 복원! (React 배치 업데이트 문제 해결)
                   setIsUserSelecting(true);
                   setSido(e.target.value);
                   setSigungu("");
                   setTimeout(() => {
                     setIsUserSelecting(false);
-                  }, 500);
+                  }, 100); // 100ms로 단축
                 }}
                 disabled={locked}
                 className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
@@ -249,12 +248,12 @@ useEffect(() => {
               <select
                 value={sigungu}
                 onChange={(e) => {
-                  // 🔥 사용자가 직접 선택
+                  // 🔥 setTimeout 복원!
                   setIsUserSelecting(true);
                   setSigungu(e.target.value);
                   setTimeout(() => {
                     setIsUserSelecting(false);
-                  }, 500);
+                  }, 100);
                 }}
                 disabled={!sido || locked}
                 className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50"
@@ -287,7 +286,7 @@ useEffect(() => {
                     setSigungu("");
                     setTimeout(() => {
                       setIsUserSelecting(false);
-                    }, 500);
+                    }, 100);
                   }}
                   disabled={locked}
                   className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
@@ -317,7 +316,7 @@ useEffect(() => {
                     setSigungu(e.target.value);
                     setTimeout(() => {
                       setIsUserSelecting(false);
-                    }, 500);
+                    }, 100);
                   }}
                   disabled={!sido || locked}
                   className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 pr-8 appearance-none"
@@ -359,8 +358,6 @@ useEffect(() => {
               // 🔥 출발 주소에서 지역 추출 → 드롭다운 자동 업데이트
               if (data.startAddress) {
                 const extracted = extractRegionFromAddress(data.startAddress);
-
-                
                 
                 if (extracted.sido && extracted.sigungu) {
                   // 자동 업데이트 (지도 이동 없음)

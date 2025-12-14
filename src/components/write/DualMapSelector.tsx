@@ -31,7 +31,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
   const [endAddress, setEndAddress] = useState("");
   const [isMapVisible, setIsMapVisible] = useState(false);
   const isUserDraggingRef = useRef(false);
-  const isInitialMount = useRef(true);
 
   const OFFSET_LAT = 0.0005;
   const OFFSET_LNG = 0.0007;
@@ -51,7 +50,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     return 2 * R * Math.asin(Math.sqrt(h));
   };
 
-  // 🔥 시/도 이름을 줄임말로 변환하는 함수
   const convertSidoToShort = (sido: string): string => {
     const sidoMap: Record<string, string> = {
       "강원특별자치도": "강원",
@@ -62,7 +60,6 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
       "경상북도": "경북",
       "경상남도": "경남",
       "제주특별자치도": "제주",
-      // 광역시/특별시는 그대로
       "서울특별시": "서울특별시",
       "부산광역시": "부산광역시",
       "대구광역시": "대구광역시",
@@ -77,12 +74,11 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     return sidoMap[sido] || sido;
   };
 
-  // 🔧 주소 및 좌표 업데이트 함수 (중복 제거)
   const updateMarkerData = (type: "start" | "end", address: string, lat: number, lng: number) => {
     if (type === "start") {
       setStartAddress(address);
-      const endLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
-      const endLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
+      const currentEndLat = endMarkerRef.current?.getPosition()?.getLat() ?? 0;
+      const currentEndLng = endMarkerRef.current?.getPosition()?.getLng() ?? 0;
 
       onChange?.({
         startAddress: address,
@@ -91,22 +87,22 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
         startLatitude: lat,
         startLongitude: lng,
         endAddress,
-        endLat,
-        endLng,
-        endLatitude: endLat,
-        endLongitude: endLng,
+        endLat: currentEndLat,
+        endLng: currentEndLng,
+        endLatitude: currentEndLat,
+        endLongitude: currentEndLng,
       });
     } else {
       setEndAddress(address);
-      const startLat = startMarkerRef.current?.getPosition()?.getLat() ?? 0;
-      const startLng = startMarkerRef.current?.getPosition()?.getLng() ?? 0;
+      const currentStartLat = startMarkerRef.current?.getPosition()?.getLat() ?? 0;
+      const currentStartLng = startMarkerRef.current?.getPosition()?.getLng() ?? 0;
 
       onChange?.({
         startAddress,
-        startLat,
-        startLng,
-        startLatitude: startLat,
-        startLongitude: startLng,
+        startLat: currentStartLat,
+        startLng: currentStartLng,
+        startLatitude: currentStartLat,
+        startLongitude: currentStartLng,
         endAddress: address,
         endLat: lat,
         endLng: lng,
@@ -116,61 +112,53 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     }
   };
 
-  // 🌊 updateAddress 함수 - 해상일 때 가까운 육지 행정구역 찾기
   const updateAddress = (lat: number, lng: number, type: "start" | "end") => {
     const kakao = (window as any).kakao;
     if (!geocoderRef.current) return;
 
-    // 1️⃣ 먼저 주소 찾기 시도 (육지인지 확인)
     geocoderRef.current.coord2Address(lng, lat, (result: any, status: string) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
-        // ✅ 주소가 있으면 육지 → 그대로 사용
         const address = result[0].address.address_name;
-        console.log(`📍 [${type}] 육지 주소:`, address);
         updateMarkerData(type, address, lat, lng);
       } else {
-        // 🌊 주소가 없으면 해상 → 가장 가까운 행정구역 찾기
-        console.log(`🌊 [${type}] 해상 감지, 행정구역 조회 중...`);
-        
         geocoderRef.current.coord2RegionCode(lng, lat, (region: any, regionStatus: string) => {
           let finalAddress = "해상";
 
           if (regionStatus === kakao.maps.services.Status.OK && region[0]) {
-            // 행정구역 정보에서 시/도, 시/군/구 추출
             const regionData = region[0];
             const sido = regionData.region_1depth_name || "";
             const sigungu = regionData.region_2depth_name || "";
             
             if (sido && sigungu) {
-              // 🔥 시/도를 줄임말로 변환
               const shortSido = convertSidoToShort(sido);
               finalAddress = `${shortSido} ${sigungu} 해상`;
-              console.log(`🌊 [${type}] 해상 (가까운 육지: ${sido} ${sigungu}) → "${finalAddress}"`);
             } else if (sido) {
-              // 시/도만 있을 때
               const shortSido = convertSidoToShort(sido);
               finalAddress = `${shortSido} 해상`;
-              console.log(`🌊 [${type}] 해상 (가까운 육지: ${sido}) → "${finalAddress}"`);
-            } else {
-              console.log(`🌊 [${type}] 해상 (행정구역 정보 없음) → "해상"`);
             }
-          } else {
-            console.log(`🌊 [${type}] 해상 (행정구역 조회 실패) → "해상"`);
           }
           
-          // 🔥 여기서 updateMarkerData 호출! (비동기 콜백 안에서)
-          console.log(`📤 [${type}] 백엔드 전송 주소: "${finalAddress}"`);
           updateMarkerData(type, finalAddress, lat, lng);
         });
       }
     });
   };
 
+  // 🔥 지도 초기화 (regionCenter가 처음 설정될 때만)
   useEffect(() => {
     if (!regionCenter) {
-      setIsMapVisible(false);
+      // 🌟 지도가 이미 있으면 숨기지 않음!
+      if (!mapInstance.current) {
+        setIsMapVisible(false);
+      }
       return;
     }
+    
+    if (mapInstance.current) {
+      // 이미 지도가 있으면 스킵
+      return;
+    }
+
     setIsMapVisible(true);
 
     const initMap = async () => {
@@ -283,11 +271,58 @@ const DualMapSelector = ({ regionCenter, isUserSelecting = false, onChange }: Du
     };
 
     initMap();
-  }, [regionCenter]);
+  }, [regionCenter]); // regionCenter가 있을 때 한 번만 초기화
 
-  
+  // 🔥 드롭다운 선택 시 지도 이동
+  useEffect(() => {
+    if (isUserDraggingRef.current) {
+      return;
+    }
 
-  
+    if (!isUserSelecting) {
+      return;
+    }
+
+    if (!regionCenter || !startMarkerRef.current || !endMarkerRef.current || !mapInstance.current) {
+      return;
+    }
+
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps || !geocoderRef.current) return;
+
+    console.log("✅ 드롭다운 선택 → 지도 이동");
+
+    const newStartPos = new kakao.maps.LatLng(regionCenter.lat, regionCenter.lng);
+    startMarkerRef.current.setPosition(newStartPos);
+    mapInstance.current.setCenter(newStartPos);
+
+    const newEndLat = regionCenter.lat - OFFSET_LAT;
+    const newEndLng = regionCenter.lng + OFFSET_LNG;
+    const newEndPos = new kakao.maps.LatLng(newEndLat, newEndLng);
+    endMarkerRef.current.setPosition(newEndPos);
+
+    geocoderRef.current.coord2Address(regionCenter.lng, regionCenter.lat, (result: any, status: string) => {
+      if (status === kakao.maps.services.Status.OK && result[0]) {
+        setStartAddress(result[0].address.address_name);
+      } else {
+        geocoderRef.current.coord2RegionCode(regionCenter.lng, regionCenter.lat, (region: any, regionStatus: string) => {
+          if (regionStatus === kakao.maps.services.Status.OK && region[0]) {
+            const sido = region[0].region_1depth_name || "";
+            const sigungu = region[0].region_2depth_name || "";
+            const shortSido = convertSidoToShort(sido);
+            const finalAddress = sigungu ? `${shortSido} ${sigungu} 해상` : `${shortSido} 해상`;
+            setStartAddress(finalAddress);
+          }
+        });
+      }
+    });
+
+    geocoderRef.current.coord2Address(newEndLng, newEndLat, (result: any, status: string) => {
+      if (status === kakao.maps.services.Status.OK && result[0]) {
+        setEndAddress(result[0].address.address_name);
+      }
+    });
+  }, [regionCenter?.lat, regionCenter?.lng, isUserSelecting]);
 
   const handlePlaceSearch = async (type: "start" | "end") => {
     const searchQuery = type === "start" ? startAddress : endAddress;

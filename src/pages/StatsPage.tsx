@@ -139,20 +139,19 @@ export default function StatsPage() {
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // 🔥 API 공통 파라미터: startDate, endDate만 사용
+      // ✅ viewMode를 파라미터에 추가
       const commonParams = {
+        viewMode: viewMode,
         startDate: startDate,
         endDate: endDate,
         region: regionParam,
       };
 
-      // 1. 전체 통계
+      // 1. 전체 통계 - ✅ 엔드포인트 통일
       try {
-        const summaryUrl = viewMode === "mine"
-          ? "/api/statistics/my-summary"
-          : "/api/statistics/summary";
+        const summaryUrl = "/api/statistics/summary";
 
-        console.log("전체 통계 요청:", summaryUrl);
+        console.log("전체 통계 요청:", summaryUrl, commonParams);
 
         const summaryRes = await instance.get(summaryUrl, { params: commonParams });
         const summaryData = summaryRes.data;
@@ -170,13 +169,11 @@ export default function StatsPage() {
         console.error("전체 통계 API 실패:", err);
       }
 
-      // 2. 월별 수거량
+      // 2. 월별 수거량 - ✅ 엔드포인트 통일
       try {
-        const monthlyUrl = viewMode === "mine"
-          ? "/api/statistics/my-monthly-change"
-          : "/api/statistics/monthly-change";
+        const monthlyUrl = "/api/statistics/monthly-change";
 
-        console.log("월별 수거량 요청:", monthlyUrl);
+        console.log("월별 수거량 요청:", monthlyUrl, commonParams);
 
         const monthlyRes = await instance.get(monthlyUrl, { params: commonParams });
         const monthlyResult = monthlyRes.data;
@@ -229,13 +226,11 @@ export default function StatsPage() {
         setMonthlyData([]);
       }
 
-      // 3. 폐기물 비율
+      // 3. 폐기물 비율 - ✅ 엔드포인트 통일
       try {
-        const wasteUrl = viewMode === "mine"
-          ? "/api/statistics/my-waste-type-ratio"
-          : "/api/statistics/waste-type-ratio";
+        const wasteUrl = "/api/statistics/waste-type-ratio";
 
-        console.log("폐기물 비율 요청:", wasteUrl);
+        console.log("폐기물 비율 요청:", wasteUrl, commonParams);
 
         const wasteRes = await instance.get(wasteUrl, { params: commonParams });
         const wasteResult = wasteRes.data;
@@ -252,13 +247,11 @@ export default function StatsPage() {
         console.error("폐기물 비율 API 실패:", err);
       }
 
-      // 4. 지역별 통계
+      // 4. 지역별 통계 - ✅ 엔드포인트 통일
       try {
-        const regionUrl = viewMode === "mine"
-          ? "/api/statistics/my-region-activity"
-          : "/api/statistics/region-activity";
+        const regionUrl = "/api/statistics/region-activity";
 
-        console.log("지역별 통계 요청:", regionUrl);
+        console.log("지역별 통계 요청:", regionUrl, commonParams);
 
         const regionRes = await instance.get(regionUrl, { params: commonParams });
         const regionResult = regionRes.data;
@@ -336,7 +329,6 @@ export default function StatsPage() {
     try {
       const regionParam = location === "전체 지역" ? "전체" : location;
 
-      // 🔥 PDF도 startDate/endDate 방식으로 통일
       const params = {
         scope: viewMode,
         startDate: startDate,
@@ -356,7 +348,6 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      // 🔥 파일명 생성할 때만 년/월 추출
       const startYear = parseInt(startDate.split("-")[0]);
       const startMonth = parseInt(startDate.split("-")[1]);
       const endYear = parseInt(endDate.split("-")[0]);
