@@ -64,14 +64,14 @@ const SignupTypePage: React.FC = () => {
             {/* 유형 선택 카드 컨테이너 */}
             <div className="flex flex-col md:flex-row gap-8 max-w-3xl mx-auto">
                 <SelectionCard
-                    title="개인회원"
-                    imagePath={ICON_PATHS.DOLPHIN}
-                    onClick={() => handleTypeSelect('personal')}
-                />
-                <SelectionCard
                     title="단체회원"
                     imagePath={ICON_PATHS.OTTER}
                     onClick={() => handleTypeSelect('group')}
+                />
+                <SelectionCard
+                    title="개인회원"
+                    imagePath={ICON_PATHS.DOLPHIN}
+                    onClick={() => handleTypeSelect('personal')}
                 />
             </div>
 
