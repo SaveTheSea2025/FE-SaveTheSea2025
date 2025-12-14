@@ -28,6 +28,7 @@ interface ActivityRecord {
   id: number;
   name: string;
   thumbnail: string;
+  activityName: string;
   totalWeight: number;
   memberCount: number;
 }
@@ -282,12 +283,12 @@ function Dashboard() {
               >
                 <img
                   src={activity.thumbnail}
-                  alt={activity.name}
+                  alt={activity.activityName}
                   className="w-full h-28 object-cover"
                 />
                 <div className="p-3 text-left">
                   <h3 className="text-[12px] font-semibold text-[#0C4A6E] mb-2 truncate">
-                    {activity.name}
+                    {activity.activityName}
                   </h3>
                   <div className="flex items-center gap-3 text-[10px] text-[#0C4A6E]">
                     <div className="flex items-center gap-1">
@@ -333,7 +334,7 @@ function Dashboard() {
 
                     <div className="p-5 text-left">
                       <h3 className="text-[18px] font-semibold text-[#0C4A6E] mb-3 truncate">
-                        {activity.name}
+                        {activity.activityName}
                       </h3>
 
                       <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-[#0C4A6E] text-[14px]">
