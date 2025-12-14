@@ -305,9 +305,21 @@ const RecordDetailPanel: React.FC<Props> = ({ recordId, totalWeight, onClose }) 
                                     const bg = colors[idx % colors.length];
 
                                     const typeLabel: Record<string, string> = {
-                                        BUOY: "부표", PLASTIC: "플라스틱", FISH_TRAP: "통발",
-                                        GLASS: "유리", METAL: "금속", ETC: "기타",
-                                        PAPER: "박스/종이", MEDICINE: "약품", SYRINGE: "주사기", CAN: "캔",
+                                        SACK: "마대",
+                                        PLASTIC: "플라스틱",
+                                        CAN: "캔",
+                                        GLASS: "유리",
+                                        PAPER: "박스/종이",
+                                        BUOY: "부표",
+                                        FISH_TRAP: "통발",
+                                        SYRINGE: "주사기",
+                                        MEDICINE: "약품",
+                                        RUBBER: "고무",
+                                        FOREIGN_WASTE: "외국쓰레기",
+                                        METAL: "금속",
+                                        WOOD: "나무",
+                                        COMPOSITE: "혼합재질",
+                                        ETC: "기타",
                                     };
 
                                     return (
