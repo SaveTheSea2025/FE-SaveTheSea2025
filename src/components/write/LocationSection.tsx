@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import DualMapSelector from "./DualMapSelector";
 import { regionCenters } from "../../data/regionCenters";
 
@@ -318,7 +318,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
               // 🔥 출발 주소에서 지역 추출 → 드롭다운 자동 업데이트
               if (data.startAddress) {
                 const extracted = extractRegionFromAddress(data.startAddress);
-                
+
                 if (extracted.sido && extracted.sigungu) {
                   // 자동 업데이트 (지도 이동 없음)
                   setSido(extracted.sido);
@@ -334,11 +334,11 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                   if (status === kakao.maps.services.Status.OK && result[0]) {
                     const addr = result[0].address.address_name;
                     setEndAddr(addr);
-                    
+
                     const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
                     const finalSido = currentExtracted.sido || sido;
                     const finalSigungu = currentExtracted.sigungu || sigungu;
-                    
+
                     onChange?.({
                       startAddress: data.startAddress,
                       startLat: data.startLat,
@@ -359,7 +359,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
                 const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
                 const finalSido = currentExtracted.sido || sido;
                 const finalSigungu = currentExtracted.sigungu || sigungu;
-                
+
                 onChange?.({
                   startAddress: data.startAddress,
                   startLat: data.startLat,

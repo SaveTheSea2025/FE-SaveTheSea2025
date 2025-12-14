@@ -32,7 +32,7 @@ import {
 // API 응답 데이터 타입 정의
 interface SummaryStats {
   activityCount: number;
-  totalMembers: number;
+  totalParticipants: number;
   totalWeight: number;
   totalVolume: number;
 }
@@ -62,7 +62,7 @@ export default function StatsPage() {
   const [unit, setUnit] = useState<"kg" | "l">("kg");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
-  const [loading, setLoading] = useState(false); // 🔥 loading으로 변경
+  const [loading, setLoading] = useState(false);
 
   const downloadRef = useRef<HTMLDivElement>(null);
 
@@ -132,28 +132,21 @@ export default function StatsPage() {
       return;
     }
 
-    setLoading(true); // 🔥 로딩 시작
+    setLoading(true);
 
     try {
-      const startYear = parseInt(startDate.split("-")[0]);
-      const startMonth = parseInt(startDate.split("-")[1]);
-      const endYear = parseInt(endDate.split("-")[0]);
-      const endMonth = parseInt(endDate.split("-")[1]);
-
       const regionParam = location === "전체 지역" ? "전체" : location;
 
       console.log("[API 호출 정보]");
-      console.log("startYear:", startYear, "startMonth:", startMonth);
-      console.log("endYear:", endYear, "endMonth:", endMonth);
+      console.log("startDate:", startDate);
+      console.log("endDate:", endDate);
       console.log("region:", regionParam);
       console.log("viewMode:", viewMode);
 
-      // 공통 파라미터 (instance가 자동으로 params를 쿼리스트링으로 변환함)
+      // 공통 파라미터 (API 명세에 맞춰 startDate, endDate 사용)
       const commonParams = {
-        startYear,
-        startMonth,
-        endYear,
-        endMonth,
+        startDate: startDate,
+        endDate: endDate,
         region: regionParam,
       };
 
@@ -165,7 +158,6 @@ export default function StatsPage() {
 
         console.log("전체 통계 요청:", summaryUrl);
 
-        // instance 사용 (자동으로 Header에 토큰 포함됨)
         const summaryRes = await instance.get(summaryUrl, { params: commonParams });
         const summaryData = summaryRes.data;
 
@@ -173,7 +165,7 @@ export default function StatsPage() {
           const data = summaryData.data;
           setSummaryStats({
             activityCount: data.activityCount ?? 0,
-            totalMembers: data.totalParticipants ?? data.totalParticipant ?? 0,
+            totalParticipants: data.totalParticipants ?? data.totalParticipant ?? 0,
             totalWeight: data.totalWeight ?? 0,
             totalVolume: data.totalVolume ?? 0,
           });
@@ -255,7 +247,7 @@ export default function StatsPage() {
     } catch (error) {
       console.error("전체 API 로드 오류:", error);
     } finally {
-      setLoading(false); // 🔥 로딩 종료
+      setLoading(false);
     }
   };
 
@@ -268,25 +260,17 @@ export default function StatsPage() {
   // 엑셀 다운로드 함수
   const handleExcelDownload = async () => {
     try {
-      const startYear = parseInt(startDate.split("-")[0]);
-      const startMonth = parseInt(startDate.split("-")[1]);
-      const endYear = parseInt(endDate.split("-")[0]);
-      const endMonth = parseInt(endDate.split("-")[1]);
-
       const regionParam = location === "전체 지역" ? "전체" : location;
 
       const params = {
         viewType: viewMode,
-        startYear,
-        startMonth,
-        endYear,
-        endMonth,
+        startDate: startDate,
+        endDate: endDate,
         region: regionParam,
       };
 
       console.log("엑셀 다운로드 요청:", params);
 
-      // instance 사용
       const response = await instance.get("/api/export/excel", {
         params,
         responseType: "blob",
@@ -300,7 +284,7 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const dateRange = `${startDate.replace(/-/g, "")}-${endDate.replace(/-/g, "")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계데이터_${dateRange}.xlsx`;
 
@@ -321,25 +305,17 @@ export default function StatsPage() {
   // PDF 다운로드 함수
   const handlePdfDownload = async () => {
     try {
-      const startYear = parseInt(startDate.split("-")[0]);
-      const startMonth = parseInt(startDate.split("-")[1]);
-      const endYear = parseInt(endDate.split("-")[0]);
-      const endMonth = parseInt(endDate.split("-")[1]);
-
       const regionParam = location === "전체 지역" ? "전체" : location;
 
       const params = {
         scope: viewMode,
-        startYear,
-        startMonth,
-        endYear,
-        endMonth,
+        startDate: startDate,
+        endDate: endDate,
         region: regionParam,
       };
 
       console.log("PDF 다운로드 요청:", params);
 
-      // instance 사용
       const response = await instance.get("/api/statistics/pdf/download", {
         params,
         responseType: "blob",
@@ -350,7 +326,7 @@ export default function StatsPage() {
       const link = document.createElement("a");
       link.href = url;
 
-      const dateRange = `${startYear}${String(startMonth).padStart(2, "0")}-${endYear}${String(endMonth).padStart(2, "0")}`;
+      const dateRange = `${startDate.replace(/-/g, "")}-${endDate.replace(/-/g, "")}`;
       const prefix = viewMode === "mine" ? user?.userName || "사용자" : "전체";
       const fileName = `${prefix}_통계보고서_${dateRange}.pdf`;
 
@@ -410,7 +386,6 @@ export default function StatsPage() {
     <div className="w-full bg-[#e5edf2] min-h-screen">
       <Header forceScrolled />
 
-      {/* 🔥 WritePage와 동일한 로딩 스타일 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
@@ -424,7 +399,7 @@ export default function StatsPage() {
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-4">
             <button className="w-9 h-9 bg-[#0077A7] rounded-full flex items-center justify-center shadow-sm">
-              <img src={filterIcon} className="w-5 h-5" />
+              <img src={filterIcon} className="w-5 h-5" alt="filter" />
             </button>
 
             <div className="relative inline-flex bg-gray-200 rounded-full p-1">
@@ -577,7 +552,7 @@ export default function StatsPage() {
               onClick={() => setDownloadOpen(!downloadOpen)}
               className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white border border-gray-200 text-sm shadow-sm hover:bg-gray-50 transition"
             >
-              <img src={downloadIcon} className="w-4 h-4" />
+              <img src={downloadIcon} className="w-4 h-4" alt="download" />
               파일 다운
             </button>
 
@@ -587,7 +562,7 @@ export default function StatsPage() {
                   onClick={handlePdfDownload}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-t-xl cursor-pointer transition"
                 >
-                  <img src={pdfIcon} className="w-5 h-5 flex-shrink-0" />
+                  <img src={pdfIcon} className="w-5 h-5 flex-shrink-0" alt="pdf" />
                   <span className="text-sm whitespace-nowrap">PDF 보고서 다운로드</span>
                 </div>
                 <div className="h-px bg-gray-100"></div>
@@ -595,7 +570,7 @@ export default function StatsPage() {
                   onClick={handleExcelDownload}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-b-xl cursor-pointer transition"
                 >
-                  <img src={excelIcon} className="w-5 h-5 flex-shrink-0" />
+                  <img src={excelIcon} className="w-5 h-5 flex-shrink-0" alt="excel" />
                   <span className="text-sm whitespace-nowrap">데이터 엑셀 다운로드</span>
                 </div>
               </div>
@@ -615,7 +590,7 @@ export default function StatsPage() {
           />
           <SummaryCard
             title="총 참여자 수"
-            value={`${(summaryStats?.totalMembers ?? 0).toLocaleString()}명`}
+            value={`${(summaryStats?.totalParticipants ?? 0).toLocaleString()}명`}
             icon={personIcon}
           />
           <SummaryCard
@@ -922,7 +897,7 @@ function SummaryCard({ title, value, icon }: any) {
         <p className="text-2xl font-semibold mt-1">{value}</p>
       </div>
       <div className="w-12 h-12 rounded-lg bg-[#c9e3e7] flex items-center justify-center">
-        <img src={icon} className="w-6 h-6" />
+        <img src={icon} className="w-6 h-6" alt="icon" />
       </div>
     </div>
   );
