@@ -47,8 +47,11 @@ const RecordsPage: React.FC = () => {
   const kakaoKey = import.meta.env.VITE_KAKAO_MAP_KEY;
 
   // 데이터 상태 관리
-  const [data, setData] = useState<CleanupItem[]>([]); // API로 불러온 전체 데이터
-  const [visibleData, setVisibleData] = useState<CleanupItem[]>([]); // 현재 지도 화면에 보이는 데이터
+  // 지도에 표시할 모든 데이터를 저장하는 상태 
+  const [allMapData, setAllMapData] = useState<CleanupItem[]>([]);
+  // 현재 지도 화면에 보이는 데이터 (리스트에 표시될 데이터)
+  const [visibleData, setVisibleData] = useState<CleanupItem[]>([]);
+  // currentPageData 변수 제거됨
 
   // UI 상태 관리
   const [loading, setLoading] = useState(true);
@@ -70,23 +73,37 @@ const RecordsPage: React.FC = () => {
       try {
         setLoading(true);
 
-        const res = await instance.get("/api/activity-records", {
+        // 1. 현재 페이지의 리스트 데이터 로드
+        const listRes = await instance.get("/api/activity-records", {
           params: {
             page: page,
-            size: 50,
+            size: 10,
           },
         });
 
-        const json = res.data;
+        const json = listRes.data;
         const list = json.data?.content || [];
         const pageInfo = json.data?.page;
 
-        setData(list);
-        setVisibleData(list);
+        // 현재 페이지 리스트 업데이트
+        setVisibleData(list); // 리스트에 표시될 초기 데이터는 현재 페이지 데이터
 
         if (pageInfo) {
           setTotalPages(pageInfo.totalPages);
         }
+
+        // 2. 지도에 표시할 모든 데이터 로드 (첫 페이지 로드 시에만 또는 필터 변경 시)
+        if (page === 0) {
+          // 편의상 첫 페이지 로드시만, 최대 200개 데이터 로드 가정
+          const allRes = await instance.get("/api/activity-records", {
+            params: {
+              page: 0,
+              size: 200,
+            },
+          });
+          setAllMapData(allRes.data.data?.content || []);
+        }
+
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -94,10 +111,10 @@ const RecordsPage: React.FC = () => {
       }
     };
     fetchRecords();
-  }, [page]);
+  }, [page]); // page 변경 시 현재 페이지 리스트 데이터만 다시 가져옴
 
   /* ==================================
-   * 🔥 핵심 로직: 지도 이동 및 오프셋 계산 함수
+   * 핵심 로직: 지도 이동 및 오프셋 계산 함수
    * ================================== */
   const handleFocusRecord = useCallback((record: CleanupItem) => {
     if (!mapRef.current || !window.kakao) {
@@ -127,7 +144,7 @@ const RecordsPage: React.FC = () => {
         // 현재 해당 좌표의 화면상 픽셀 좌표 구하기
         const point = projection.pointFromCoords(targetLatLng);
 
-        // 🔥 중요: 사이드바가 오른쪽에 400px 있으므로,
+        // 중요: 사이드바가 오른쪽에 400px 있으므로,
         // 시각적 중심은 전체 너비의 중심보다 왼쪽에 있어야 함.
         // 따라서 지도 중심(Center)을 오른쪽으로 200px(400/2) 이동시켜야
         // 마커가 왼쪽(시각적 중심)으로 이동됨.
@@ -151,7 +168,8 @@ const RecordsPage: React.FC = () => {
    * 2. Kakao 지도 초기화 및 마커/히트맵 설정
    * ================================== */
   useEffect(() => {
-    if (loading || data.length === 0) return;
+    // allMapData.length로 변경
+    if (loading || allMapData.length === 0) return;
 
     const loadKakaoSDK = () =>
       new Promise<void>((resolve) => {
@@ -232,8 +250,9 @@ const RecordsPage: React.FC = () => {
         this.node.style.filter = `blur(${blurPx}px)`;
       };
 
-      const maxW = Math.max(...data.map((d) => d.totalWeight || 0)) || 1;
-      data.forEach((p) => {
+      // allMapData를 사용하여 히트맵 생성
+      const maxW = Math.max(...allMapData.map((d) => d.totalWeight || 0)) || 1;
+      allMapData.forEach((p) => {
         const ratio = (p.totalWeight || 0) / maxW;
         const opacity = 0.42 + ratio * 0.45;
         const size = 0.08 * (1 + ratio);
@@ -271,7 +290,8 @@ const RecordsPage: React.FC = () => {
       clusterer.clear();
 
       const markers: any[] = [];
-      data.forEach((d) => {
+      // allMapData를 사용하여 마커 생성
+      allMapData.forEach((d) => {
         const markerPosition = new kakao.maps.LatLng(d.startLatitude, d.startLongitude);
         let markerOrOverlay: any;
 
@@ -283,13 +303,13 @@ const RecordsPage: React.FC = () => {
           div.style.height = '70px';
           div.style.cursor = 'pointer';
           div.innerHTML = `
-            <img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
-            <div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
-              <img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
-            </div>
-          `;
+<img src="${markerImg}" style="width: 60px; height: 70px; display: block;" alt="marker" />
+<div style="position: absolute; top: 2px; left: 8px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: 2px solid white;">
+<img src="${d.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="thumbnail" />
+</div>
+`;
 
-          // 🔥 수정: 마커 클릭 시 handleFocusRecord 호출 (공통 로직 사용)
+          // 마커 클릭 시 handleFocusRecord 호출 (공통 로직 사용)
           div.addEventListener('click', () => {
             handleFocusRecord(d);
           });
@@ -311,7 +331,7 @@ const RecordsPage: React.FC = () => {
             position: markerPosition, image: markerImage, clickable: true
           });
 
-          // 🔥 수정: 마커 클릭 시 handleFocusRecord 호출 (공통 로직 사용)
+          // 마커 클릭 시 handleFocusRecord 호출 (공통 로직 사용)
           kakao.maps.event.addListener(markerOrOverlay, "click", () => {
             handleFocusRecord(d);
           });
@@ -336,7 +356,8 @@ const RecordsPage: React.FC = () => {
         const sw = bounds.getSouthWest();
         const ne = bounds.getNorthEast();
 
-        const visible = data.filter(
+        // allMapData를 사용하여 지도 경계 내 데이터 필터링
+        const visible = allMapData.filter(
           (d) =>
             d.startLatitude >= sw.getLat() &&
             d.startLatitude <= ne.getLat() &&
@@ -350,7 +371,8 @@ const RecordsPage: React.FC = () => {
     loadKakaoSDK().then(() => {
       window.kakao.maps.load(initMap);
     });
-  }, [kakaoKey, data, loading, handleFocusRecord]); // handleFocusRecord 의존성 추가
+    // 의존성 배열을 allMapData로 변경
+  }, [kakaoKey, allMapData, loading, handleFocusRecord]);
 
   /* ==================================
    * 3. 지역 필터 & 지도 이동 로직
@@ -411,6 +433,7 @@ const RecordsPage: React.FC = () => {
   /* ==================================
    * 5. 데이터 필터링 로직
    * ================================== */
+  // 리스트는 지도 경계 내의 데이터(visibleData)에 대해서만 필터링됩니다.
   let filteredData = visibleData;
 
   if (filters) {
