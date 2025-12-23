@@ -77,7 +77,7 @@ const RecordsPage: React.FC = () => {
         const listRes = await instance.get("/api/activity-records", {
           params: {
             page: page,
-            size: 10,
+            size: 200,  // 임시 수정 - 한 페이지에 기존 10개 로드
           },
         });
 
@@ -634,7 +634,7 @@ const RecordsPage: React.FC = () => {
           )}
 
           {/* 6. 페이지네이션 */}
-          <div className="flex justify-center items-center gap-3 py-3 border-t border-gray-200 bg-white relative z-20">
+          {/* <div className="flex justify-center items-center gap-3 py-3 border-t border-gray-200 bg-white relative z-20">
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
@@ -652,7 +652,7 @@ const RecordsPage: React.FC = () => {
             >
               다음
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
