@@ -62,8 +62,11 @@ const RecordsPage: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<CleanupItem | null>(null); // 상세 보기 선택된 기록
 
   // 페이지네이션 상태
-  // const [page, setPage] = useState(0);
-  // const [totalPages, setTotalPages] = useState(0);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // 페이지 버튼 숨기기
+  const showPagination = false;
 
   /* ==================================
    * 1. 백엔드 데이터 호출 (페이지네이션)
@@ -233,64 +236,64 @@ const RecordsPage: React.FC = () => {
         let blurPx = 10;
 
         if (level <= 5) {
-           // 크기
-           scaleFactor = 0.025;  
-           // 투명도
-           opacityAdjust = 0.4; 
-           blurPx = 15;          
-        } 
+          // 크기
+          scaleFactor = 0.025;
+          // 투명도
+          opacityAdjust = 0.4;
+          blurPx = 15;
+        }
         // 1. 500m 이하
         else if (level <= 6) {
-           // 크기
-           scaleFactor = 0.05;  
-           // 투명도
-           opacityAdjust = 0.5; 
-           blurPx = 15;          
-        } 
+          // 크기
+          scaleFactor = 0.05;
+          // 투명도
+          opacityAdjust = 0.5;
+          blurPx = 15;
+        }
         // 2. 1km 구간
         else if (level <= 7) {
-           // 크기
-           scaleFactor = 0.09;   
-           // 투명도(높을수록 색감을 쨍하게 올림)
-           opacityAdjust = 0.6; 
-           blurPx = 12;
+          // 크기
+          scaleFactor = 0.09;
+          // 투명도(높을수록 색감을 쨍하게 올림)
+          opacityAdjust = 0.6;
+          blurPx = 12;
         }
         // 3. 2km 구간
         else if (level <= 8) {
-           // 크기
-           scaleFactor = 0.2;  
-           // 투명도
-           opacityAdjust = 0.6; 
-           blurPx = 15;
-        } 
+          // 크기
+          scaleFactor = 0.2;
+          // 투명도
+          opacityAdjust = 0.6;
+          blurPx = 15;
+        }
         // 4. 4km 구간
         else if (level <= 9) {
-           scaleFactor = 0.4;   
-           opacityAdjust = 0.7; 
-           blurPx = 20;
-        } 
+          scaleFactor = 0.4;
+          opacityAdjust = 0.7;
+          blurPx = 20;
+        }
         // 5. 8km 구간
         else if (level <= 10) {
-           scaleFactor = 0.6; 
-           opacityAdjust = 0.7; 
-           blurPx = 20;
-        } 
+          scaleFactor = 0.6;
+          opacityAdjust = 0.7;
+          blurPx = 20;
+        }
         // 6. 16km 구간
         else if (level <= 11) {
-           scaleFactor = 0.8; 
-           opacityAdjust = 1.0; 
-           blurPx = 20;
-        } 
+          scaleFactor = 0.8;
+          opacityAdjust = 1.0;
+          blurPx = 20;
+        }
         // 7. 32km 구간
         else if (level <= 12) {
-           scaleFactor = 1.1; 
-           opacityAdjust = 1.1; 
-           blurPx = 20;
+          scaleFactor = 1.1;
+          opacityAdjust = 1.1;
+          blurPx = 20;
         }
         else {
-           scaleFactor = 1.2;
-           opacityAdjust = 1.4;
-           blurPx = 20;
+          scaleFactor = 1.2;
+          opacityAdjust = 1.4;
+          blurPx = 20;
         }
         this.node.style.left = `${sw.x}px`;
         this.node.style.top = `${ne.y}px`;
@@ -633,26 +636,29 @@ const RecordsPage: React.FC = () => {
             </div>
           )}
 
+
           {/* 6. 페이지네이션 */}
-          {/* <div className="flex justify-center items-center gap-3 py-3 border-t border-gray-200 bg-white relative z-20">
-            <button
-              onClick={() => setPage(Math.max(0, page - 1))}
-              disabled={page === 0}
-              className="px-3 py-1 rounded-md border text-sm disabled:opacity-40"
-            >
-              이전
-            </button>
-            <span className="text-sm text-gray-600">
-              {page + 1} / {totalPages || 1}
-            </span>
-            <button
-              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              disabled={page >= totalPages - 1}
-              className="px-3 py-1 rounded-md border text-sm disabled:opacity-40"
-            >
-              다음
-            </button>
-          </div> */}
+          {showPagination && (
+            <div className="flex justify-center items-center gap-3 py-3 border-t border-gray-200 bg-white relative z-20">
+              <button
+                onClick={() => setPage(Math.max(0, page - 1))}
+                disabled={page === 0}
+                className="px-3 py-1 rounded-md border text-sm disabled:opacity-40"
+              >
+                이전
+              </button>
+              <span className="text-sm text-gray-600">
+                {page + 1} / {totalPages || 1}
+              </span>
+              <button
+                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                disabled={page >= totalPages - 1}
+                className="px-3 py-1 rounded-md border text-sm disabled:opacity-40"
+              >
+                다음
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
