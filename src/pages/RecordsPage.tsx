@@ -62,8 +62,8 @@ const RecordsPage: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<CleanupItem | null>(null); // 상세 보기 선택된 기록
 
   // 페이지네이션 상태
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  // const [page, setPage] = useState(0);
+  // const [totalPages, setTotalPages] = useState(0);
 
   /* ==================================
    * 1. 백엔드 데이터 호출 (페이지네이션)
