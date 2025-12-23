@@ -77,7 +77,7 @@ const RecordsPage: React.FC = () => {
         const listRes = await instance.get("/api/activity-records", {
           params: {
             page: page,
-            size: 10,
+            size: 200,  // 임시 수정 - 한 페이지에 기존 10개 로드
           },
         });
 
@@ -232,11 +232,66 @@ const RecordsPage: React.FC = () => {
         let opacityAdjust = 1.0;
         let blurPx = 10;
 
-        if (level <= 5) { scaleFactor = 0.02; opacityAdjust = 0.2; blurPx = 4; }
-        else if (level <= 8) { scaleFactor = 0.06; opacityAdjust = 0.3; blurPx = 10; }
-        else if (level <= 11) { scaleFactor = 0.15; opacityAdjust = 0.5; blurPx = 15; }
-        else { scaleFactor = 1.2; opacityAdjust = 0.7; blurPx = 15; }
-
+        if (level <= 5) {
+           // 크기
+           scaleFactor = 0.025;  
+           // 투명도
+           opacityAdjust = 0.4; 
+           blurPx = 15;          
+        } 
+        // 1. 500m 이하
+        else if (level <= 6) {
+           // 크기
+           scaleFactor = 0.05;  
+           // 투명도
+           opacityAdjust = 0.5; 
+           blurPx = 15;          
+        } 
+        // 2. 1km 구간
+        else if (level <= 7) {
+           // 크기
+           scaleFactor = 0.09;   
+           // 투명도(높을수록 색감을 쨍하게 올림)
+           opacityAdjust = 0.6; 
+           blurPx = 12;
+        }
+        // 3. 2km 구간
+        else if (level <= 8) {
+           // 크기
+           scaleFactor = 0.2;  
+           // 투명도
+           opacityAdjust = 0.6; 
+           blurPx = 15;
+        } 
+        // 4. 4km 구간
+        else if (level <= 9) {
+           scaleFactor = 0.4;   
+           opacityAdjust = 0.7; 
+           blurPx = 20;
+        } 
+        // 5. 8km 구간
+        else if (level <= 10) {
+           scaleFactor = 0.6; 
+           opacityAdjust = 0.7; 
+           blurPx = 20;
+        } 
+        // 6. 16km 구간
+        else if (level <= 11) {
+           scaleFactor = 0.8; 
+           opacityAdjust = 1.0; 
+           blurPx = 20;
+        } 
+        // 7. 32km 구간
+        else if (level <= 12) {
+           scaleFactor = 1.1; 
+           opacityAdjust = 1.1; 
+           blurPx = 20;
+        }
+        else {
+           scaleFactor = 1.2;
+           opacityAdjust = 1.4;
+           blurPx = 20;
+        }
         this.node.style.left = `${sw.x}px`;
         this.node.style.top = `${ne.y}px`;
         this.node.style.width = `${width * scaleFactor}px`;
@@ -247,7 +302,9 @@ const RecordsPage: React.FC = () => {
         this.node.style.transform = `translate(${diffX}px, ${diffY}px)`;
 
         this.node.style.opacity = (this.baseOpacity * opacityAdjust).toString();
+
         this.node.style.filter = `blur(${blurPx}px)`;
+
       };
 
       // allMapData를 사용하여 히트맵 생성
@@ -577,7 +634,7 @@ const RecordsPage: React.FC = () => {
           )}
 
           {/* 6. 페이지네이션 */}
-          <div className="flex justify-center items-center gap-3 py-3 border-t border-gray-200 bg-white relative z-20">
+          {/* <div className="flex justify-center items-center gap-3 py-3 border-t border-gray-200 bg-white relative z-20">
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
@@ -595,7 +652,7 @@ const RecordsPage: React.FC = () => {
             >
               다음
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
