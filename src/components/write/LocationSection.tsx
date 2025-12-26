@@ -38,10 +38,11 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
   const [endPos, setEndPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const [locked, setLocked] = useState(false);
-  const [hasEditedEndMap] = useState(false);
 
   // 🔥 사용자가 직접 드롭다운을 클릭했는지 추적
   const [isUserSelecting, setIsUserSelecting] = useState(false);
+    
+  const [preventDropdownUpdate, setPreventDropdownUpdate] = useState(false);
 
   const regionCenter =
     sido && sigungu && regionCenters[sido]?.[sigungu]
@@ -129,7 +130,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
 
   // 🔥 startAddr이 변경될 때마다 실행
   useEffect(() => {
-    if (startAddr) {
+    if (startAddr && !preventDropdownUpdate) {
       const extracted = extractRegionFromAddress(startAddr);
       console.log("🔄 startAddr 변경:", startAddr);
       console.log("🔍 추출 결과:", extracted);
@@ -142,7 +143,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
         console.log("⚠️ 추출 실패:", extracted);
       }
     }
-  }, [startAddr]);
+  }, [startAddr, preventDropdownUpdate]);
 
   useEffect(() => {
     if (startAddr && endAddr && startPos && endPos) {
@@ -163,46 +164,7 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
     }
   }, [startAddr, endAddr, startPos, endPos, sido, sigungu, onChange]);
 
-  useEffect(() => {
-    if (startPos && !hasEditedEndMap) {
-      const kakao = (window as any).kakao;
-
-      const offsetLat = 0.0005;
-      const offsetLng = 0.0007;
-
-      const newEndLat = startPos.lat - offsetLat;
-      const newEndLng = startPos.lng + offsetLng;
-
-      setEndPos({ lat: newEndLat, lng: newEndLng });
-
-      const moveEndMap = () => {
-        if (window.endMapInstance && window.endMarkerRef) {
-          const moveLatLng = new kakao.maps.LatLng(newEndLat, newEndLng);
-          window.endMarkerRef.setPosition(moveLatLng);
-          window.endMapInstance.setCenter(moveLatLng);
-
-          const geocoder = new kakao.maps.services.Geocoder();
-          geocoder.coord2Address(newEndLng, newEndLat, (result: any, status: string) => {
-            if (status === kakao.maps.services.Status.OK && result[0]) {
-              const addr = result[0].address.address_name;
-              setEndAddr(addr);
-            }
-          });
-        }
-      };
-
-      if (window.endMapReady) {
-        moveEndMap();
-      } else {
-        const checkTilesLoaded = setInterval(() => {
-          if (window.endMapReady) {
-            moveEndMap();
-            clearInterval(checkTilesLoaded);
-          }
-        }, 300);
-      }
-    }
-  }, [startPos, hasEditedEndMap]);
+  
 
   return (
     <section className="mb-10 relative">
@@ -345,78 +307,84 @@ const LocationSection = ({ onChange }: LocationSectionProps) => {
       <div className="space-y-6 relative">
         <div className="relative">
           <DualMapSelector
-            regionCenter={regionCenter}
-            isUserSelecting={isUserSelecting}
-            onChange={(data) => {
-              console.log("📍 주소 변경:", data.startAddress, data.endAddress);
+  regionCenter={regionCenter}
+  isUserSelecting={isUserSelecting}
+  onChange={(data) => {
+    console.log("📍 주소 변경:", data.startAddress, data.endAddress);
 
-              setStartAddr(data.startAddress);
-              setStartPos({ lat: data.startLat, lng: data.startLng });
-              setEndAddr(data.endAddress);
-              setEndPos({ lat: data.endLat, lng: data.endLng });
+    // 🔥 마커 드래그 중에는 드롭다운 자동 업데이트 방지
+    setPreventDropdownUpdate(true);
 
-              // 🔥 출발 주소에서 지역 추출 → 드롭다운 자동 업데이트
-              if (data.startAddress) {
-                const extracted = extractRegionFromAddress(data.startAddress);
+    setStartAddr(data.startAddress);
+    setStartPos({ lat: data.startLat, lng: data.startLng });
+    setEndAddr(data.endAddress);
+    setEndPos({ lat: data.endLat, lng: data.endLng });
 
-                if (extracted.sido && extracted.sigungu) {
-                  // 자동 업데이트 (지도 이동 없음)
-                  setSido(extracted.sido);
-                  setSigungu(extracted.sigungu);
-                }
-              }
+    // 🔥 500ms 후 드롭다운 업데이트 재활성화
+    setTimeout(() => {
+      setPreventDropdownUpdate(false);
+    }, 500);
 
-              const kakao = (window as any).kakao;
-              const geocoder = new kakao.maps.services.Geocoder();
+    // ❌ 삭제된 부분 (useEffect에서 처리하므로 여기서는 불필요)
+    // if (data.startAddress) {
+    //   const extracted = extractRegionFromAddress(data.startAddress);
+    //   if (extracted.sido && extracted.sigungu) {
+    //     setSido(extracted.sido);
+    //     setSigungu(extracted.sigungu);
+    //   }
+    // }
 
-              if (!data.endAddress && data.endLat && data.endLng) {
-                geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
-                  if (status === kakao.maps.services.Status.OK && result[0]) {
-                    const addr = result[0].address.address_name;
-                    setEndAddr(addr);
+    const kakao = (window as any).kakao;
+    const geocoder = new kakao.maps.services.Geocoder();
 
-                    const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
-                    const finalSido = currentExtracted.sido || sido;
-                    const finalSigungu = currentExtracted.sigungu || sigungu;
+    if (!data.endAddress && data.endLat && data.endLng) {
+      geocoder.coord2Address(data.endLng, data.endLat, (result: any, status: string) => {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const addr = result[0].address.address_name;
+          setEndAddr(addr);
 
-                    onChange?.({
-                      startAddress: data.startAddress,
-                      startLat: data.startLat,
-                      startLng: data.startLng,
-                      endAddress: addr,
-                      endLat: data.endLat,
-                      endLng: data.endLng,
-                      regionSido: finalSido,
-                      regionSigungu: finalSigungu,
-                      startLatitude: data.startLat,
-                      startLongitude: data.startLng,
-                      endLatitude: data.endLat,
-                      endLongitude: data.endLng,
-                    });
-                  }
-                });
-              } else {
-                const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
-                const finalSido = currentExtracted.sido || sido;
-                const finalSigungu = currentExtracted.sigungu || sigungu;
+          const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
+          const finalSido = currentExtracted.sido || sido;
+          const finalSigungu = currentExtracted.sigungu || sigungu;
 
-                onChange?.({
-                  startAddress: data.startAddress,
-                  startLat: data.startLat,
-                  startLng: data.startLng,
-                  endAddress: data.endAddress,
-                  endLat: data.endLat,
-                  endLng: data.endLng,
-                  regionSido: finalSido,
-                  regionSigungu: finalSigungu,
-                  startLatitude: data.startLat,
-                  startLongitude: data.startLng,
-                  endLatitude: data.endLat,
-                  endLongitude: data.endLng,
-                });
-              }
-            }}
-          />
+          onChange?.({
+            startAddress: data.startAddress,
+            startLat: data.startLat,
+            startLng: data.startLng,
+            endAddress: addr,
+            endLat: data.endLat,
+            endLng: data.endLng,
+            regionSido: finalSido,
+            regionSigungu: finalSigungu,
+            startLatitude: data.startLat,
+            startLongitude: data.startLng,
+            endLatitude: data.endLat,
+            endLongitude: data.endLng,
+          });
+        }
+      });
+    } else {
+      const currentExtracted = data.startAddress ? extractRegionFromAddress(data.startAddress) : { sido: '', sigungu: '' };
+      const finalSido = currentExtracted.sido || sido;
+      const finalSigungu = currentExtracted.sigungu || sigungu;
+
+      onChange?.({
+        startAddress: data.startAddress,
+        startLat: data.startLat,
+        startLng: data.startLng,
+        endAddress: data.endAddress,
+        endLat: data.endLat,
+        endLng: data.endLng,
+        regionSido: finalSido,
+        regionSigungu: finalSigungu,
+        startLatitude: data.startLat,
+        startLongitude: data.startLng,
+        endLatitude: data.endLat,
+        endLongitude: data.endLng,
+      });
+    }
+  }}
+/>
 
           {locked && (
             <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] cursor-not-allowed z-10 rounded-md pointer-events-auto"></div>

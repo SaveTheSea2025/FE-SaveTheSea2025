@@ -63,6 +63,7 @@ export default function StatsPage() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [regionMode, setRegionMode] = useState<"count" | "amount">("count");
   const [loading, setLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false); 
 
   const downloadRef = useRef<HTMLDivElement>(null);
 
@@ -260,6 +261,7 @@ export default function StatsPage() {
   // 엑셀 다운로드 함수
   const handleExcelDownload = async () => {
     try {
+      setDownloadLoading(true); 
       const regionParam = location === "전체 지역" ? "전체" : location;
 
       const params = {
@@ -299,12 +301,15 @@ export default function StatsPage() {
     } catch (error: any) {
       console.error("엑셀 다운로드 실패:", error);
       alert("엑셀 다운로드에 실패했습니다. (서버 OPTIONS 허용 설정 확인 필요)");
+    }finally {
+      setDownloadLoading(false); // ⬅️ 이 줄 추가!
     }
   };
 
   // PDF 다운로드 함수
   const handlePdfDownload = async () => {
     try {
+      setDownloadLoading(true); 
       const regionParam = location === "전체 지역" ? "전체" : location;
 
       const params = {
@@ -341,6 +346,8 @@ export default function StatsPage() {
     } catch (error: any) {
       console.error("PDF 다운로드 실패:", error);
       alert("PDF 다운로드에 실패했습니다.");
+    }finally {
+      setDownloadLoading(false); // ⬅️ 이 줄 추가!
     }
   };
 
@@ -390,6 +397,12 @@ export default function StatsPage() {
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
           <p className="text-sm tracking-wide">데이터 로딩 중입니다...</p>
+        </div>
+      )}
+      {downloadLoading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm text-white">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-3"></div>
+          <p className="text-sm tracking-wide">다운로드 중입니다...</p>
         </div>
       )}
 
